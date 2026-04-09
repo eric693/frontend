@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 04 — JS 基礎：變數、函式、陣列、物件</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c0a;
+  --bg2:#0e1410;
+  --bg3:#141f18;
+  --surface:#1a2820;
+  --border:#253322;
+  --text:#e8f4ec;
+  --muted:#6a9270;
+  --accent:#c8f06e;
+  --accent-g:linear-gradient(135deg,#c8f06e,#6ee7b7);
+  --accent2:#6ee7b7;
+  --accent3:#60a5fa;
+  --amber:#f59e0b;
+  --red:#f87171;
+  --glow:rgba(200,240,110,0.2);
+  --glow3:rgba(96,165,250,0.2);
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(90px);opacity:0.12;
+}
+body::before{width:500px;height:500px;background:radial-gradient(circle,#c8f06e,transparent);top:-120px;right:-80px;}
+body::after{width:380px;height:380px;background:radial-gradient(circle,#60a5fa,transparent);bottom:-80px;left:-60px;}
+
+.progress-bar{
+  position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;
+  background:var(--accent-g);
+  box-shadow:0 0 10px var(--accent);
+  transition:width .08s linear;
+}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  background:rgba(8,12,10,.88);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{
+  display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;
+  font-family:var(--font-m);font-size:.58rem;color:var(--muted);
+  text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;
+}
+.toc-item::before{
+  content:'';width:3px;height:3px;border-radius:50%;background:var(--border);
+  flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;
+}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{
+  background:var(--accent);width:14px;border-radius:2px;
+  box-shadow:0 0 6px var(--accent);
+}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{
+  padding:5rem 3.5rem 4.5rem;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;min-height:460px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+.hero-glow{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(200,240,110,.1),transparent);
+  pointer-events:none;
+}
+.hero-label{
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;
+  opacity:0;animation:fadeUp .5s .1s forwards;
+}
+.hero h1{
+  font-family:var(--font-d);font-weight:900;
+  font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;
+  letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;
+  opacity:0;animation:fadeUp .5s .25s forwards;
+}
+.hero h1 .hi{
+  background:var(--accent-g);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero h1 .hi2{color:var(--accent3);}
+.hero-desc{
+  font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;
+  opacity:0;animation:fadeUp .5s .38s forwards;
+}
+.hero-deco{
+  position:absolute;right:4rem;top:50%;transform:translateY(-50%);
+  width:200px;height:200px;pointer-events:none;
+  opacity:0;animation:fadeUp .5s .6s forwards;
+}
+.hero-deco-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent),var(--accent2)) border-box;
+  animation:spin 8s linear infinite;
+}
+.hero-deco-ring:nth-child(2){
+  inset:20px;animation-duration:5s;animation-direction:reverse;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent2),var(--accent3)) border-box;
+}
+.hero-deco-ring:nth-child(3){
+  inset:40px;animation-duration:3s;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent3),var(--accent)) border-box;
+}
+.hero-deco-center{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.1em;
+}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;
+  padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);
+}
+.badge.hi{border-color:rgba(200,240,110,.5);color:var(--accent);background:rgba(200,240,110,.08);}
+.badge.hi2{border-color:rgba(96,165,250,.4);color:var(--accent3);background:rgba(96,165,250,.07);}
+.badge.hi3{border-color:rgba(245,158,11,.4);color:var(--amber);background:rgba(245,158,11,.07);}
+
+/* CONTENT */
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{
+  padding:4rem 0;border-bottom:1px solid var(--border);
+  opacity:0;transform:translateY(18px);
+  transition:opacity .55s,transform .55s;
+}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{
+  font-family:var(--font-m);font-size:.63rem;color:var(--accent);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.7rem;
+}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{
+  font-family:var(--font-d);font-size:1.95rem;font-weight:700;
+  color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;
+}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+/* OBJECTIVES */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{
+  background:var(--bg2);padding:1.3rem 1.5rem;
+  display:flex;gap:1rem;align-items:flex-start;transition:background .2s;
+}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);
+  background:rgba(200,240,110,.1);border:1px solid rgba(200,240,110,.25);
+  padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;
+}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+/* CONCEPT BLOCKS */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{
+  padding:1.2rem 1.8rem;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+}
+.cicon{
+  width:30px;height:30px;background:var(--accent-g);color:var(--bg);
+  font-family:var(--font-m);font-size:.65rem;font-weight:500;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#a8c8b0;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+/* CALLOUTS */
+.note{
+  border-left:2px solid var(--accent);background:rgba(200,240,110,.05);
+  padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;
+  color:#a8c8b0;line-height:1.7;
+}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent2);background:rgba(110,231,183,.06);color:#9dd4bc;}
+.note.tip .note-label{color:var(--accent2);}
+.note.info{border-left-color:var(--accent3);background:rgba(96,165,250,.06);color:#a8c4e8;}
+.note.info .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--amber);background:rgba(245,158,11,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.06);color:#e8a0a0;}
+.note.danger .note-label{color:var(--red);}
+
+/* CODE */
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{
+  background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);
+}
+/* syntax colors */
+.kw{color:#c8f06e;}      /* keyword: let const var function return if else */
+.fn{color:#60a5fa;}      /* function name */
+.str{color:#fde68a;}     /* string */
+.num{color:#f0abfc;}     /* number */
+.cmt{color:#3a5040;font-style:italic;} /* comment */
+.op{color:#6ee7b7;}      /* operator = => */
+.type{color:#f59e0b;}    /* type annotation / constructor */
+.prop{color:#a5f3fc;}    /* object property */
+.bool{color:#fb7185;}    /* true false null undefined */
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+/* TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(37,51,34,.5);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{
+  padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;
+  display:flex;align-items:center;gap:.5rem;
+}
+.cpanel-hdr.good{background:rgba(110,231,183,.07);color:var(--accent2);border-bottom:1px solid rgba(110,231,183,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+
+/* DEMO WRAP */
+.demo-wrap{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.demo-bar span{color:var(--accent);}
+.demo-content{padding:2rem;background:var(--bg);}
+
+/* LIVE TODO DEMO */
+.todo-app{
+  background:var(--bg2);border:1px solid var(--border);padding:1.8rem;
+  max-width:420px;
+}
+.todo-app-title{
+  font-family:var(--font-d);font-size:1.3rem;font-weight:700;
+  color:var(--text);margin-bottom:1.4rem;
+  display:flex;align-items:center;gap:.8rem;
+}
+.todo-app-title span{
+  font-family:var(--font-m);font-size:.62rem;color:var(--accent);
+  background:rgba(200,240,110,.1);border:1px solid rgba(200,240,110,.3);
+  padding:.15rem .5rem;
+}
+.todo-input-row{display:flex;gap:.6rem;margin-bottom:1rem;}
+.todo-input{
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font-b);font-size:.85rem;
+  padding:.55rem .9rem;outline:none;transition:border-color .2s;
+}
+.todo-input:focus{border-color:var(--accent);}
+.todo-input::placeholder{color:var(--muted);}
+.todo-add-btn{
+  font-family:var(--font-m);font-size:.68rem;letter-spacing:.06em;
+  background:var(--accent);color:var(--bg);border:none;
+  padding:.55rem 1rem;cursor:pointer;transition:opacity .2s;
+  font-weight:500;
+}
+.todo-add-btn:hover{opacity:.85;}
+.todo-filter-row{display:flex;gap:.4rem;margin-bottom:1rem;}
+.filter-btn{
+  font-family:var(--font-m);font-size:.6rem;letter-spacing:.06em;
+  background:var(--bg);border:1px solid var(--border);color:var(--muted);
+  padding:.25rem .7rem;cursor:pointer;transition:all .15s;
+}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,240,110,.08);}
+.todo-list{display:flex;flex-direction:column;gap:.4rem;min-height:60px;}
+.todo-item{
+  display:flex;align-items:center;gap:.7rem;
+  padding:.7rem .9rem;
+  background:var(--bg);border:1px solid var(--border);
+  transition:all .2s;
+}
+.todo-item.done{opacity:.5;}
+.todo-item.done .todo-text{text-decoration:line-through;color:var(--muted);}
+.todo-check{
+  width:18px;height:18px;border:1.5px solid var(--border);
+  flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;transition:all .15s;
+}
+.todo-item.done .todo-check{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.todo-text{flex:1;font-size:.85rem;cursor:pointer;}
+.todo-delete{
+  font-family:var(--font-m);font-size:.65rem;color:var(--muted);
+  background:none;border:none;cursor:pointer;padding:.1rem .3rem;
+  transition:color .15s;
+}
+.todo-delete:hover{color:var(--red);}
+.todo-footer{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);
+  font-family:var(--font-m);font-size:.62rem;color:var(--muted);
+}
+.todo-clear{background:none;border:none;font-family:var(--font-m);font-size:.62rem;color:var(--muted);cursor:pointer;transition:color .15s;}
+.todo-clear:hover{color:var(--red);}
+
+/* TYPE CARDS */
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.type-card{background:var(--bg2);padding:1.2rem;transition:background .2s;}
+.type-card:hover{background:var(--bg3);}
+.type-name{font-family:var(--font-m);font-size:.68rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.type-example{font-family:var(--font-m);font-size:.75rem;color:var(--amber);margin-bottom:.5rem;}
+.type-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* SCOPE VISUAL */
+.scope-visual{border:1px solid var(--border);padding:1.5rem;background:var(--bg);margin:1.5rem 0;font-family:var(--font-m);font-size:.78rem;}
+.scope-box{border:1px dashed var(--border);padding:1rem 1.2rem;margin:.6rem 0;position:relative;}
+.scope-label{
+  position:absolute;top:-.55rem;left:.8rem;
+  font-size:.58rem;letter-spacing:.1em;padding:0 .4rem;background:var(--bg);
+}
+.scope-box.global{border-color:rgba(200,240,110,.4);}
+.scope-box.global .scope-label{color:var(--accent);}
+.scope-box.func{border-color:rgba(96,165,250,.4);}
+.scope-box.func .scope-label{color:var(--accent3);}
+.scope-box.block{border-color:rgba(245,158,11,.4);}
+.scope-box.block .scope-label{color:var(--amber);}
+.scope-var{color:var(--accent);margin:.2rem 0;}
+.scope-var.blue{color:var(--accent3);}
+.scope-var.amber{color:var(--amber);}
+.scope-cmt{color:#3a5040;font-style:italic;font-size:.72rem;}
+
+/* ARRAY METHOD CARDS */
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.method-card{background:var(--bg2);padding:1.3rem 1.5rem;transition:background .2s;}
+.method-card:hover{background:var(--bg3);}
+.method-name{font-family:var(--font-m);font-size:.82rem;color:var(--accent);margin-bottom:.3rem;}
+.method-sig{font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.6rem;}
+.method-desc{font-size:.82rem;color:#a8c8b0;line-height:1.6;margin-bottom:.6rem;}
+.method-ex{font-family:var(--font-m);font-size:.72rem;color:var(--amber);background:var(--bg);padding:.4rem .7rem;border:1px solid var(--border);}
+
+/* INTERACTIVE CONSOLE */
+.console-demo{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.console-hdr{
+  padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:.7rem;
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.console-dot{width:8px;height:8px;border-radius:50%;}
+.console-dot.green{background:#28c840;}
+.console-dot.yellow{background:#febc2e;}
+.console-dot.red{background:#ff5f57;}
+.console-out{
+  background:var(--bg);padding:1rem 1.4rem;
+  font-family:var(--font-m);font-size:.78rem;line-height:1.9;
+}
+.console-line{display:flex;gap:.8rem;align-items:flex-start;}
+.console-prompt{color:var(--accent);flex-shrink:0;user-select:none;}
+.console-prompt.out{color:var(--muted);}
+.console-val{color:var(--text);}
+.console-val.str{color:#fde68a;}
+.console-val.num{color:#f0abfc;}
+.console-val.bool{color:#fb7185;}
+.console-val.arr{color:#a5f3fc;}
+.console-val.obj{color:#6ee7b7;}
+.console-val.undef{color:var(--muted);}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;
+  background:var(--bg);border:1px solid var(--border);cursor:pointer;
+  font-size:.87rem;transition:border-color .15s,background .15s;
+  user-select:none;line-height:1.5;
+}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(200,240,110,.05);}
+.quiz-opt.correct{border-color:var(--accent2);background:rgba(110,231,183,.06);color:var(--accent2);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent2);background:rgba(110,231,183,.05);color:#9dd4bc;}
+.quiz-fb.show{display:block;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;
+  background:var(--bg2);border:1px solid var(--border);font-size:.87rem;
+  cursor:pointer;transition:background .15s;user-select:none;
+}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(110,231,183,.05);border-color:rgba(110,231,183,.3);}
+.check-item.done .check-box{background:var(--accent2);border-color:var(--accent2);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* PROJECT */
+.project-hero{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;
+}
+.project-hero::after{
+  content:'Todo.js';position:absolute;right:1.5rem;bottom:-.5rem;
+  font-family:var(--font-m);font-size:3.5rem;color:var(--accent);
+  opacity:.06;line-height:1;pointer-events:none;white-space:nowrap;
+}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}
+  .header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .type-grid{grid-template-columns:1fr 1fr;}
+  .method-grid{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 04 / 18 &mdash; JavaScript 基礎</div>
+  <nav class="header-nav">
+    <a href="week3.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week5.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#variables">變數與型別</a>
+  <a class="toc-item" href="#functions">函式</a>
+  <a class="toc-item" href="#arrays">陣列</a>
+  <a class="toc-item" href="#objects">物件</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-deco">
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-center">JS</div>
+  </div>
+  <div class="hero-label">Phase 02 &mdash; Week 04 of 18</div>
+  <h1>JavaScript<br><span class="hi">基礎核心</span></h1>
+  <p class="hero-desc">
+    從變數宣告到函式、陣列與物件，掌握 JavaScript 的四大基石。
+    理解這些概念，你就擁有了操控網頁行為的能力。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">var / let / const</span>
+    <span class="badge hi">函式 Function</span>
+    <span class="badge hi">陣列 Array</span>
+    <span class="badge hi">物件 Object</span>
+    <span class="badge hi2">ES6+ 語法</span>
+    <span class="badge hi3">Todo List 專案</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ══════════════════════════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">完成本週課程後，你應該能夠獨立完成一個有增刪改查功能的 Todo List，並能解釋以下每一個概念。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">理解 <code>var</code>、<code>let</code>、<code>const</code> 的差異，並在正確場景選用適當的宣告方式</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">掌握 JavaScript 七種基本型別（Primitive Types）及 <code>typeof</code> 運算子的用法</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">能撰寫函式宣告、函式表達式與箭頭函式，了解 <code>this</code> 在不同函式形式中的差異</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">熟練使用陣列的常用方法：<code>map</code>、<code>filter</code>、<code>reduce</code>、<code>forEach</code>、<code>find</code></span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">理解物件的建立、存取、修改，以及解構賦值（Destructuring）語法</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">綜合運用以上知識，完成一個具備新增、完成、刪除、篩選功能的 Todo List 應用程式</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ VARIABLES -->
+<section class="section" id="variables">
+  <div class="eyebrow">02 &mdash; Variables &amp; Types</div>
+  <h2 class="section-title">變數宣告與資料型別</h2>
+  <p class="section-intro">
+    JavaScript 是動態型別語言，變數本身沒有型別，但值有型別。ES6 之後，我們應優先使用 <code>const</code>，
+    需要重新賦值時才用 <code>let</code>，盡量避免 <code>var</code>。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">V</div>
+      <div>
+        <div class="ctitle">var vs let vs const</div>
+        <div class="csub">作用域（Scope）與可變性的根本差異</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <em>var</em> 是函式作用域（function-scoped），存在 <strong>提升（Hoisting）</strong> 行為，
+        且可以重複宣告，容易造成預期外的 bug。現代 JavaScript 幾乎不再使用它。
+      </p>
+      <p>
+        <em>let</em> 是區塊作用域（block-scoped），可以重新賦值但不能重複宣告，
+        也有提升但進入 <strong>暫時性死區（Temporal Dead Zone）</strong>，存取前會拋出 ReferenceError。
+      </p>
+      <p>
+        <em>const</em> 同樣是區塊作用域，宣告後 <strong>不能重新賦值</strong>，但如果值是物件或陣列，
+        其內部屬性仍可修改（因為 const 鎖定的是「綁定」，不是「值」）。
+      </p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr bad">✗ 避免使用 var</div>
+      <pre><span class="kw">var</span> count <span class="op">=</span> <span class="num">0</span>
+<span class="kw">var</span> count <span class="op">=</span> <span class="num">5</span>   <span class="cmt">// 重複宣告，不報錯</span>
+
+<span class="kw">for</span> (<span class="kw">var</span> i <span class="op">=</span> <span class="num">0</span>; i <span class="op">&lt;</span> <span class="num">3</span>; i++) {
+  setTimeout(() <span class="op">=&gt;</span> {
+    console.log(i) <span class="cmt">// 全部印出 3！</span>
+  }, <span class="num">100</span>)
+}</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">✓ 使用 let / const</div>
+      <pre><span class="kw">const</span> MAX <span class="op">=</span> <span class="num">100</span>   <span class="cmt">// 不會改變的值</span>
+<span class="kw">let</span> count <span class="op">=</span> <span class="num">0</span>     <span class="cmt">// 會變動的值</span>
+count<span class="op">++</span>           <span class="cmt">// ✓ 可以</span>
+
+<span class="kw">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="num">0</span>; i <span class="op">&lt;</span> <span class="num">3</span>; i++) {
+  setTimeout(() <span class="op">=&gt;</span> {
+    console.log(i) <span class="cmt">// 0, 1, 2 ✓</span>
+  }, <span class="num">100</span>)
+}</pre>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">JavaScript 的七種基本型別</h3>
+
+  <div class="type-grid">
+    <div class="type-card">
+      <div class="type-name">string</div>
+      <div class="type-example">"Hello, World!"</div>
+      <div class="type-desc">文字資料，用單引號、雙引號或反引號包裹</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">number</div>
+      <div class="type-example">42 / 3.14 / NaN</div>
+      <div class="type-desc">整數與浮點數都是 number，包含特殊值 NaN、Infinity</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">boolean</div>
+      <div class="type-example">true / false</div>
+      <div class="type-desc">邏輯值，條件判斷的核心</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">undefined</div>
+      <div class="type-example">let x; // x</div>
+      <div class="type-desc">宣告了但未賦值，或函式無 return</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">null</div>
+      <div class="type-example">let val = null</div>
+      <div class="type-desc">明確表示「空值」，是開發者主動賦予的</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">symbol</div>
+      <div class="type-example">Symbol('id')</div>
+      <div class="type-desc">ES6 新增，唯一且不可變的識別符</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">bigint</div>
+      <div class="type-example">9007199254740991n</div>
+      <div class="type-desc">ES2020，處理超大整數的型別</div>
+    </div>
+    <div class="type-card">
+      <div class="type-name">object</div>
+      <div class="type-example">{ } / [ ] / null</div>
+      <div class="type-desc">引用型別，包含物件、陣列（注意 typeof null 是 "object"）</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript</span>
+    </div>
+    <pre><span class="cmt">// typeof 運算子</span>
+<span class="kw">typeof</span> <span class="str">"hello"</span>       <span class="cmt">// "string"</span>
+<span class="kw">typeof</span> <span class="num">42</span>            <span class="cmt">// "number"</span>
+<span class="kw">typeof</span> <span class="bool">true</span>          <span class="cmt">// "boolean"</span>
+<span class="kw">typeof</span> <span class="bool">undefined</span>    <span class="cmt">// "undefined"</span>
+<span class="kw">typeof</span> <span class="bool">null</span>          <span class="cmt">// "object" ← 歷史遺留 bug！</span>
+<span class="kw">typeof</span> {}             <span class="cmt">// "object"</span>
+<span class="kw">typeof</span> []             <span class="cmt">// "object" ← 陣列也是物件</span>
+<span class="kw">typeof</span> <span class="fn">function</span>(){} <span class="cmt">// "function"</span>
+
+<span class="cmt">// 更準確的陣列判斷</span>
+Array.<span class="fn">isArray</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>])  <span class="cmt">// true ✓</span>
+
+<span class="cmt">// 模板字串 Template Literals (ES6)</span>
+<span class="kw">const</span> name <span class="op">=</span> <span class="str">"Eric"</span>
+<span class="kw">const</span> age <span class="op">=</span> <span class="num">25</span>
+<span class="kw">const</span> msg <span class="op">=</span> <span class="str">`我叫 <span class="op">${</span>name<span class="op">}</span>，今年 <span class="op">${</span>age<span class="op">}</span> 歲`</span>
+console.<span class="fn">log</span>(msg) <span class="cmt">// 我叫 Eric，今年 25 歲</span>
+
+<span class="cmt">// 型別轉換</span>
+<span class="type">Number</span>(<span class="str">"42"</span>)     <span class="cmt">// 42</span>
+<span class="type">String</span>(<span class="num">100</span>)     <span class="cmt">// "100"</span>
+<span class="type">Boolean</span>(<span class="num">0</span>)     <span class="cmt">// false（falsy 值）</span>
+<span class="type">Boolean</span>(<span class="str">""</span>)    <span class="cmt">// false</span>
+<span class="type">Boolean</span>([])    <span class="cmt">// true！（空陣列是 truthy）</span></pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">⚠ FALSY VALUES</span>
+    JavaScript 中，以下值在條件判斷中會被視為 <strong>false</strong>：
+    <code>false</code>、<code>0</code>、<code>""</code>（空字串）、<code>null</code>、<code>undefined</code>、<code>NaN</code>。
+    其餘皆為 truthy，包含空陣列 <code>[]</code> 和空物件 <code>{}</code>。
+  </div>
+
+  <!-- Scope Visual -->
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">作用域（Scope）視覺化</h3>
+
+  <div class="scope-visual">
+    <div class="scope-box global">
+      <span class="scope-label">全域作用域 GLOBAL SCOPE</span>
+      <div class="scope-var">const APP_NAME = "Todo App"</div>
+      <div class="scope-var">let globalCount = 0</div>
+
+      <div class="scope-box func" style="margin-top:1rem;">
+        <span class="scope-label">函式作用域 FUNCTION SCOPE</span>
+        <div class="scope-var blue">function addTodo(text) {</div>
+        <div class="scope-var blue" style="padding-left:1.5rem;">const id = Date.now() <span class="scope-cmt">// 只在函式內存在</span></div>
+        <div class="scope-var blue" style="padding-left:1.5rem;">globalCount++ <span class="scope-cmt">// 可以存取全域變數</span></div>
+
+        <div class="scope-box block" style="margin-top:.6rem;">
+          <span class="scope-label">區塊作用域 BLOCK SCOPE</span>
+          <div class="scope-var amber">if (text.length > 0) {</div>
+          <div class="scope-var amber" style="padding-left:1.5rem;">let trimmed = text.trim() <span class="scope-cmt">// 只在 if 區塊內</span></div>
+          <div class="scope-var amber">}</div>
+          <div class="scope-var amber" style="margin-top:.3rem;color:#f87171;font-size:.72rem;">// console.log(trimmed) → ReferenceError ✗</div>
+        </div>
+
+        <div class="scope-var blue">}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ FUNCTIONS -->
+<section class="section" id="functions">
+  <div class="eyebrow">03 &mdash; Functions</div>
+  <h2 class="section-title">函式的三種形式</h2>
+  <p class="section-intro">
+    函式是 JavaScript 的一等公民（First-Class Citizen），可以被當作值傳遞、儲存在變數中、作為參數傳入或從函式回傳。
+    理解三種函式寫法的差異是掌握 JS 的關鍵。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">F1</div>
+      <div>
+        <div class="ctitle">函式宣告（Function Declaration）</div>
+        <div class="csub">有 Hoisting，可在宣告前呼叫</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        用 <em>function</em> 關鍵字開頭的函式宣告會被提升到作用域頂部，
+        因此可以在宣告前就呼叫它。適合用在需要被大量呼叫的工具函式。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 函式宣告</span>
+    </div>
+    <pre><span class="cmt">// 可以在宣告前呼叫（Hoisting）</span>
+console.<span class="fn">log</span>(<span class="fn">greet</span>(<span class="str">"Eric"</span>)) <span class="cmt">// "Hello, Eric!"</span>
+
+<span class="kw">function</span> <span class="fn">greet</span>(name) {
+  <span class="kw">return</span> <span class="str">`Hello, <span class="op">${</span>name<span class="op">}</span>!`</span>
+}
+
+<span class="cmt">// 帶預設參數（Default Parameters, ES6）</span>
+<span class="kw">function</span> <span class="fn">createUser</span>(name, role <span class="op">=</span> <span class="str">"user"</span>, active <span class="op">=</span> <span class="bool">true</span>) {
+  <span class="kw">return</span> { name, role, active }
+}
+<span class="fn">createUser</span>(<span class="str">"Eric"</span>)
+<span class="cmt">// { name: "Eric", role: "user", active: true }</span>
+
+<span class="cmt">// 其餘參數（Rest Parameters）</span>
+<span class="kw">function</span> <span class="fn">sum</span>(...<span class="prop">numbers</span>) {
+  <span class="kw">return</span> <span class="prop">numbers</span>.<span class="fn">reduce</span>((acc, n) <span class="op">=&gt;</span> acc <span class="op">+</span> n, <span class="num">0</span>)
+}
+<span class="fn">sum</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>) <span class="cmt">// 10</span></pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">F2</div>
+      <div>
+        <div class="ctitle">函式表達式（Function Expression）</div>
+        <div class="csub">沒有 Hoisting，只能在宣告後使用</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        將函式賦值給一個變數。沒有 Hoisting，適合需要<strong>根據條件決定</strong>要用哪個函式的場景，
+        也常用來建立 <em>IIFE（立即呼叫函式表達式）</em>。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 函式表達式</span>
+    </div>
+    <pre><span class="cmt">// 函式表達式</span>
+<span class="kw">const</span> <span class="fn">double</span> <span class="op">=</span> <span class="kw">function</span>(n) {
+  <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span>
+}
+
+<span class="cmt">// 根據條件選擇函式</span>
+<span class="kw">const</span> <span class="fn">format</span> <span class="op">=</span> isMetric
+  ? <span class="kw">function</span>(val) { <span class="kw">return</span> <span class="str">`<span class="op">${</span>val<span class="op">}</span> km`</span> }
+  : <span class="kw">function</span>(val) { <span class="kw">return</span> <span class="str">`<span class="op">${</span>val<span class="op">}</span> miles`</span> }
+
+<span class="cmt">// IIFE — 立即執行，建立私有作用域</span>
+<span class="kw">const</span> counter <span class="op">=</span> (<span class="kw">function</span>() {
+  <span class="kw">let</span> count <span class="op">=</span> <span class="num">0</span>  <span class="cmt">// 外部無法存取</span>
+  <span class="kw">return</span> {
+    <span class="fn">increment</span>: () <span class="op">=&gt;</span> <span class="op">++</span>count,
+    <span class="fn">get</span>: () <span class="op">=&gt;</span> count
+  }
+})()</pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">F3</div>
+      <div>
+        <div class="ctitle">箭頭函式（Arrow Function）</div>
+        <div class="csub">ES6 語法糖，不綁定自己的 this</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        箭頭函式語法更簡潔，並且<strong>不擁有自己的 <em>this</em></strong>，
+        而是繼承外層的 this。這讓它非常適合用在回呼函式（callback）中，
+        例如 <code>map</code>、<code>filter</code>、事件監聽等場景。
+      </p>
+      <p>
+        單一參數可省略括號，單行 return 可省略大括號與 return 關鍵字。
+        但如果要直接回傳物件字面值，必須用小括號包住 <code>() => ({...})</code>。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 箭頭函式</span>
+    </div>
+    <pre><span class="cmt">// 完整寫法</span>
+<span class="kw">const</span> <span class="fn">add</span> <span class="op">=</span> (a, b) <span class="op">=&gt;</span> {
+  <span class="kw">return</span> a <span class="op">+</span> b
+}
+
+<span class="cmt">// 省略 return（隱式回傳）</span>
+<span class="kw">const</span> <span class="fn">add</span> <span class="op">=</span> (a, b) <span class="op">=&gt;</span> a <span class="op">+</span> b
+
+<span class="cmt">// 單一參數，省略括號</span>
+<span class="kw">const</span> <span class="fn">double</span> <span class="op">=</span> n <span class="op">=&gt;</span> n <span class="op">*</span> <span class="num">2</span>
+
+<span class="cmt">// 回傳物件時需用小括號</span>
+<span class="kw">const</span> <span class="fn">toObj</span> <span class="op">=</span> name <span class="op">=&gt;</span> ({ name, active: <span class="bool">true</span> })
+
+<span class="cmt">// 高階函式（Higher-Order Function）</span>
+<span class="kw">const</span> <span class="fn">applyTwice</span> <span class="op">=</span> (fn, x) <span class="op">=&gt;</span> <span class="fn">fn</span>(<span class="fn">fn</span>(x))
+<span class="fn">applyTwice</span>(double, <span class="num">3</span>) <span class="cmt">// 12</span>
+
+<span class="cmt">// this 的差異</span>
+<span class="kw">const</span> obj <span class="op">=</span> {
+  name: <span class="str">"Eric"</span>,
+  <span class="fn">regularFn</span>: <span class="kw">function</span>() {
+    <span class="kw">return</span> <span class="kw">this</span>.<span class="prop">name</span>  <span class="cmt">// "Eric" ✓</span>
+  },
+  <span class="fn">arrowFn</span>: () <span class="op">=&gt;</span> {
+    <span class="kw">return</span> <span class="kw">this</span>.<span class="prop">name</span>  <span class="cmt">// undefined（this 指向外層）</span>
+  }
+}</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">💡 PURE FUNCTIONS</span>
+    好的函式應盡量是<strong>純函式（Pure Function）</strong>：相同輸入永遠產生相同輸出，
+    且不修改外部狀態（無副作用）。這讓程式碼更可預測、更容易測試。
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ ARRAYS -->
+<section class="section" id="arrays">
+  <div class="eyebrow">04 &mdash; Arrays</div>
+  <h2 class="section-title">陣列與常用方法</h2>
+  <p class="section-intro">
+    陣列是 JavaScript 最常用的資料結構。ES5 之後引入的 <code>map</code>、<code>filter</code>、<code>reduce</code>
+    等高階方法讓我們能用函數式風格撰寫更簡潔、更安全的資料處理程式碼。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 陣列基礎</span>
+    </div>
+    <pre><span class="cmt">// 建立陣列</span>
+<span class="kw">const</span> fruits <span class="op">=</span> [<span class="str">"apple"</span>, <span class="str">"banana"</span>, <span class="str">"cherry"</span>]
+<span class="kw">const</span> nums <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+<span class="kw">const</span> mixed <span class="op">=</span> [<span class="num">1</span>, <span class="str">"hello"</span>, <span class="bool">true</span>, { <span class="prop">id</span>: <span class="num">1</span> }]
+
+<span class="cmt">// 基本操作</span>
+fruits[<span class="num">0</span>]              <span class="cmt">// "apple"</span>
+fruits.<span class="prop">length</span>          <span class="cmt">// 3</span>
+fruits.<span class="fn">push</span>(<span class="str">"date"</span>)    <span class="cmt">// 末端新增，回傳新長度</span>
+fruits.<span class="fn">pop</span>()           <span class="cmt">// 移除並回傳最後一個</span>
+fruits.<span class="fn">unshift</span>(<span class="str">"fig"</span>) <span class="cmt">// 開頭新增</span>
+fruits.<span class="fn">shift</span>()         <span class="cmt">// 移除並回傳第一個</span>
+
+<span class="cmt">// splice — 刪除 / 插入（會修改原陣列）</span>
+fruits.<span class="fn">splice</span>(<span class="num">1</span>, <span class="num">1</span>)           <span class="cmt">// 從索引 1 刪除 1 個</span>
+fruits.<span class="fn">splice</span>(<span class="num">1</span>, <span class="num">0</span>, <span class="str">"mango"</span>) <span class="cmt">// 在索引 1 插入</span>
+
+<span class="cmt">// slice — 取出片段（不修改原陣列）</span>
+nums.<span class="fn">slice</span>(<span class="num">1</span>, <span class="num">3</span>)   <span class="cmt">// [2, 3]</span>
+nums.<span class="fn">slice</span>(-<span class="num">2</span>)    <span class="cmt">// [4, 5]</span>
+
+<span class="cmt">// Spread 展開運算子（ES6）</span>
+<span class="kw">const</span> newFruits <span class="op">=</span> [...fruits, <span class="str">"kiwi"</span>] <span class="cmt">// 複製並新增</span>
+<span class="kw">const</span> combined <span class="op">=</span> [...nums, ...[<span class="num">6</span>, <span class="num">7</span>]]  <span class="cmt">// 合併兩陣列</span></pre>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">高階陣列方法（Higher-Order Methods）</h3>
+
+  <div class="method-grid">
+    <div class="method-card">
+      <div class="method-name">.map()</div>
+      <div class="method-sig">arr.map(fn) → 新陣列</div>
+      <div class="method-desc">對每個元素執行 fn，回傳由結果組成的<strong>新陣列</strong>，長度與原陣列相同。</div>
+      <div class="method-ex">[1,2,3].map(n => n * 2) // [2,4,6]</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.filter()</div>
+      <div class="method-sig">arr.filter(fn) → 新陣列</div>
+      <div class="method-desc">保留讓 fn 回傳 <strong>true</strong> 的元素，回傳過濾後的新陣列。</div>
+      <div class="method-ex">[1,2,3,4].filter(n => n > 2) // [3,4]</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.reduce()</div>
+      <div class="method-sig">arr.reduce(fn, init) → 單一值</div>
+      <div class="method-desc">將陣列「摺疊」成單一值，<code>acc</code> 是累計器，<code>init</code> 是初始值。</div>
+      <div class="method-ex">[1,2,3].reduce((a,n) => a+n, 0) // 6</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.forEach()</div>
+      <div class="method-sig">arr.forEach(fn) → undefined</div>
+      <div class="method-desc">對每個元素執行 fn，<strong>不回傳值</strong>，僅用於產生副作用。</div>
+      <div class="method-ex">arr.forEach(n => console.log(n))</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.find()</div>
+      <div class="method-sig">arr.find(fn) → 元素或 undefined</div>
+      <div class="method-desc">回傳第一個讓 fn 為 true 的<strong>元素</strong>，找不到回傳 undefined。</div>
+      <div class="method-ex">[{id:1},{id:2}].find(o=>o.id===2)</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.findIndex()</div>
+      <div class="method-sig">arr.findIndex(fn) → index 或 -1</div>
+      <div class="method-desc">回傳第一個符合條件的元素<strong>索引</strong>，找不到回傳 -1。</div>
+      <div class="method-ex">[10,20,30].findIndex(n=>n===20) // 1</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.some() / .every()</div>
+      <div class="method-sig">arr.some(fn) → boolean</div>
+      <div class="method-desc"><code>some</code>：至少一個符合即 true；<code>every</code>：全部符合才 true。</div>
+      <div class="method-ex">[1,2,3].some(n=>n>2) // true</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">.includes()</div>
+      <div class="method-sig">arr.includes(val) → boolean</div>
+      <div class="method-desc">判斷陣列是否包含某值（使用 === 嚴格比較）。</div>
+      <div class="method-ex">["a","b","c"].includes("b") // true</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 實際應用：Todo 資料處理</span>
+    </div>
+    <pre><span class="kw">const</span> todos <span class="op">=</span> [
+  { <span class="prop">id</span>: <span class="num">1</span>, <span class="prop">text</span>: <span class="str">"學習 JavaScript"</span>, <span class="prop">done</span>: <span class="bool">true</span>  },
+  { <span class="prop">id</span>: <span class="num">2</span>, <span class="prop">text</span>: <span class="str">"完成作業"</span>,         <span class="prop">done</span>: <span class="bool">false</span> },
+  { <span class="prop">id</span>: <span class="num">3</span>, <span class="prop">text</span>: <span class="str">"運動 30 分鐘"</span>,    <span class="prop">done</span>: <span class="bool">false</span> },
+]
+
+<span class="cmt">// 只取未完成項目</span>
+<span class="kw">const</span> active <span class="op">=</span> todos.<span class="fn">filter</span>(t <span class="op">=&gt;</span> <span class="op">!</span>t.<span class="prop">done</span>)
+
+<span class="cmt">// 將 todo 轉換為 HTML 字串陣列</span>
+<span class="kw">const</span> html <span class="op">=</span> todos
+  .<span class="fn">map</span>(t <span class="op">=&gt;</span> <span class="str">`&lt;li class="<span class="op">${</span>t.<span class="prop">done</span> ? <span class="str">'done'</span> : <span class="str">''</span><span class="op">}</span>"&gt;<span class="op">${</span>t.<span class="prop">text</span><span class="op">}</span>&lt;/li&gt;`</span>)
+  .<span class="fn">join</span>(<span class="str">""</span>)
+
+<span class="cmt">// 計算已完成數量</span>
+<span class="kw">const</span> doneCount <span class="op">=</span> todos.<span class="fn">filter</span>(t <span class="op">=&gt;</span> t.<span class="prop">done</span>).<span class="prop">length</span>
+
+<span class="cmt">// 切換完成狀態（不修改原陣列）</span>
+<span class="kw">const</span> <span class="fn">toggleTodo</span> <span class="op">=</span> (todos, id) <span class="op">=&gt;</span>
+  todos.<span class="fn">map</span>(t <span class="op">=&gt;</span> t.<span class="prop">id</span> <span class="op">===</span> id ? { ...t, <span class="prop">done</span>: <span class="op">!</span>t.<span class="prop">done</span> } : t)
+
+<span class="cmt">// 刪除指定 id（不修改原陣列）</span>
+<span class="kw">const</span> <span class="fn">deleteTodo</span> <span class="op">=</span> (todos, id) <span class="op">=&gt;</span>
+  todos.<span class="fn">filter</span>(t <span class="op">=&gt;</span> t.<span class="prop">id</span> <span class="op">!==</span> id)</pre>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">📌 不可變性（IMMUTABILITY）</span>
+    優先使用回傳新陣列的方法（<code>map</code>、<code>filter</code>、<code>slice</code>、spread）
+    而非直接修改原陣列（<code>push</code>、<code>splice</code>），這是函數式程式設計的核心原則，
+    也是 React 要求的寫法。
+  </div>
+
+  <!-- Console Demo -->
+  <div class="console-demo">
+    <div class="console-hdr">
+      <div class="console-dot red"></div>
+      <div class="console-dot yellow"></div>
+      <div class="console-dot green"></div>
+      <span>陣列方法鏈結（Method Chaining）</span>
+    </div>
+    <div class="console-out">
+      <div class="console-line"><span class="console-prompt">&gt;</span><span class="console-val">const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span></div>
+      <div class="console-line"><span class="console-prompt">&gt;</span><span class="console-val">nums.filter(n => n % 2 === 0)</span></div>
+      <div class="console-line"><span class="console-prompt out">&lt;</span><span class="console-val arr">[2, 4, 6, 8, 10]</span></div>
+      <div class="console-line"><span class="console-prompt">&gt;</span><span class="console-val">nums.filter(n => n % 2 === 0).map(n => n * n)</span></div>
+      <div class="console-line"><span class="console-prompt out">&lt;</span><span class="console-val arr">[4, 16, 36, 64, 100]</span></div>
+      <div class="console-line"><span class="console-prompt">&gt;</span><span class="console-val">nums.filter(n => n % 2 === 0).map(n => n * n).reduce((a, n) => a + n, 0)</span></div>
+      <div class="console-line"><span class="console-prompt out">&lt;</span><span class="console-val num">220</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ OBJECTS -->
+<section class="section" id="objects">
+  <div class="eyebrow">05 &mdash; Objects</div>
+  <h2 class="section-title">物件與解構賦值</h2>
+  <p class="section-intro">
+    物件（Object）是 JavaScript 的基礎資料結構，幾乎所有的複雜資料都用物件來表示。
+    ES6 引入的解構賦值、簡寫屬性、計算屬性名稱等語法，讓操作物件更加優雅。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 物件基礎</span>
+    </div>
+    <pre><span class="cmt">// 物件字面值</span>
+<span class="kw">const</span> user <span class="op">=</span> {
+  <span class="prop">id</span>: <span class="num">1</span>,
+  <span class="prop">name</span>: <span class="str">"Eric"</span>,
+  <span class="prop">email</span>: <span class="str">"eric@example.com"</span>,
+  <span class="prop">address</span>: {           <span class="cmt">// 巢狀物件</span>
+    <span class="prop">city</span>: <span class="str">"Taipei"</span>,
+    <span class="prop">country</span>: <span class="str">"Taiwan"</span>
+  },
+  <span class="fn">greet</span>() {           <span class="cmt">// 方法簡寫（ES6）</span>
+    <span class="kw">return</span> <span class="str">`Hi, I'm <span class="op">${</span><span class="kw">this</span>.<span class="prop">name</span><span class="op">}</span>`</span>
+  }
+}
+
+<span class="cmt">// 兩種存取方式</span>
+user.<span class="prop">name</span>           <span class="cmt">// "Eric"（點記法）</span>
+user[<span class="str">"email"</span>]       <span class="cmt">// "eric@example.com"（括號記法）</span>
+user.<span class="prop">address</span>.<span class="prop">city</span>  <span class="cmt">// "Taipei"（鏈式存取）</span>
+
+<span class="cmt">// 新增 / 修改 / 刪除屬性</span>
+user.<span class="prop">age</span> <span class="op">=</span> <span class="num">25</span>            <span class="cmt">// 新增</span>
+user.<span class="prop">name</span> <span class="op">=</span> <span class="str">"Eric Chen"</span>  <span class="cmt">// 修改</span>
+<span class="kw">delete</span> user.<span class="prop">email</span>        <span class="cmt">// 刪除</span>
+
+<span class="cmt">// ES6 簡寫屬性（變數名 = 屬性名）</span>
+<span class="kw">const</span> name <span class="op">=</span> <span class="str">"Eric"</span>, age <span class="op">=</span> <span class="num">25</span>
+<span class="kw">const</span> u <span class="op">=</span> { name, age }  <span class="cmt">// { name: "Eric", age: 25 }</span>
+
+<span class="cmt">// 計算屬性名稱（Computed Property Names）</span>
+<span class="kw">const</span> key <span class="op">=</span> <span class="str">"status"</span>
+<span class="kw">const</span> obj <span class="op">=</span> { [key]: <span class="str">"active"</span> }  <span class="cmt">// { status: "active" }</span></pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">D</div>
+      <div>
+        <div class="ctitle">解構賦值（Destructuring Assignment）</div>
+        <div class="csub">從物件或陣列中快速提取值</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        解構賦值是 ES6 最實用的語法之一，讓我們能從物件或陣列中<strong>直接提取需要的值</strong>到獨立變數，
+        避免重複寫 <code>obj.prop</code>。
+      </p>
+      <p>
+        物件解構可以設定<em>預設值</em>、使用<em>別名</em>，也可以進行<em>巢狀解構</em>。
+        搭配函式參數使用時，能讓函式介面更清晰。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 解構賦值</span>
+    </div>
+    <pre><span class="kw">const</span> user <span class="op">=</span> {
+  <span class="prop">id</span>: <span class="num">1</span>, <span class="prop">name</span>: <span class="str">"Eric"</span>, <span class="prop">age</span>: <span class="num">25</span>,
+  <span class="prop">address</span>: { <span class="prop">city</span>: <span class="str">"Taipei"</span>, <span class="prop">zip</span>: <span class="str">"100"</span> }
+}
+
+<span class="cmt">// 基本物件解構</span>
+<span class="kw">const</span> { name, age } <span class="op">=</span> user
+console.<span class="fn">log</span>(name) <span class="cmt">// "Eric"</span>
+
+<span class="cmt">// 別名（Alias）</span>
+<span class="kw">const</span> { name: <span class="prop">userName</span> } <span class="op">=</span> user
+console.<span class="fn">log</span>(userName) <span class="cmt">// "Eric"</span>
+
+<span class="cmt">// 預設值</span>
+<span class="kw">const</span> { role <span class="op">=</span> <span class="str">"user"</span>, name: uName } <span class="op">=</span> user
+console.<span class="fn">log</span>(role)  <span class="cmt">// "user"（user 物件沒有 role）</span>
+
+<span class="cmt">// 巢狀解構</span>
+<span class="kw">const</span> { address: { city } } <span class="op">=</span> user
+console.<span class="fn">log</span>(city) <span class="cmt">// "Taipei"</span>
+
+<span class="cmt">// 其餘屬性（Rest in Object）</span>
+<span class="kw">const</span> { id, ...rest } <span class="op">=</span> user
+console.<span class="fn">log</span>(rest) <span class="cmt">// { name, age, address }</span>
+
+<span class="cmt">// 陣列解構</span>
+<span class="kw">const</span> [first, second, ...others] <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>]
+<span class="cmt">// first=1, second=2, others=[3,4]</span>
+
+<span class="cmt">// 函式參數解構（最常見用法）</span>
+<span class="kw">function</span> <span class="fn">renderUser</span>({ name, age, role <span class="op">=</span> <span class="str">"user"</span> }) {
+  <span class="kw">return</span> <span class="str">`<span class="op">${</span>name<span class="op">}</span> (<span class="op">${</span>age<span class="op">}</span>) - <span class="op">${</span>role<span class="op">}</span>`</span>
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 物件實用方法</span>
+    </div>
+    <pre><span class="kw">const</span> person <span class="op">=</span> { <span class="prop">name</span>: <span class="str">"Eric"</span>, <span class="prop">age</span>: <span class="num">25</span>, <span class="prop">city</span>: <span class="str">"Taipei"</span> }
+
+<span class="cmt">// Object.keys / values / entries</span>
+Object.<span class="fn">keys</span>(person)    <span class="cmt">// ["name", "age", "city"]</span>
+Object.<span class="fn">values</span>(person)  <span class="cmt">// ["Eric", 25, "Taipei"]</span>
+Object.<span class="fn">entries</span>(person) <span class="cmt">// [["name","Eric"],["age",25],["city","Taipei"]]</span>
+
+<span class="cmt">// 用 entries 遍歷物件</span>
+Object.<span class="fn">entries</span>(person).<span class="fn">forEach</span>(([key, val]) <span class="op">=&gt;</span> {
+  console.<span class="fn">log</span>(<span class="str">`<span class="op">${</span>key<span class="op">}</span>: <span class="op">${</span>val<span class="op">}</span>`</span>)
+})
+
+<span class="cmt">// Object.assign — 合併物件（淺複製）</span>
+<span class="kw">const</span> defaults <span class="op">=</span> { <span class="prop">theme</span>: <span class="str">"dark"</span>, <span class="prop">lang</span>: <span class="str">"zh-TW"</span> }
+<span class="kw">const</span> config <span class="op">=</span> Object.<span class="fn">assign</span>({}, defaults, { <span class="prop">theme</span>: <span class="str">"light"</span> })
+<span class="cmt">// { theme: "light", lang: "zh-TW" }</span>
+
+<span class="cmt">// Spread 更簡潔（推薦）</span>
+<span class="kw">const</span> config2 <span class="op">=</span> { ...defaults, <span class="prop">theme</span>: <span class="str">"light"</span> }
+
+<span class="cmt">// 選擇性鏈結（Optional Chaining, ES2020）</span>
+<span class="kw">const</span> city <span class="op">=</span> user?.<span class="prop">address</span>?.<span class="prop">city</span>  <span class="cmt">// 不會因 undefined 報錯</span>
+
+<span class="cmt">// Nullish Coalescing（??, ES2020）</span>
+<span class="kw">const</span> name <span class="op">=</span> user.<span class="prop">name</span> ?? <span class="str">"Guest"</span> <span class="cmt">// 只有 null/undefined 才用預設</span></pre>
+  </div>
+
+  <div class="note">
+    <span class="note-label">📌 淺複製 vs 深複製</span>
+    Spread 運算子 <code>{ ...obj }</code> 只能做<strong>淺複製（Shallow Copy）</strong>，
+    巢狀物件仍是同一個參考。若需要深複製，可用 <code>JSON.parse(JSON.stringify(obj))</code>（有限制）
+    或 <code>structuredClone(obj)</code>（現代瀏覽器支援）。
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">06 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+  <p class="section-intro">測試你對本週核心概念的理解。點擊選項後查看解釋。</p>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">以下程式碼的輸出結果是什麼？<br><code>const arr = [1, 2, 3]; arr.push(4); console.log(arr);</code></div>
+    <div class="quiz-options" data-answer="1">
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">A</span>
+        <span>報錯，因為 const 宣告的變數不能被修改</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)" data-correct>
+        <span class="quiz-key">B</span>
+        <span>[1, 2, 3, 4]</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">C</span>
+        <span>[1, 2, 3]，因為 const 不允許改變</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">D</span>
+        <span>undefined</span>
+      </div>
+    </div>
+    <div class="quiz-fb">
+      <strong>正確！</strong> <code>const</code> 鎖定的是「綁定（binding）」，
+      不是值本身。陣列是物件，<code>arr</code> 存的是記憶體位址，這個位址沒有改變，
+      所以 <code>push</code> 完全合法。只有 <code>arr = [5, 6]</code> 這種重新賦值才會報錯。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">下列哪個陣列方法<strong>不會</strong>修改原陣列？</div>
+    <div class="quiz-options" data-answer="2">
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">A</span>
+        <span>push()</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">B</span>
+        <span>splice()</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)" data-correct>
+        <span class="quiz-key">C</span>
+        <span>map()</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">D</span>
+        <span>sort()</span>
+      </div>
+    </div>
+    <div class="quiz-fb">
+      <strong>正確！</strong> <code>map()</code> 回傳一個全新的陣列，不修改原陣列。
+      <code>push()</code> 在末端新增元素、<code>splice()</code> 可插入/刪除、<code>sort()</code> 就地排序，
+      三者都會直接改變原陣列。這個區別在 React 狀態管理中極為重要。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">以下程式碼的輸出是什麼？<br><code>console.log(typeof null)</code></div>
+    <div class="quiz-options" data-answer="3">
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">A</span>
+        <span>"null"</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">B</span>
+        <span>"undefined"</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)" data-correct>
+        <span class="quiz-key">C</span>
+        <span>"object"</span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">D</span>
+        <span>"boolean"</span>
+      </div>
+    </div>
+    <div class="quiz-fb">
+      <strong>正確！</strong> <code>typeof null === "object"</code> 是 JavaScript 的歷史遺留 bug，
+      從 1995 年第一版就存在，為了不破壞現有程式碼而保留至今。
+      要正確判斷一個值是否為 null，應使用嚴格相等：<code>value === null</code>。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">以下哪個寫法可以將陣列 <code>[1,2,3,4,5]</code> 轉換成所有偶數的平方和？</div>
+    <div class="quiz-options" data-answer="4">
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">A</span>
+        <span><code>[1,2,3,4,5].map(n => n*n).filter(n => n%2===0).reduce((a,n)=>a+n)</code></span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)" data-correct>
+        <span class="quiz-key">B</span>
+        <span><code>[1,2,3,4,5].filter(n => n%2===0).map(n => n*n).reduce((a,n)=>a+n, 0)</code></span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">C</span>
+        <span><code>[1,2,3,4,5].reduce((a,n) => a+n*n, 0)</code></span>
+      </div>
+      <div class="quiz-opt" onclick="answerQuiz(this)">
+        <span class="quiz-key">D</span>
+        <span><code>[1,2,3,4,5].forEach(n => n%2===0 ? n*n : 0)</code></span>
+      </div>
+    </div>
+    <div class="quiz-fb">
+      <strong>正確！</strong> 正確順序：先 <code>filter</code> 篩出偶數 → 再 <code>map</code> 取平方 → 最後 <code>reduce</code> 加總。
+      選項 A 的錯誤在於先取平方再篩偶數，會把奇數的平方（如 9、25）誤篩出來。
+      <code>reduce</code> 第二參數 <code>0</code> 確保空陣列時不報錯。
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">07 &mdash; Project</div>
+  <h2 class="section-title">本週專案</h2>
+
+  <div class="project-hero">
+    <div class="project-eyebrow">Week 04 Project</div>
+    <div class="project-name">互動式 Todo List</div>
+    <div class="project-desc">
+      運用本週學到的變數、函式、陣列與物件，建立一個完整的 Todo List 應用程式。
+      重點在於用純 JavaScript 管理資料狀態，並動態更新 DOM。
+    </div>
+  </div>
+
+  <!-- Live Demo -->
+  <div class="demo-wrap">
+    <div class="demo-bar"><span>LIVE DEMO</span> 互動式 Todo List — 點擊體驗</div>
+    <div class="demo-content">
+      <div class="todo-app">
+        <div class="todo-app-title">
+          My Todos
+          <span id="todoCount">0 剩餘</span>
+        </div>
+        <div class="todo-input-row">
+          <input class="todo-input" id="todoInput" placeholder="新增任務..." type="text">
+          <button class="todo-add-btn" onclick="addTodo()">新增</button>
+        </div>
+        <div class="todo-filter-row">
+          <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
+          <button class="filter-btn" onclick="setFilter('active', this)">未完成</button>
+          <button class="filter-btn" onclick="setFilter('done', this)">已完成</button>
+        </div>
+        <div class="todo-list" id="todoList"></div>
+        <div class="todo-footer">
+          <span id="todoStatus">沒有任務</span>
+          <button class="todo-clear" onclick="clearDone()">清除已完成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">實作步驟</h3>
+
+  <div class="steps">
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">建立資料結構</div>
+        <div class="step-body">設計 todo 物件格式：<code>{ id, text, done, createdAt }</code>，以及儲存所有任務的陣列 <code>let todos = []</code>。思考為何用 <code>let</code> 而非 <code>const</code>。</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">實作 addTodo 函式</div>
+        <div class="step-body">取得 input 值、驗證不為空、建立新的 todo 物件，用 spread 或 push 加入陣列，清空 input，呼叫 render 更新畫面。</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">實作 toggleTodo 函式</div>
+        <div class="step-body">用 <code>map</code> 找到目標 id，用 spread <code>{ ...todo, done: !todo.done }</code> 切換狀態，回傳新陣列賦值給 <code>todos</code>。</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">實作 deleteTodo 函式</div>
+        <div class="step-body">用 <code>filter</code> 過濾掉目標 id，回傳新陣列。理解為何不用 <code>splice</code>（因為 splice 修改原陣列）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">實作篩選與渲染</div>
+        <div class="step-body">加入 <code>filter</code> 狀態變數（all/active/done），在 render 前先根據狀態篩選，用 <code>map</code> 將資料轉換為 HTML 字串，設定到容器的 <code>innerHTML</code>。</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num"></span>
+      <div>
+        <div class="step-title">持久化（加分題）</div>
+        <div class="step-body">使用 <code>localStorage.setItem('todos', JSON.stringify(todos))</code> 在每次修改後儲存，頁面載入時用 <code>JSON.parse(localStorage.getItem('todos'))</code> 讀回。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">完成度自我檢核</h3>
+  <div class="checklist" id="projectChecklist">
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>能新增任務，並在按下 Enter 鍵時也能觸發新增</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>點擊任務可切換完成 / 未完成狀態，視覺上有明顯差異</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>能刪除單一任務，底部「清除已完成」能一次刪除所有完成項目</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>篩選按鈕（全部 / 未完成 / 已完成）功能正常</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>底部顯示「X 個未完成任務」的計數，隨操作即時更新</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>使用 localStorage 讓資料在重新整理後依然存在</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>所有資料操作都是「不可變」風格（map、filter、spread），不直接修改 todos 陣列元素</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">08 &mdash; Resources</div>
+  <h2 class="section-title">延伸學習資源</h2>
+  <p class="section-intro">搭配這些資源可以加深對 JavaScript 核心概念的理解。</p>
+
+  <div class="resource-grid">
+    <a class="resource-card" href="https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Guide" target="_blank">
+      <span class="resource-type">官方文件</span>
+      <span class="resource-name">MDN JavaScript 指南</span>
+      <span class="resource-desc">Mozilla 維護的官方文件，是學習 JavaScript 最權威的中文資源，每個 API 都有詳細說明與範例。</span>
+      <span class="resource-arrow">→</span>
+    </a>
+    <a class="resource-card" href="https://javascript.info" target="_blank">
+      <span class="resource-type">互動教程</span>
+      <span class="resource-name">javascript.info</span>
+      <span class="resource-desc">從基礎到進階的完整 JS 教程，圖文並茂，有大量練習題，是目前最推薦的英文學習資源。</span>
+      <span class="resource-arrow">→</span>
+    </a>
+    <a class="resource-card" href="https://eloquentjavascript.net" target="_blank">
+      <span class="resource-type">電子書</span>
+      <span class="resource-name">Eloquent JavaScript</span>
+      <span class="resource-desc">深入淺出的 JS 書籍，免費線上閱讀。第 3、4、5 章對應本週內容，強烈推薦搭配閱讀。</span>
+      <span class="resource-arrow">→</span>
+    </a>
+    <a class="resource-card" href="https://www.youtube.com/watch?v=W6NZfCO5SIk" target="_blank">
+      <span class="resource-type">影片教學</span>
+      <span class="resource-name">JavaScript in 1 Hour — Programming with Mosh</span>
+      <span class="resource-desc">Mosh 的 JS 快速入門，清楚覆蓋本週所有核心概念，適合複習或預習使用。</span>
+      <span class="resource-arrow">→</span>
+    </a>
+  </div>
+</section>
+
+</div><!-- /content -->
+
+<nav class="bottom-nav">
+  <a class="nav-btn" href="week3.html">&larr; Week 03 — CSS 動畫</a>
+  <a class="home-link" href="index.html">&#8962; 課程總覽</a>
+  <a class="nav-btn" href="week5.html">Week 05 — DOM 操作 &rarr;</a>
+</nav>
+</main>
+
+<script>
+// ─── Progress bar ───────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('progressBar')
+  const total = document.body.scrollHeight - window.innerHeight
+  el.style.width = (window.scrollY / total * 100) + '%'
+})
+
+// ─── Section reveal ─────────────────────────────────────
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+document.querySelectorAll('.section').forEach(s => obs.observe(s))
+
+// ─── TOC active ─────────────────────────────────────────
+const tocLinks = document.querySelectorAll('.toc-item')
+const sections = document.querySelectorAll('.section[id]')
+window.addEventListener('scroll', () => {
+  let cur = ''
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) cur = s.id })
+  tocLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + cur)
+  })
+}, { passive: true })
+
+// ─── Quiz ────────────────────────────────────────────────
+function answerQuiz(opt) {
+  const block = opt.closest('.quiz-block')
+  if (block.dataset.answered) return
+  block.dataset.answered = '1'
+  const isCorrect = opt.hasAttribute('data-correct')
+  opt.classList.add(isCorrect ? 'correct' : 'wrong')
+  if (!isCorrect) block.querySelector('[data-correct]').classList.add('correct')
+  block.querySelector('.quiz-fb').classList.add('show')
+}
+
+// ─── Checklist ───────────────────────────────────────────
+function toggleCheck(item) {
+  item.classList.toggle('done')
+  item.querySelector('.check-box').textContent = item.classList.contains('done') ? '✓' : ''
+}
+
+// ─── Todo Demo ───────────────────────────────────────────
+let todos = [
+  { id: 1, text: '學習 JavaScript 基礎', done: true },
+  { id: 2, text: '完成 Todo List 專案', done: false },
+  { id: 3, text: '練習陣列高階方法', done: false },
+]
+let currentFilter = 'all'
+
+function getFiltered() {
+  if (currentFilter === 'active') return todos.filter(t => !t.done)
+  if (currentFilter === 'done') return todos.filter(t => t.done)
+  return todos
+}
+
+function renderTodos() {
+  const list = document.getElementById('todoList')
+  const filtered = getFiltered()
+  const activeCount = todos.filter(t => !t.done).length
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-family:var(--font-m);font-size:.72rem;padding:1.5rem 0;">沒有任務</div>'
+  } else {
+    list.innerHTML = filtered.map(t => `
+      <div class="todo-item ${t.done ? 'done' : ''}" data-id="${t.id}">
+        <div class="todo-check" onclick="toggleTodo(${t.id})">${t.done ? '✓' : ''}</div>
+        <span class="todo-text" onclick="toggleTodo(${t.id})">${escHtml(t.text)}</span>
+        <button class="todo-delete" onclick="deleteTodo(${t.id})" title="刪除">✕</button>
+      </div>
+    `).join('')
+  }
+
+  document.getElementById('todoCount').textContent = activeCount + ' 剩餘'
+  document.getElementById('todoStatus').textContent =
+    todos.length === 0 ? '沒有任務' : `${activeCount} / ${todos.length} 未完成`
+}
+
+function escHtml(str) {
+  return str.replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+}
+
+function addTodo() {
+  const input = document.getElementById('todoInput')
+  const text = input.value.trim()
+  if (!text) return
+  todos = [...todos, { id: Date.now(), text, done: false }]
+  input.value = ''
+  renderTodos()
+}
+
+function toggleTodo(id) {
+  todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t)
+  renderTodos()
+}
+
+function deleteTodo(id) {
+  todos = todos.filter(t => t.id !== id)
+  renderTodos()
+}
+
+function clearDone() {
+  todos = todos.filter(t => !t.done)
+  renderTodos()
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  renderTodos()
+}
+
+document.getElementById('todoInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTodo()
+})
+
+renderTodos()
+</script>
+</body>
+</html>
