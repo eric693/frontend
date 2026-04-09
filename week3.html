@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 03 — CSS 動畫、變數與媒體查詢</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0810;
+  --bg2:      #100d1a;
+  --bg3:      #16122a;
+  --surface:  #1e1830;
+  --border:   #2e2848;
+  --text:     #ede9f6;
+  --muted:    #7b6fa0;
+  --accent:   #e8547a;
+  --accent-g: linear-gradient(135deg,#e8547a,#f5923e);
+  --accent2:  #f5923e;
+  --accent3:  #a78bfa;
+  --green:    #34d399;
+  --blue:     #60a5fa;
+  --glow:     rgba(232,84,122,0.25);
+  --glow3:    rgba(167,139,250,0.2);
+  --font-d:   'Playfair Display', serif;
+  --font-b:   'Outfit', sans-serif;
+  --font-m:   'JetBrains Mono', monospace;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+
+/* ─ ambient orbs ─ */
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(80px);opacity:0.15;
+}
+body::before{width:500px;height:500px;background:radial-gradient(circle,#e8547a,transparent);top:-100px;right:-100px;}
+body::after{width:400px;height:400px;background:radial-gradient(circle,#a78bfa,transparent);bottom:-80px;left:-80px;}
+
+/* ─ PROGRESS ─ */
+.progress-bar{
+  position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;
+  background:var(--accent-g);
+  box-shadow:0 0 10px var(--accent);
+  transition:width .08s linear;
+}
+
+/* ─ HEADER ─ */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  background:rgba(10,8,16,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;
+  padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);
+}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+/* ─ TOC ─ */
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{
+  display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;
+  font-family:var(--font-m);font-size:.58rem;color:var(--muted);
+  text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;
+}
+.toc-item::before{
+  content:'';width:3px;height:3px;border-radius:50%;background:var(--border);
+  flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;
+}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{
+  background:var(--accent);width:14px;border-radius:2px;
+  box-shadow:0 0 6px var(--accent);
+}
+
+/* ─ MAIN ─ */
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* ─ HERO ─ */
+.hero{
+  padding:5rem 3.5rem 4.5rem;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;min-height:460px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+/* animated gradient title background */
+.hero-glow{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(232,84,122,.12),transparent);
+  pointer-events:none;
+}
+.hero-label{
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;
+  opacity:0;animation:fadeUp .5s .1s forwards;
+}
+.hero h1{
+  font-family:var(--font-d);font-weight:900;
+  font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;
+  letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;
+  opacity:0;animation:fadeUp .5s .25s forwards;
+}
+.hero h1 .hi{
+  background:var(--accent-g);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero h1 .hi2{color:var(--accent3);}
+.hero-desc{
+  font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;
+  opacity:0;animation:fadeUp .5s .38s forwards;
+}
+/* Live spinning ring in hero corner */
+.hero-deco{
+  position:absolute;right:4rem;top:50%;transform:translateY(-50%);
+  width:200px;height:200px;pointer-events:none;
+  opacity:0;animation:fadeUp .5s .6s forwards;
+}
+.hero-deco-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent),var(--accent3)) border-box;
+  animation:spin 8s linear infinite;
+}
+.hero-deco-ring:nth-child(2){
+  inset:20px;animation-duration:5s;animation-direction:reverse;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent3),var(--accent2)) border-box;
+}
+.hero-deco-ring:nth-child(3){
+  inset:40px;animation-duration:3s;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent2),var(--accent)) border-box;
+}
+.hero-deco-center{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.1em;
+}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;
+  padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);
+}
+.badge.hi{border-color:rgba(232,84,122,.5);color:var(--accent);background:rgba(232,84,122,.08);}
+.badge.hi2{border-color:rgba(167,139,250,.4);color:var(--accent3);background:rgba(167,139,250,.07);}
+
+/* ─ CONTENT ─ */
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+/* ─ SECTION ─ */
+.section{
+  padding:4rem 0;border-bottom:1px solid var(--border);
+  opacity:0;transform:translateY(18px);
+  transition:opacity .55s,transform .55s;
+}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{
+  font-family:var(--font-m);font-size:.63rem;color:var(--accent);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.7rem;
+}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{
+  font-family:var(--font-d);font-size:1.95rem;font-weight:700;
+  color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;
+}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+/* ─ OBJECTIVE GRID ─ */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{
+  background:var(--bg2);padding:1.3rem 1.5rem;
+  display:flex;gap:1rem;align-items:flex-start;transition:background .2s;
+}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);
+  background:rgba(232,84,122,.1);border:1px solid rgba(232,84,122,.25);
+  padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;
+}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+/* ─ CONCEPT BLOCKS ─ */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{
+  padding:1.2rem 1.8rem;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+}
+.cicon{
+  width:30px;height:30px;background:var(--accent-g);color:#fff;
+  font-family:var(--font-m);font-size:.65rem;font-weight:500;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ctitle{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#bbb4d0;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+/* ─ CALLOUTS ─ */
+.note{
+  border-left:2px solid var(--accent);background:rgba(232,84,122,.06);
+  padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;
+  color:#d4a8b8;line-height:1.7;
+}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--green);background:rgba(52,211,153,.06);color:#9dd4bc;}
+.note.tip .note-label{color:var(--green);}
+.note.info{border-left-color:var(--accent3);background:rgba(167,139,250,.06);color:#c4baec;}
+.note.info .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--accent2);background:rgba(245,146,62,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--accent2);}
+
+/* ─ CODE ─ */
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{
+  background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);
+}
+.t{color:#93c5fd;} /* selector/tag */
+.p{color:#86efac;} /* property */
+.v{color:#fde68a;} /* value */
+.c{color:#4b4570;font-style:italic;} /* comment */
+.s{color:#f0abfc;} /* at-rule/special */
+.kf{color:#fb7185;} /* keyframe name */
+.u{color:#a5f3fc;} /* unit */
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border);padding:.1em .4em;border-bottom-width:2px;}
+
+/* ─ PROPERTY TABLE ─ */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(46,40,72,.5);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* ─────────────────────────────────────────
+   LIVE DEMO AREAS  (the star of week 3)
+───────────────────────────────────────── */
+.demo-wrap{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.demo-bar span{color:var(--accent);}
+.demo-content{padding:2rem;background:var(--bg);}
+
+/* --- transition demo --- */
+.trans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.trans-box{
+  height:70px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.65rem;letter-spacing:.08em;
+  border:1px solid var(--border);color:var(--muted);background:var(--bg2);
+  cursor:pointer;
+}
+.trans-box:hover{color:#fff;}
+.tb-color{transition:background .4s ease,color .3s;}
+.tb-color:hover{background:var(--accent);}
+.tb-scale{transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.tb-scale:hover{transform:scale(1.15);}
+.tb-multi{transition:background .3s,transform .3s,border-radius .3s,box-shadow .3s;}
+.tb-multi:hover{background:var(--accent3);transform:translateY(-6px);border-radius:50%;box-shadow:0 12px 30px var(--glow3);}
+
+/* --- easing visual --- */
+.easing-track{
+  position:relative;height:60px;background:var(--bg2);
+  border:1px solid var(--border);overflow:hidden;margin:.8rem 0;
+  display:flex;align-items:center;
+}
+.easing-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);padding:0 1rem;white-space:nowrap;width:120px;flex-shrink:0;}
+.easing-runner{
+  width:32px;height:32px;background:var(--accent-g);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.55rem;color:#fff;
+}
+.easing-track:hover .easing-runner{transform:translateX(calc(100% * 5));}
+.ease-linear .easing-runner{transition:transform 1.2s linear;}
+.ease-in .easing-runner{transition:transform 1.2s ease-in;}
+.ease-out .easing-runner{transition:transform 1.2s ease-out;}
+.ease-inout .easing-runner{transition:transform 1.2s ease-in-out;}
+.ease-bounce .easing-runner{transition:transform 1.2s cubic-bezier(.34,1.56,.64,1);}
+.ease-elastic .easing-runner{background:linear-gradient(135deg,var(--accent3),var(--accent2));transition:transform 1.2s cubic-bezier(.68,-.55,.27,1.55);}
+
+/* --- keyframe demo cards --- */
+.kf-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1rem 0;}
+.kf-card{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem;
+}
+.kf-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-align:center;}
+/* spin */
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.demo-spin{width:44px;height:44px;border:2px solid transparent;border-radius:50%;
+  background:linear-gradient(var(--bg2),var(--bg2)) padding-box,
+             linear-gradient(135deg,var(--accent),var(--accent3)) border-box;
+  animation:spin 2s linear infinite;}
+/* pulse */
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.18);opacity:.7}}
+.demo-pulse{width:44px;height:44px;background:var(--accent-g);border-radius:50%;animation:pulse 1.5s ease-in-out infinite;}
+/* bounce */
+@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-20px)}60%{transform:translateY(-10px)}}
+.demo-bounce{
+  width:36px;height:36px;background:linear-gradient(135deg,var(--accent3),var(--blue));border-radius:4px;
+  animation:bounce 1.2s ease-in-out infinite;
+}
+/* wave text */
+@keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.demo-wave{display:flex;gap:3px;}
+.demo-wave span{
+  display:inline-block;font-family:var(--font-d);font-size:1.3rem;font-weight:700;
+  background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:wave 1s ease-in-out infinite;
+}
+.demo-wave span:nth-child(2){animation-delay:.1s;}
+.demo-wave span:nth-child(3){animation-delay:.2s;}
+.demo-wave span:nth-child(4){animation-delay:.3s;}
+.demo-wave span:nth-child(5){animation-delay:.4s;}
+.demo-wave span:nth-child(6){animation-delay:.5s;}
+/* shimmer */
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.demo-shimmer{
+  width:140px;height:14px;border-radius:6px;
+  background:linear-gradient(90deg,var(--bg3) 25%,var(--border) 50%,var(--bg3) 75%);
+  background-size:200%;
+  animation:shimmer 1.6s linear infinite;
+}
+/* fade-in scale */
+@keyframes popIn{0%{opacity:0;transform:scale(.7) rotate(-8deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.demo-pop{
+  width:50px;height:50px;background:var(--accent-g);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.65rem;color:#fff;
+  animation:popIn .6s cubic-bezier(.34,1.56,.64,1) infinite alternate;
+}
+
+/* --- CSS variable live demo --- */
+.var-playground{
+  background:var(--bg2);border:1px solid var(--border);padding:2rem;
+  display:flex;flex-direction:column;gap:1.5rem;
+}
+.var-row{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;}
+.var-row label{font-family:var(--font-m);font-size:.68rem;color:var(--muted);width:140px;flex-shrink:0;}
+.var-row input[type=range]{flex:1;min-width:140px;accent-color:var(--accent);}
+.var-row input[type=color]{width:40px;height:28px;border:1px solid var(--border);background:none;cursor:pointer;border-radius:2px;}
+.var-preview{
+  padding:1.5rem 2rem;border:1px solid var(--border);
+  transition:all .3s;font-family:var(--font-m);font-size:.8rem;text-align:center;
+}
+
+/* --- dark mode demo --- */
+.dark-toggle-demo{
+  display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+}
+.theme-panel{padding:1.5rem;display:flex;flex-direction:column;gap:.8rem;}
+.theme-panel.light{background:#f8f5ee;color:#1a1612;}
+.theme-panel.dark{background:#1a1612;color:#f8f5ee;}
+.theme-label{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;margin-bottom:.3rem;}
+.theme-panel.light .theme-label{color:#8a826f;}
+.theme-panel.dark .theme-label{color:#7a7268;}
+.mini-card{padding:.8rem 1rem;border-radius:4px;font-size:.8rem;}
+.theme-panel.light .mini-card{background:#fff;border:1px solid #d8d0c4;color:#1a1612;}
+.theme-panel.dark .mini-card{background:#2a2520;border:1px solid #3a352e;color:#f0ede8;}
+.mini-btn{padding:.4rem .9rem;font-family:var(--font-m);font-size:.65rem;border:none;cursor:pointer;transition:opacity .2s;}
+.mini-btn:hover{opacity:.8;}
+.theme-panel.light .mini-btn{background:#c4581a;color:#fff;}
+.theme-panel.dark .mini-btn{background:#c8f06e;color:#0e0e0f;}
+
+/* --- animation controls demo --- */
+.anim-ctrl-demo{display:flex;flex-direction:column;gap:1rem;}
+.ctrl-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.ctrl-label{font-family:var(--font-m);font-size:.65rem;color:var(--muted);width:130px;flex-shrink:0;}
+.ctrl-btn{
+  font-family:var(--font-m);font-size:.62rem;padding:.28rem .8rem;
+  background:var(--bg3);border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;transition:all .15s;letter-spacing:.06em;
+}
+.ctrl-btn:hover,.ctrl-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,84,122,.08);}
+.ctrl-target{
+  width:60px;height:60px;background:var(--accent-g);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.6rem;color:#fff;
+}
+
+/* ─ COMPARE ─ */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{
+  padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;
+  display:flex;align-items:center;gap:.5rem;
+}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--green);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+
+/* ─ QUIZ ─ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;
+  background:var(--bg);border:1px solid var(--border);cursor:pointer;
+  font-size:.87rem;transition:border-color .15s,background .15s;
+  user-select:none;line-height:1.5;
+}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(232,84,122,.06);}
+.quiz-opt.correct{border-color:var(--green);background:rgba(52,211,153,.06);color:var(--green);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* ─ CHECKLIST ─ */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;
+  background:var(--bg2);border:1px solid var(--border);font-size:.87rem;
+  cursor:pointer;transition:background .15s;user-select:none;
+}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* ─ PROJECT ─ */
+.project-hero{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;
+}
+.project-hero::after{
+  content:'@keyframes';position:absolute;right:1.5rem;bottom:-.5rem;
+  font-family:var(--font-m);font-size:3.5rem;color:var(--accent);
+  opacity:.06;line-height:1;pointer-events:none;white-space:nowrap;
+}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* ─ RESOURCES ─ */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+/* ─ BOTTOM NAV ─ */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+/* ─ KEYFRAME ANIMATIONS page-wide ─ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─ RESPONSIVE ─ */
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}
+  .header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .trans-grid{grid-template-columns:1fr 1fr;}
+  .kf-grid{grid-template-columns:1fr 1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .dark-toggle-demo{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 03 / 18 &mdash; CSS ANIMATION</div>
+  <nav class="header-nav">
+    <a href="week2.html">&larr; Week 02</a>
+    <a href="index.html">總覽</a>
+    <a href="week4.html">Week 04 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">CSS 自訂屬性</a>
+  <a class="toc-item" href="#concept-2">Transition</a>
+  <a class="toc-item" href="#concept-3">Keyframe 動畫</a>
+  <a class="toc-item" href="#concept-4">動畫控制</a>
+  <a class="toc-item" href="#concept-5">深色模式</a>
+  <a class="toc-item" href="#concept-6">完整 RWD</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-deco">
+      <div class="hero-deco-ring"></div>
+      <div class="hero-deco-ring"></div>
+      <div class="hero-deco-ring"></div>
+      <div class="hero-deco-center">@keyframes</div>
+    </div>
+    <div class="hero-label">PHASE 01 &mdash; 打穩基礎 / WEEK 03</div>
+    <h1>CSS <span class="hi">動畫</span>、<br>變數與<span class="hi2">深色模式</span></h1>
+    <p class="hero-desc">讓頁面動起來。這週你將掌握 CSS 的動態層——transition 讓互動有靈魂，@keyframes 讓元素有生命，CSS 變數讓深色模式只需幾行程式碼。</p>
+    <div class="hero-badges">
+      <span class="badge hi">CSS 自訂屬性</span>
+      <span class="badge hi">Transition</span>
+      <span class="badge hi">@keyframes</span>
+      <span class="badge hi2">深色模式</span>
+      <span class="badge hi2">完整 RWD</span>
+      <span class="badge">8&ndash;10 小時</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個核心學習成果，涵蓋 CSS 動態設計的完整基礎。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">使用 CSS 自訂屬性（變數）建立一套可維護的設計系統，並理解變數的作用域與繼承規則</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">使用 <code>transition</code> 為 hover、focus、active 狀態加入平滑過渡，並選擇合適的 timing function</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">使用 <code>@keyframes</code> 定義多步驟動畫，並用 <code>animation</code> 屬性控制播放次數、延遲、填充模式</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">理解 <code>animation-fill-mode</code> 的四個值，並知道何時使用 <code>forwards</code> 讓動畫停在最後一幀</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">使用 <code>prefers-color-scheme</code> 媒體查詢實作自動深色模式，搭配 CSS 變數讓切換只需覆寫變數</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">完整實作三個 RWD 斷點（手機 / 平板 / 桌面），理解 mobile-first 策略並能獨立決定斷點值</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: CSS Custom Properties -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">CSS 自訂屬性（變數）</h2>
+      <p class="section-intro">CSS 自訂屬性不只是「把顏色存起來」，它是建立整套設計系統的基礎，也是實現動態主題切換（深色模式）最乾淨的方式。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">01</div>
+          <div><div class="ctitle">宣告與使用</div><div class="csub">--variable-name / var()</div></div>
+        </div>
+        <div class="cbody">
+          <p>CSS 自訂屬性以 <em>兩個連字號</em>（<code>--</code>）開頭宣告，用 <code>var()</code> 函式取用。慣例上，全域變數宣告在 <code>:root</code> 選擇器中，讓整份樣式表都能存取。</p>
+          <p><code>var()</code> 接受第二個參數作為<strong>備用值</strong>（fallback）：<code>var(--color-primary, #2563eb)</code>——當變數未定義時使用 <code>#2563eb</code>。這讓程式碼更健壯，尤其在元件化開發中很有用。</p>
+          <p>CSS 變數遵循<em>作用域與繼承規則</em>：在某個元素上宣告的變數，只有該元素及其後代可以使用。你可以在子元素中覆寫父元素定義的變數，實現區域主題效果。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 自訂屬性完整語法</div>
+        </div>
+        <pre><span class="c">/* ── 全域設計 Token ── */</span>
+<span class="t">:root</span> {
+  <span class="c">/* 顏色系統 */</span>
+  <span class="p">--color-bg</span>:        <span class="v">#ffffff</span>;
+  <span class="p">--color-bg-alt</span>:    <span class="v">#f8f9fa</span>;
+  <span class="p">--color-text</span>:      <span class="v">#1a1a2e</span>;
+  <span class="p">--color-muted</span>:     <span class="v">#6b7280</span>;
+  <span class="p">--color-primary</span>:   <span class="v">#e8547a</span>;
+  <span class="p">--color-secondary</span>: <span class="v">#a78bfa</span>;
+  <span class="p">--color-border</span>:    <span class="v">#e5e7eb</span>;
+
+  <span class="c">/* 間距比例尺（4px base）*/</span>
+  <span class="p">--space-1</span>: <span class="v">.25rem</span>;   <span class="c">/* 4px  */</span>
+  <span class="p">--space-2</span>: <span class="v">.5rem</span>;    <span class="c">/* 8px  */</span>
+  <span class="p">--space-4</span>: <span class="v">1rem</span>;     <span class="c">/* 16px */</span>
+  <span class="p">--space-8</span>: <span class="v">2rem</span>;     <span class="c">/* 32px */</span>
+  <span class="p">--space-16</span>: <span class="v">4rem</span>;    <span class="c">/* 64px */</span>
+
+  <span class="c">/* 圓角 */</span>
+  <span class="p">--radius-sm</span>: <span class="v">4px</span>;
+  <span class="p">--radius-md</span>: <span class="v">8px</span>;
+  <span class="p">--radius-lg</span>: <span class="v">16px</span>;
+  <span class="p">--radius-full</span>: <span class="v">9999px</span>; <span class="c">/* 膠囊形狀 */</span>
+
+  <span class="c">/* 陰影 */</span>
+  <span class="p">--shadow-sm</span>:  <span class="v">0 1px 3px rgba(0,0,0,.1)</span>;
+  <span class="p">--shadow-md</span>:  <span class="v">0 4px 12px rgba(0,0,0,.12)</span>;
+  <span class="p">--shadow-lg</span>:  <span class="v">0 12px 32px rgba(0,0,0,.15)</span>;
+
+  <span class="c">/* 過渡速度 */</span>
+  <span class="p">--transition-fast</span>:   <span class="v">.15s ease</span>;
+  <span class="p">--transition-normal</span>: <span class="v">.25s ease</span>;
+  <span class="p">--transition-slow</span>:   <span class="v">.4s ease</span>;
+}
+
+<span class="c">/* ── 在元素中使用變數 ── */</span>
+<span class="t">.card</span> {
+  <span class="p">background</span>:    <span class="v">var(--color-bg)</span>;
+  <span class="p">border</span>:        <span class="v">1px solid var(--color-border)</span>;
+  <span class="p">border-radius</span>: <span class="v">var(--radius-md)</span>;
+  <span class="p">padding</span>:       <span class="v">var(--space-8)</span>;
+  <span class="p">box-shadow</span>:    <span class="v">var(--shadow-sm)</span>;
+  <span class="p">transition</span>:    <span class="v">box-shadow var(--transition-normal)</span>;
+}
+<span class="t">.card:hover</span> {
+  <span class="p">box-shadow</span>: <span class="v">var(--shadow-lg)</span>;
+}
+
+<span class="c">/* ── 區域變數覆寫（主題島）── */</span>
+<span class="t">.card-featured</span> {
+  <span class="p">--color-bg</span>:     <span class="v">#fff0f4</span>; <span class="c">/* 只在這張卡片內有效 */</span>
+  <span class="p">--color-border</span>: <span class="v">#e8547a</span>;
+  <span class="p">background</span>: <span class="v">var(--color-bg)</span>;
+}
+
+<span class="c">/* ── 備用值（fallback）── */</span>
+<span class="t">.text</span> {
+  <span class="p">color</span>: <span class="v">var(--color-brand, #e8547a)</span>; <span class="c">/* 未定義時用 #e8547a */</span>
+}</pre>
+      </div>
+
+      <!-- Live CSS Variable Playground -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><span>LIVE PLAYGROUND</span><span>拖動滑桿即時修改 CSS 變數</span></div>
+        <div class="demo-content">
+          <div class="var-playground">
+            <div class="var-row">
+              <label>--radius: <span id="radiusVal">12</span>px</label>
+              <input type="range" min="0" max="50" value="12" id="radiusSlider">
+            </div>
+            <div class="var-row">
+              <label>--padding: <span id="padVal">20</span>px</label>
+              <input type="range" min="4" max="48" value="20" id="padSlider">
+            </div>
+            <div class="var-row">
+              <label>--bg-color:</label>
+              <input type="color" value="#e8547a" id="bgColor">
+            </div>
+            <div class="var-preview" id="varPreview"
+                 style="border-radius:12px;padding:20px;background:rgba(232,84,122,.15);border-color:rgba(232,84,122,.4);color:var(--text);">
+              CSS 變數讓這個預覽框的樣式隨時改變
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note tip">
+        <span class="note-label">命名慣例</span>
+        推薦使用 <strong>語意命名</strong>而非描述外觀：<code>--color-primary</code> 比 <code>--color-pink</code> 好，因為當你想把主色從粉紅改成藍色時，後者就失去意義了。設計系統通常分為三層：<em>Primitive Token</em>（原始值：<code>--pink-500: #e8547a</code>）、<em>Semantic Token</em>（語意值：<code>--color-primary: var(--pink-500)</code>）、<em>Component Token</em>（元件值：<code>--btn-bg: var(--color-primary)</code>）。
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: Transition -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">Transition 過渡效果</h2>
+      <p class="section-intro">Transition 是 CSS 動畫的入門磚——它讓屬性值的改變不是瞬間跳躍，而是平滑過渡。掌握它，你的 UI 就有了基本的生命感。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">02</div>
+          <div><div class="ctitle">transition 語法拆解</div><div class="csub">property / duration / timing / delay</div></div>
+        </div>
+        <div class="cbody">
+          <p>transition 由四個部分組成：<em>要過渡的屬性</em>、<em>持續時間</em>、<em>緩動函數</em>（timing function）、<em>延遲時間</em>。可以一次設定多個屬性，用逗號分隔。</p>
+          <p>使用 <code>transition: all</code> 雖然方便，但會監聽所有屬性的變化，效能較差且可能產生意外效果（例如 <code>display</code> 無法過渡）。<strong>推薦明確指定要過渡的屬性</strong>，如 <code>transition: background-color .2s, transform .3s</code>。</p>
+          <div class="note warn">
+            <span class="note-label">哪些屬性可以 transition？</span>
+            只有「數值型」屬性才能平滑過渡：顏色、尺寸、位置、透明度、transform 等。<code>display: none → block</code>、<code>height: 0 → auto</code> 這類無法數值插值的改變不能直接 transition（後者需要技巧處理）。
+          </div>
+        </div>
+      </div>
+
+      <!-- Transition Live Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><span>LIVE DEMO</span><span>滑鼠移入方塊觀察效果</span></div>
+        <div class="demo-content">
+          <div class="trans-grid">
+            <div style="display:flex;flex-direction:column;gap:.6rem;align-items:center;">
+              <div class="trans-box tb-color">background-color<br><span style="font-size:.55rem;color:#888">.4s ease</span></div>
+              <div style="font-family:var(--font-m);font-size:.58rem;color:var(--muted);">顏色過渡</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.6rem;align-items:center;">
+              <div class="trans-box tb-scale">transform<br><span style="font-size:.55rem;color:#888">cubic-bezier 彈跳</span></div>
+              <div style="font-family:var(--font-m);font-size:.58rem;color:var(--muted);">縮放 + 彈跳</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.6rem;align-items:center;">
+              <div class="trans-box tb-multi">多屬性<br><span style="font-size:.55rem;color:#888">background+transform+radius</span></div>
+              <div style="font-family:var(--font-m);font-size:.58rem;color:var(--muted);">多屬性同時過渡</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Easing Demo -->
+      <div class="demo-wrap" style="margin-top:1.5rem;">
+        <div class="demo-bar"><span>EASING FUNCTIONS</span><span>滑鼠移入各列觀察速度曲線差異</span></div>
+        <div class="demo-content" style="padding:1rem 1.5rem;display:flex;flex-direction:column;gap:.4rem;">
+          <div class="easing-track ease-linear"><span class="easing-label">linear</span><div class="easing-runner">&#9658;</div></div>
+          <div class="easing-track ease-in"><span class="easing-label">ease-in</span><div class="easing-runner">&#9658;</div></div>
+          <div class="easing-track ease-out"><span class="easing-label">ease-out</span><div class="easing-runner">&#9658;</div></div>
+          <div class="easing-track ease-inout"><span class="easing-label">ease-in-out</span><div class="easing-runner">&#9658;</div></div>
+          <div class="easing-track ease-bounce"><span class="easing-label">cubic-bezier(彈跳)</span><div class="easing-runner">&#9658;</div></div>
+          <div class="easing-track ease-elastic"><span class="easing-label">cubic-bezier(彈性)</span><div class="easing-runner" style="background:linear-gradient(135deg,var(--accent3),var(--accent2));">&#9658;</div></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; Transition 完整語法</div>
+        </div>
+        <pre><span class="c">/* ── 基本語法 ── */</span>
+<span class="t">.element</span> {
+  <span class="c">/* property | duration | timing-function | delay */</span>
+  <span class="p">transition</span>: <span class="v">background-color .3s ease 0s</span>;
+
+  <span class="c">/* 多屬性（逗號分隔）*/</span>
+  <span class="p">transition</span>:
+    <span class="v">background-color .3s ease</span>,
+    <span class="v">transform .25s cubic-bezier(.34,1.56,.64,1)</span>,
+    <span class="v">box-shadow .3s ease</span>;
+}
+
+<span class="c">/* ── Timing Functions ── */</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .2s ease</span>; }         <span class="c">/* 預設：先快後慢 */</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .2s linear</span>; }       <span class="c">/* 等速 */</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .2s ease-in</span>; }      <span class="c">/* 先慢後快（進場感）*/</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .2s ease-out</span>; }     <span class="c">/* 先快後慢（自然感）*/</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .2s ease-in-out</span>; }  <span class="c">/* 兩端慢中間快 */</span>
+
+<span class="c">/* cubic-bezier 自訂緩動 */</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .3s cubic-bezier(.34,1.56,.64,1)</span>; } <span class="c">/* 彈跳 */</span>
+<span class="t">.btn</span> { <span class="p">transition</span>: <span class="v">transform .4s cubic-bezier(.68,-.55,.27,1.55)</span>; } <span class="c">/* 彈性 */</span>
+
+<span class="c">/* ── 常見 hover 模式 ── */</span>
+<span class="t">.card</span> {
+  <span class="p">transform</span>: <span class="v">translateY(0)</span>;
+  <span class="p">box-shadow</span>: <span class="v">var(--shadow-sm)</span>;
+  <span class="p">transition</span>: <span class="v">transform .25s ease, box-shadow .25s ease</span>;
+}
+<span class="t">.card:hover</span> {
+  <span class="p">transform</span>: <span class="v">translateY(-6px)</span>; <span class="c">/* 上浮 */</span>
+  <span class="p">box-shadow</span>: <span class="v">var(--shadow-lg)</span>;
+}
+
+<span class="t">.link</span> {
+  <span class="p">text-decoration</span>: <span class="v">none</span>;
+  <span class="p">background-image</span>: <span class="v">linear-gradient(var(--color-primary),var(--color-primary))</span>;
+  <span class="p">background-size</span>: <span class="v">0% 2px</span>;         <span class="c">/* 初始：無底線 */</span>
+  <span class="p">background-position</span>: <span class="v">bottom left</span>;
+  <span class="p">background-repeat</span>: <span class="v">no-repeat</span>;
+  <span class="p">transition</span>: <span class="v">background-size .3s ease</span>;
+}
+<span class="t">.link:hover</span> {
+  <span class="p">background-size</span>: <span class="v">100% 2px</span>;       <span class="c">/* hover：底線從左展開 */</span>
+}</pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>Timing Function</th><th>特性</th><th>適合場景</th></tr></thead>
+        <tbody>
+          <tr><td>ease</td><td>預設，先快後慢，自然感</td><td>大多數通用場景</td></tr>
+          <tr><td>linear</td><td>等速，機械感</td><td>進度條、旋轉 loading</td></tr>
+          <tr><td>ease-in</td><td>先慢後快，加速感</td><td>元素離開畫面</td></tr>
+          <tr><td>ease-out</td><td>先快後慢，減速感</td><td>元素進入畫面（最自然）</td></tr>
+          <tr><td>ease-in-out</td><td>兩端慢，中間快</td><td>需要對稱的動作</td></tr>
+          <tr><td>cubic-bezier()</td><td>完全自訂四個控制點</td><td>彈跳、彈性、個性化效果</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 3: Keyframe Animation -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">@keyframes 動畫</h2>
+      <p class="section-intro">Transition 只能在兩個狀態之間過渡，@keyframes 讓你定義任意多個動畫階段，打造複雜的連續動作——旋轉、跳動、波浪、閃爍，全都在掌控之中。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">03</div>
+          <div><div class="ctitle">@keyframes 定義動畫幀</div><div class="csub">from/to / 百分比</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>@keyframes</code> 定義一個<strong>有名字的動畫序列</strong>，你可以在動畫的任意時間點（用百分比 0%–100% 或 from/to）設定 CSS 屬性值，瀏覽器自動在各幀之間插值。</p>
+          <p>定義好 @keyframes 後，用 <code>animation</code> 屬性將其套用到元素上。最重要的兩個參數是<em>動畫名稱</em>和<em>持續時間</em>。</p>
+          <p><strong>transform 是動畫的最佳朋友</strong>：<code>translateX/Y</code>（位移）、<code>scale</code>（縮放）、<code>rotate</code>（旋轉）都用 GPU 加速，比直接改 <code>top/left/width</code> 效能好得多。<code>opacity</code> 也是 GPU 加速屬性。這兩類屬性是製作動畫的首選。</p>
+        </div>
+      </div>
+
+      <!-- Keyframe Live Demos -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><span>KEYFRAME ANIMATION DEMOS</span><span>所有動畫持續播放</span></div>
+        <div class="demo-content">
+          <div class="kf-grid">
+            <div class="kf-card">
+              <div class="demo-spin"></div>
+              <div class="kf-label">rotate 旋轉<br><code style="font-size:.6rem;">animation: spin 2s linear infinite</code></div>
+            </div>
+            <div class="kf-card">
+              <div class="demo-pulse"></div>
+              <div class="kf-label">scale + opacity 脈衝<br><code style="font-size:.6rem;">animation: pulse 1.5s ease-in-out infinite</code></div>
+            </div>
+            <div class="kf-card">
+              <div class="demo-bounce"></div>
+              <div class="kf-label">translateY 彈跳<br><code style="font-size:.6rem;">animation: bounce 1.2s ease-in-out infinite</code></div>
+            </div>
+            <div class="kf-card">
+              <div class="demo-wave"><span>C</span><span>S</span><span>S</span><span>&nbsp;</span><span>W</span><span>!</span></div>
+              <div class="kf-label">文字波浪（animation-delay）<br><code style="font-size:.6rem;">nth-child 依序延遲 .1s</code></div>
+            </div>
+            <div class="kf-card">
+              <div style="display:flex;flex-direction:column;gap:.5rem;width:100%;">
+                <div class="demo-shimmer"></div>
+                <div class="demo-shimmer" style="width:100px;"></div>
+                <div class="demo-shimmer" style="width:120px;"></div>
+              </div>
+              <div class="kf-label">Skeleton Shimmer<br><code style="font-size:.6rem;">background-position 滑動</code></div>
+            </div>
+            <div class="kf-card">
+              <div class="demo-pop">pop</div>
+              <div class="kf-label">scale + rotate 彈出<br><code style="font-size:.6rem;">animation-direction: alternate</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; @keyframes 完整語法與常見動畫</div>
+        </div>
+        <pre><span class="c">/* ── 基本語法 ── */</span>
+<span class="s">@keyframes</span> <span class="kf">slideFadeIn</span> {
+  <span class="t">from</span> {
+    <span class="p">opacity</span>: <span class="v">0</span>;
+    <span class="p">transform</span>: <span class="v">translateY(20px)</span>;
+  }
+  <span class="t">to</span> {
+    <span class="p">opacity</span>: <span class="v">1</span>;
+    <span class="p">transform</span>: <span class="v">translateY(0)</span>;
+  }
+}
+
+<span class="c">/* ── 多個關鍵幀 ── */</span>
+<span class="s">@keyframes</span> <span class="kf">bounce</span> {
+  <span class="t">0%, 100%</span>   { <span class="p">transform</span>: <span class="v">translateY(0)</span>; }
+  <span class="t">40%</span>        { <span class="p">transform</span>: <span class="v">translateY(-20px)</span>; }
+  <span class="t">60%</span>        { <span class="p">transform</span>: <span class="v">translateY(-10px)</span>; }
+}
+
+<span class="c">/* ── animation 屬性：6 個參數 ── */</span>
+<span class="t">.element</span> {
+  <span class="c">/* name | duration | timing | delay | iteration | direction */</span>
+  <span class="p">animation</span>: <span class="kf">slideFadeIn</span> <span class="v">.6s ease-out 0s 1 normal</span>;
+
+  <span class="c">/* 簡寫（常用形式）*/</span>
+  <span class="p">animation</span>: <span class="kf">slideFadeIn</span> <span class="v">.6s ease-out forwards</span>;
+}
+
+<span class="c">/* ── 分開寫更清晰 ── */</span>
+<span class="t">.card</span> {
+  <span class="p">animation-name</span>:            <span class="kf">slideFadeIn</span>;
+  <span class="p">animation-duration</span>:        <span class="v">.6s</span>;
+  <span class="p">animation-timing-function</span>: <span class="v">ease-out</span>;
+  <span class="p">animation-delay</span>:           <span class="v">0s</span>;
+  <span class="p">animation-iteration-count</span>: <span class="v">1</span>;         <span class="c">/* infinite = 無限循環 */</span>
+  <span class="p">animation-direction</span>:       <span class="v">normal</span>;    <span class="c">/* alternate = 來回 */</span>
+  <span class="p">animation-fill-mode</span>:       <span class="v">forwards</span>; <span class="c">/* 停在最後一幀 */</span>
+  <span class="p">animation-play-state</span>:      <span class="v">running</span>;  <span class="c">/* paused = 暫停 */</span>
+}
+
+<span class="c">/* ── 交錯動畫（stagger）── */</span>
+<span class="t">.item</span>                { <span class="p">animation</span>: <span class="kf">slideFadeIn</span> <span class="v">.5s ease-out both</span>; }
+<span class="t">.item:nth-child(1)</span>   { <span class="p">animation-delay</span>: <span class="v">0s</span>; }
+<span class="t">.item:nth-child(2)</span>   { <span class="p">animation-delay</span>: <span class="v">.1s</span>; }
+<span class="t">.item:nth-child(3)</span>   { <span class="p">animation-delay</span>: <span class="v">.2s</span>; }
+<span class="t">.item:nth-child(4)</span>   { <span class="p">animation-delay</span>: <span class="v">.3s</span>; }
+<span class="c">/* 每個元素依序延遲，形成瀑布進場效果 */</span>
+
+<span class="c">/* ── 實用動畫庫 ── */</span>
+<span class="s">@keyframes</span> <span class="kf">spin</span>      { <span class="t">to</span> { <span class="p">transform</span>: <span class="v">rotate(360deg)</span>; } }
+<span class="s">@keyframes</span> <span class="kf">ping</span>      { <span class="t">75%,100%</span> { <span class="p">transform</span>: <span class="v">scale(2)</span>; <span class="p">opacity</span>: <span class="v">0</span>; } }
+<span class="s">@keyframes</span> <span class="kf">pulse</span>     { <span class="t">0%,100%</span> { <span class="p">opacity</span>: <span class="v">1</span>; } <span class="t">50%</span> { <span class="p">opacity</span>: <span class="v">.5</span>; } }
+<span class="s">@keyframes</span> <span class="kf">shimmer</span>   {
+  <span class="t">0%</span>   { <span class="p">background-position</span>: <span class="v">-200% center</span>; }
+  <span class="t">100%</span> { <span class="p">background-position</span>: <span class="v">200% center</span>; }
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: Animation Control -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">動畫控制與 fill-mode</h2>
+      <p class="section-intro"><code>animation-fill-mode</code> 是動畫結束後「停在哪裡」的關鍵設定，理解它能解決「動畫播完後元素跳回原狀」的常見困惑。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">04</div>
+          <div><div class="ctitle">animation-fill-mode</div><div class="csub">none / forwards / backwards / both</div></div>
+        </div>
+        <div class="cbody">
+          <p><em>none（預設）</em>：動畫播放前後，元素都維持原本的樣式。動畫結束後「跳回」原位。</p>
+          <p><em>forwards</em>：動畫結束後，元素<strong>停留在最後一幀</strong>（to / 100%）的樣式。製作「滑入顯示」動畫時必用。</p>
+          <p><em>backwards</em>：有 <code>animation-delay</code> 時，在延遲期間就套用第一幀（from / 0%）的樣式，避免延遲期間元素突然出現。</p>
+          <p><em>both</em>：同時套用 forwards 和 backwards 的效果。<strong>交錯動畫（stagger）幾乎都需要用 both</strong>。</p>
+        </div>
+      </div>
+
+      <!-- Animation Control Playground -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><span>ANIMATION CONTROLS</span><span>點擊按鈕套用不同設定</span></div>
+        <div class="demo-content">
+          <div class="anim-ctrl-demo" id="animCtrl">
+            <div class="ctrl-row">
+              <div class="ctrl-label">fill-mode:</div>
+              <button class="ctrl-btn active" data-fill="forwards">forwards</button>
+              <button class="ctrl-btn" data-fill="backwards">backwards</button>
+              <button class="ctrl-btn" data-fill="both">both</button>
+              <button class="ctrl-btn" data-fill="none">none</button>
+            </div>
+            <div class="ctrl-row">
+              <div class="ctrl-label">iteration-count:</div>
+              <button class="ctrl-btn active" data-iter="1">1</button>
+              <button class="ctrl-btn" data-iter="3">3</button>
+              <button class="ctrl-btn" data-iter="infinite">infinite</button>
+            </div>
+            <div class="ctrl-row">
+              <div class="ctrl-label">direction:</div>
+              <button class="ctrl-btn active" data-dir="normal">normal</button>
+              <button class="ctrl-btn" data-dir="reverse">reverse</button>
+              <button class="ctrl-btn" data-dir="alternate">alternate</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:1.5rem;margin-top:.5rem;">
+              <button class="ctrl-btn" id="replayBtn" style="border-color:var(--accent);color:var(--accent);">&#9654; 重新播放</button>
+              <div class="ctrl-target" id="ctrlTarget" style="opacity:0;">BOX</div>
+              <div style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);max-width:300px;line-height:1.6;" id="ctrlDesc">
+                forwards：動畫結束後停在最後一幀（opacity:1）
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; fill-mode 與 JavaScript 控制動畫</div>
+        </div>
+        <pre><span class="c">/* ── fill-mode 四個值 ── */</span>
+<span class="s">@keyframes</span> <span class="kf">fadeIn</span> {
+  <span class="t">from</span> { <span class="p">opacity</span>: <span class="v">0</span>; <span class="p">transform</span>: <span class="v">translateY(20px)</span>; }
+  <span class="t">to</span>   { <span class="p">opacity</span>: <span class="v">1</span>; <span class="p">transform</span>: <span class="v">translateY(0)</span>; }
+}
+
+<span class="t">.enter-none</span>      { <span class="p">animation</span>: <span class="kf">fadeIn</span> <span class="v">.5s ease none</span>; }
+<span class="c">/* 播完後跳回 opacity:0，元素消失 */</span>
+
+<span class="t">.enter-forwards</span>  { <span class="p">animation</span>: <span class="kf">fadeIn</span> <span class="v">.5s ease forwards</span>; }
+<span class="c">/* 播完後停在 opacity:1，元素留在畫面上 ✓ */</span>
+
+<span class="t">.enter-both</span>      { <span class="p">animation</span>: <span class="kf">fadeIn</span> <span class="v">.5s ease .3s both</span>; }
+<span class="c">/* 延遲 .3s 前就套用 from 的樣式（opacity:0）*/</span>
+<span class="c">/* 結束後停在 to 的樣式（opacity:1）✓ 最常用 */</span>
+
+<span class="c">/* ── play-state：用 JS 暫停/繼續 ── */</span>
+<span class="t">.paused</span> { <span class="p">animation-play-state</span>: <span class="v">paused</span>; }
+
+<span class="c">/* JavaScript */</span>
+<span class="t">document.querySelector</span>(<span class="v">'.loader'</span>).style.animationPlayState = <span class="v">'paused'</span>;
+
+<span class="c">/* ── Scroll 觸發動畫（Intersection Observer）── */</span>
+<span class="t">.reveal</span> {
+  <span class="p">opacity</span>: <span class="v">0</span>;
+  <span class="p">transform</span>: <span class="v">translateY(30px)</span>;
+  <span class="p">transition</span>: <span class="v">opacity .6s ease, transform .6s ease</span>;
+}
+<span class="t">.reveal.visible</span> {  <span class="c">/* JS 加上 .visible 類別 */</span>
+  <span class="p">opacity</span>: <span class="v">1</span>;
+  <span class="p">transform</span>: <span class="v">translateY(0)</span>;
+}
+
+<span class="c">/* JavaScript Intersection Observer */</span>
+<span class="t">const</span> observer = <span class="t">new</span> IntersectionObserver(<span class="v">entries</span> => {
+  entries.forEach(<span class="v">e</span> => {
+    <span class="t">if</span> (e.isIntersecting) e.target.classList.add(<span class="v">'visible'</span>);
+  });
+}, { threshold: <span class="v">0.1</span> });
+
+document.querySelectorAll(<span class="v">'.reveal'</span>).forEach(<span class="v">el</span> => observer.observe(<span class="v">el</span>));
+
+<span class="c">/* ── 無障礙：尊重使用者的動畫偏好 ── */</span>
+<span class="s">@media</span> (<span class="p">prefers-reduced-motion</span>: <span class="v">reduce</span>) {
+  <span class="t">*, *::before, *::after</span> {
+    <span class="p">animation-duration</span>:   <span class="v">.01ms</span> <span class="s">!important</span>;
+    <span class="p">animation-iteration-count</span>: <span class="v">1</span>  <span class="s">!important</span>;
+    <span class="p">transition-duration</span>:  <span class="v">.01ms</span> <span class="s">!important</span>;
+  }
+}</pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>fill-mode</th><th>效果</th><th>使用場景</th></tr></thead>
+        <tbody>
+          <tr><td>none</td><td>播放前後都是元素本身的樣式</td><td>循環動畫、不需要停留效果</td></tr>
+          <tr><td>forwards</td><td>播放結束後停留在最後一幀</td><td>一次性出場/入場動畫</td></tr>
+          <tr><td>backwards</td><td>延遲期間套用第一幀樣式</td><td>有 delay 且需要避免初始閃現</td></tr>
+          <tr><td>both</td><td>同時套用 forwards + backwards</td><td>有 delay 的交錯動畫，幾乎最通用</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 5: Dark Mode -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">深色模式</h2>
+      <p class="section-intro">深色模式不是「把背景換成黑色」那麼簡單。這週你將學會用 CSS 變數搭配媒體查詢，優雅地實作自動跟隨系統設定的深色模式。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">05</div>
+          <div><div class="ctitle">prefers-color-scheme</div><div class="csub">系統深色模式偵測</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>@media (prefers-color-scheme: dark)</code> 會在使用者的作業系統設定為深色模式時生效。搭配 CSS 變數，你只需在這個媒體查詢中覆寫 <code>:root</code> 的顏色變數，<strong>不需要重寫任何元件的樣式</strong>——所有用了顏色變數的元素都會自動切換。</p>
+          <p>深色模式的設計原則：<em>不要只是把顏色反轉</em>。深色背景不應該是純黑（<code>#000000</code>），通常是帶一點色調的深灰（如 GitHub 的 <code>#0d1117</code>）。陰影在深色模式下效果不明顯，應改用描邊（border）來區分層次。</p>
+          <div class="note info">
+            <span class="note-label">手動切換深色模式</span>
+            除了跟隨系統，你也可以讓使用者手動切換。常見做法是在 <code>&lt;html&gt;</code> 或 <code>&lt;body&gt;</code> 標籤加上 <code>data-theme="dark"</code> 屬性，然後在 CSS 中用 <code>[data-theme="dark"]</code> 選擇器覆寫變數。用 JavaScript 切換這個屬性，就能實現手動切換按鈕。
+          </div>
+        </div>
+      </div>
+
+      <!-- Dark Mode Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><span>LIGHT vs DARK</span><span>同一套 HTML，CSS 變數不同</span></div>
+        <div class="demo-content" style="padding:1rem;">
+          <div class="dark-toggle-demo">
+            <div class="theme-panel light">
+              <div class="theme-label">LIGHT MODE</div>
+              <div class="mini-card">這是一張卡片<br><small style="color:#8a826f;">使用 var(--color-bg) 等變數</small></div>
+              <div style="display:flex;gap:.5rem;align-items:center;">
+                <button class="mini-btn">主要按鈕</button>
+                <span style="font-size:.78rem;color:#8a826f;">次要文字</span>
+              </div>
+            </div>
+            <div class="theme-panel dark">
+              <div class="theme-label">DARK MODE</div>
+              <div class="mini-card">這是一張卡片<br><small style="color:#7a7268;">使用 var(--color-bg) 等變數</small></div>
+              <div style="display:flex;gap:.5rem;align-items:center;">
+                <button class="mini-btn">主要按鈕</button>
+                <span style="font-size:.78rem;color:#7a7268;">次要文字</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 深色模式完整實作</div>
+        </div>
+        <pre><span class="c">/* ── 淺色模式（預設）── */</span>
+<span class="t">:root</span> {
+  <span class="p">--color-bg</span>:      <span class="v">#ffffff</span>;
+  <span class="p">--color-bg-alt</span>:  <span class="v">#f8f9fa</span>;
+  <span class="p">--color-text</span>:    <span class="v">#1a1612</span>;
+  <span class="p">--color-muted</span>:   <span class="v">#8a826f</span>;
+  <span class="p">--color-border</span>:  <span class="v">#d8d0c4</span>;
+  <span class="p">--color-primary</span>: <span class="v">#c4581a</span>;
+  <span class="p">--shadow</span>:        <span class="v">0 4px 12px rgba(0,0,0,.1)</span>;
+}
+
+<span class="c">/* ── 自動跟隨系統設定 ── */</span>
+<span class="s">@media</span> (<span class="p">prefers-color-scheme</span>: <span class="v">dark</span>) {
+  <span class="t">:root</span> {
+    <span class="p">--color-bg</span>:      <span class="v">#0e0e0f</span>;  <span class="c">/* 帶色調的深灰，非純黑 */</span>
+    <span class="p">--color-bg-alt</span>:  <span class="v">#161618</span>;
+    <span class="p">--color-text</span>:    <span class="v">#f0ede8</span>;
+    <span class="p">--color-muted</span>:   <span class="v">#888888</span>;
+    <span class="p">--color-border</span>:  <span class="v">#2a2a2e</span>;
+    <span class="p">--color-primary</span>: <span class="v">#c8f06e</span>;  <span class="c">/* 深色模式用更亮的主色 */</span>
+    <span class="p">--shadow</span>:        <span class="v">0 4px 12px rgba(0,0,0,.4)</span>;
+    <span class="c">/* 不需要改任何其他規則，所有元件自動更新 */</span>
+  }
+}
+
+<span class="c">/* ── 手動切換（JS 按鈕）── */</span>
+<span class="t">[data-theme="dark"]</span> {
+  <span class="p">--color-bg</span>:   <span class="v">#0e0e0f</span>;
+  <span class="p">--color-text</span>: <span class="v">#f0ede8</span>;
+  <span class="c">/* 其他變數... */</span>
+}
+
+<span class="c">/* JavaScript 切換主題 */</span>
+<span class="t">const</span> toggle = document.getElementById(<span class="v">'themeToggle'</span>);
+toggle.addEventListener(<span class="v">'click'</span>, () => {
+  <span class="t">const</span> current = document.documentElement.dataset.theme;
+  document.documentElement.dataset.theme =
+    current === <span class="v">'dark'</span> ? <span class="v">''</span> : <span class="v">'dark'</span>;
+});
+
+<span class="c">/* ── 加入過渡讓切換更平滑 ── */</span>
+<span class="t">body</span> {
+  <span class="p">transition</span>: <span class="v">background-color .3s ease, color .3s ease</span>;
+  <span class="c">/* 注意：其他元件也需要加 transition 才會平滑過渡 */</span>
+}</pre>
+      </div>
+
+      <div class="note tip">
+        <span class="note-label">深色模式設計原則</span>
+        深色模式不是簡單反轉色調。幾個重要原則：（1）<strong>避免純黑背景</strong>（<code>#000</code>），使用 <code>#0e0e0f</code> 或 <code>#0d1117</code> 這類帶微弱色調的深灰；（2）<strong>降低飽和度</strong>，深色背景上鮮豔的顏色會過於刺眼；（3）<strong>陰影變透明度更高</strong>（<code>rgba(0,0,0,.4)</code> 而非 .1）；（4）<strong>邊框代替陰影</strong>做層次區分。
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: Full RWD -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">完整 RWD 實戰策略</h2>
+      <p class="section-intro">這週把響應式設計從概念推進到實戰——三個斷點、完整的縮放策略、以及最容易被忽略的排版細節。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">06</div>
+          <div><div class="ctitle">常見 RWD 問題與解法</div><div class="csub">圖片溢出 / 文字過大 / 觸控目標過小</div></div>
+        </div>
+        <div class="cbody">
+          <p><strong>圖片溢出容器</strong>：永遠加上 <code>img { max-width: 100%; height: auto; }</code> 作為全域重設。這讓所有圖片最多和容器一樣寬，但不強制拉伸。</p>
+          <p><strong>文字大小不縮放</strong>：使用 <code>clamp()</code> 函式讓文字在不同螢幕尺寸間流暢縮放：<code>font-size: clamp(1.5rem, 3vw, 3rem)</code> 意思是「最小 1.5rem，最大 3rem，中間按視窗寬度的 3% 計算」。</p>
+          <p><strong>觸控目標過小</strong>：手機上按鈕和連結的最小可點擊面積應為 <em>44px × 44px</em>（Apple 人機介面指南建議）。按鈕 padding 要夠大，不要只讓文字本身可點擊。</p>
+          <div class="note warn">
+            <span class="note-label">測試方法</span>
+            Chrome DevTools 按 <kbd>Ctrl+Shift+M</kbd>（Mac: <kbd>Cmd+Shift+M</kbd>）進入裝置模擬模式。選擇不同裝置預設值，或手動調整視窗寬度。同時注意「Responsive」模式下拖動邊框，觀察版面在各寬度下的變化。
+          </div>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr bad">&#10005; 常見錯誤</div>
+          <pre style="background:var(--bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">/* 固定像素寬度 */</span>
+<span class="t">.container</span> { <span class="p">width</span>: <span class="v">1200px</span>; }
+
+<span class="c">/* 字體固定大小 */</span>
+<span class="t">h1</span> { <span class="p">font-size</span>: <span class="v">48px</span>; }
+
+<span class="c">/* 忘記圖片限制 */</span>
+<span class="c">/* (沒有 max-width: 100%) */</span>
+
+<span class="c">/* 按鈕太小 */</span>
+<span class="t">.btn</span> { <span class="p">padding</span>: <span class="v">2px 8px</span>; }</pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">&#10003; 正確做法</div>
+          <pre style="background:var(--bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">/* 彈性最大寬度 */</span>
+<span class="t">.container</span> { <span class="p">max-width</span>: <span class="v">1200px</span>; <span class="p">width</span>: <span class="v">100%</span>; }
+
+<span class="c">/* 流體字體 */</span>
+<span class="t">h1</span> { <span class="p">font-size</span>: <span class="v">clamp(2rem,5vw,3.5rem)</span>; }
+
+<span class="c">/* 圖片永遠不溢出 */</span>
+<span class="t">img</span> { <span class="p">max-width</span>: <span class="v">100%</span>; <span class="p">height</span>: <span class="v">auto</span>; }
+
+<span class="c">/* 觸控友善按鈕 */</span>
+<span class="t">.btn</span> { <span class="p">padding</span>: <span class="v">.75rem 1.5rem</span>; }</pre>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 完整 RWD 三斷點模板</div>
+        </div>
+        <pre><span class="c">/* ════ 全域重設 ════ */</span>
+<span class="t">*, *::before, *::after</span> { <span class="p">box-sizing</span>: <span class="v">border-box</span>; <span class="p">margin</span>: <span class="v">0</span>; <span class="p">padding</span>: <span class="v">0</span>; }
+<span class="t">img, video, svg</span>        { <span class="p">max-width</span>: <span class="v">100%</span>; <span class="p">height</span>: <span class="v">auto</span>; <span class="p">display</span>: <span class="v">block</span>; }
+
+<span class="c">/* ════ 容器系統 ════ */</span>
+<span class="t">.container</span> {
+  <span class="p">width</span>: <span class="v">100%</span>;
+  <span class="p">max-width</span>: <span class="v">1200px</span>;
+  <span class="p">margin-inline</span>: <span class="v">auto</span>; <span class="c">/* 等同 margin: 0 auto */</span>
+  <span class="p">padding-inline</span>: <span class="v">1rem</span>; <span class="c">/* 邊緣留白 */</span>
+}
+
+<span class="c">/* ════ 手機版（預設，無媒體查詢）════ */</span>
+<span class="t">.nav</span>          { <span class="p">flex-direction</span>: <span class="v">column</span>; <span class="p">gap</span>: <span class="v">.5rem</span>; }
+<span class="t">.hero-title</span>   { <span class="p">font-size</span>: <span class="v">clamp(1.8rem, 8vw, 4rem)</span>; }
+<span class="t">.grid</span>         { <span class="p">grid-template-columns</span>: <span class="v">1fr</span>; }
+<span class="t">.sidebar</span>      { <span class="p">display</span>: <span class="v">none</span>; }
+
+<span class="c">/* ════ 平板（640px+）════ */</span>
+<span class="s">@media</span> (<span class="p">min-width</span>: <span class="v">640px</span>) {
+  <span class="t">.container</span>    { <span class="p">padding-inline</span>: <span class="v">1.5rem</span>; }
+  <span class="t">.nav</span>          { <span class="p">flex-direction</span>: <span class="v">row</span>; }
+  <span class="t">.grid</span>         { <span class="p">grid-template-columns</span>: <span class="v">repeat(2, 1fr)</span>; }
+}
+
+<span class="c">/* ════ 桌面（1024px+）════ */</span>
+<span class="s">@media</span> (<span class="p">min-width</span>: <span class="v">1024px</span>) {
+  <span class="t">.container</span>    { <span class="p">padding-inline</span>: <span class="v">2rem</span>; }
+  <span class="t">.grid</span>         { <span class="p">grid-template-columns</span>: <span class="v">repeat(3, 1fr)</span>; }
+  <span class="t">.sidebar</span>      { <span class="p">display</span>: <span class="v">block</span>; }
+  <span class="t">.layout</span>       { <span class="p">grid-template-columns</span>: <span class="v">240px 1fr</span>; }
+}
+
+<span class="c">/* ════ 深色模式 ════ */</span>
+<span class="s">@media</span> (<span class="p">prefers-color-scheme</span>: <span class="v">dark</span>) {
+  <span class="t">:root</span> { <span class="c">/* 覆寫顏色變數 */</span> }
+}
+
+<span class="c">/* ════ 無障礙：關閉動畫 ════ */</span>
+<span class="s">@media</span> (<span class="p">prefers-reduced-motion</span>: <span class="v">reduce</span>) {
+  <span class="t">*, *::before, *::after</span> {
+    <span class="p">animation-duration</span>: <span class="v">.01ms</span> <span class="s">!important</span>;
+    <span class="p">transition-duration</span>: <span class="v">.01ms</span> <span class="s">!important</span>;
+  }
+}</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">三道題目，涵蓋本週的動畫與深色模式核心概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 03</div>
+        <div class="quiz-q">你製作了一個元素從 <code>opacity: 0</code> 淡入到 <code>opacity: 1</code> 的進場動畫，但播放結束後元素又消失了（跳回 opacity: 0）。應該加上哪個設定來讓它停留在畫面上？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>animation-direction: alternate</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>animation-iteration-count: infinite</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>animation-fill-mode: forwards</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>animation-play-state: paused</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>animation-fill-mode: forwards</code> 讓動畫結束後停留在最後一幀的樣式（<code>opacity: 1</code>）。<code>infinite</code> 會讓動畫無限重播（每次都從 0 開始），不是你要的效果；<code>alternate</code> 讓動畫來回播放；<code>paused</code> 是暫停播放。</div>
+        <div class="quiz-fb note" style="border-left-color:#f87171;background:rgba(248,113,113,.06);color:#d4a0a0;"><span class="note-label" style="color:#f87171;">TRY AGAIN</span>想想「動畫結束後的狀態」——哪個屬性控制動畫播完後元素停留的位置？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 03</div>
+        <div class="quiz-q">以下哪兩個 CSS 屬性最適合用來製作動畫？（因為它們使用 GPU 加速，效能最好）</div>
+        <div class="quiz-options" data-answer="0">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>transform</code> 和 <code>opacity</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>width</code> 和 <code>height</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>top</code> 和 <code>left</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>margin</code> 和 <code>padding</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>transform</code>（位移、縮放、旋轉）和 <code>opacity</code> 是「合成屬性」（composited properties），瀏覽器可以直接交給 GPU 處理，不需要觸發 Layout（重排）或 Paint（重繪）。改變 <code>width/height</code>、<code>top/left</code>、<code>margin</code> 都會觸發 Layout，效能成本高出許多。</div>
+        <div class="quiz-fb note" style="border-left-color:#f87171;background:rgba(248,113,113,.06);color:#d4a0a0;"><span class="note-label" style="color:#f87171;">TRY AGAIN</span>提示：哪些屬性的改變不需要重新計算頁面佈局（Layout）？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 03</div>
+        <div class="quiz-q">你用 CSS 變數實作了深色模式，淺色模式的主色是 <code>--color-primary: #c4581a</code>。在深色模式下，你應該如何覆寫它讓對比度更好？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>在每個元素的選擇器中重新設定 <code>color: #f0a070</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>在 <code>@media (prefers-color-scheme: dark) { :root { --color-primary: #f0a070; } }</code> 中覆寫變數</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>使用 <code>!important</code> 強制覆寫</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>為深色模式另外建立一份完整的 CSS 檔案</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>在 <code>@media (prefers-color-scheme: dark)</code> 內的 <code>:root</code> 中覆寫 CSS 變數，是最乾淨的做法。所有使用了 <code>var(--color-primary)</code> 的元素都會自動更新，不需要動任何其他樣式。這正是 CSS 變數配合深色模式的威力所在。</div>
+        <div class="quiz-fb note" style="border-left-color:#f87171;background:rgba(248,113,113,.06);color:#d4a0a0;"><span class="note-label" style="color:#f87171;">TRY AGAIN</span>CSS 變數的核心優勢是什麼？想想只改一個地方就能讓所有元素同步更新的方法。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：動效與深色模式</h2>
+      <p class="section-intro">這週的任務是在前兩週的履歷頁面上，加入動畫效果和完整的深色模式支援，讓它從「靜態頁面」晉升為「有互動感的現代網頁」。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 03 PROJECT</div>
+        <div class="project-name">動態履歷<br>深色模式版</div>
+        <p class="project-desc">為第二週的履歷加入：進場動畫（stagger effect）、hover 互動效果、自動深色模式，以及完整的三斷點響應式設計。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.15rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">重整 CSS 變數系統</div>
+            <div class="step-body">在 <code>:root</code> 中建立完整的設計 Token：顏色（至少 6 個）、間距比例尺（--space-1 到 --space-16）、圓角（--radius-sm/md/lg）、過渡速度（--transition-fast/normal）。確保所有樣式都改用變數，不再有硬編碼的顏色值。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入深色模式</div>
+            <div class="step-body">加入 <code>@media (prefers-color-scheme: dark)</code>，在其中的 <code>:root</code> 覆寫所有顏色變數。深色背景不要用 <code>#000</code>，改用 <code>#0e0e0f</code> 或 <code>#111113</code>。同時為 <code>body</code> 加上 <code>transition: background-color .3s, color .3s</code> 讓切換平滑。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">頁面進場動畫</div>
+            <div class="step-body">定義 <code>@keyframes fadeIn</code>（opacity 0→1，translateY 20→0）。為 header、hero 標題、hero 描述依序設定 <code>animation: fadeIn .6s ease both</code>，並用遞增的 <code>animation-delay</code>（0s / .15s / .3s / .45s）製造交錯進場效果。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">Scroll Reveal 效果</div>
+            <div class="step-body">為 section 元素加上 <code>.reveal</code> class，初始 <code>opacity: 0; transform: translateY(30px)</code>，有 <code>.visible</code> 時過渡到 <code>opacity: 1; transform: translateY(0)</code>。用 IntersectionObserver 監聽元素進入視窗時加上 <code>.visible</code>，threshold 設 0.1。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">技能卡片 Hover 效果</div>
+            <div class="step-body">為每個技能卡片加上 hover 效果：<code>transition: transform .25s, box-shadow .25s</code>，hover 時 <code>transform: translateY(-6px); box-shadow: 0 12px 24px rgba(0,0,0,.12)</code>。同時改變 <code>border-color</code> 為主色調，讓卡片「亮起來」。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">導覽連結底線動效</div>
+            <div class="step-body">用 <code>background-image + background-size</code> 技巧製作底線展開動效（程式碼參考概念 2 的範例）。從寬度 <code>0% 2px</code> hover 到 <code>100% 2px</code>，加上 <code>transition: background-size .3s ease</code>。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">完整三斷點 RWD</div>
+            <div class="step-body">加入手機（預設）、平板（640px+）、桌面（1024px+）三個斷點。確認：全局加了 <code>img { max-width: 100%; }</code>、標題使用 <code>clamp()</code>、按鈕 padding 足夠大（手機觸控友善）、沒有任何元素在手機版橫向溢出。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">無障礙動畫設定</div>
+            <div class="step-body">在 CSS 最底部加入 <code>@media (prefers-reduced-motion: reduce)</code>，在其中停用所有動畫和過渡（設為 <code>.01ms</code>）。在 macOS 的「系統設定 → 輔助使用 → 減少動態效果」中測試是否正常停用。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.15rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有硬編碼顏色都已改為 CSS 變數，<code>:root</code> 有完整的設計 Token</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>深色模式在系統設定切換時自動生效，顏色對比度良好</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>頁面載入時 header 和 hero 有交錯進場動畫（至少 3 個元素有不同 delay）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>使用 IntersectionObserver 實作 Scroll Reveal，section 滾入時才顯示</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>技能卡片 hover 時有 transform + box-shadow 浮起效果，過渡平滑</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>導覽連結有底線展開動效（不使用預設底線，改用 background-size 技巧）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>三個斷點都有效，手機版沒有橫向溢出，按鈕大小適合觸控</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>有加入 <code>prefers-reduced-motion</code> 媒體查詢，動畫在無障礙模式下停用</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">CSS 動畫需要大量視覺化才能真正理解，這些工具和資源讓你邊玩邊學。</p>
+      <div class="resource-grid">
+        <a href="https://cubic-bezier.com/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">互動工具</div>
+          <div class="resource-name">cubic-bezier.com</div>
+          <div class="resource-desc">拖動控制點即時預覽緩動曲線效果，並直接複製 CSS 程式碼，是設計自訂 timing function 的必備工具。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://animate.style/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">動畫函式庫</div>
+          <div class="resource-name">Animate.css</div>
+          <div class="resource-desc">預製的 CSS 動畫集合，可以直接引用，也適合研究每個動畫的 @keyframes 實作，學習常見動畫的寫法。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_animations/Using_CSS_animations" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件</div>
+          <div class="resource-name">MDN &mdash; CSS Animations</div>
+          <div class="resource-desc">animation 屬性的完整說明，每個值都有互動範例，是查詢語法細節的最佳來源。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://web.dev/articles/prefers-reduced-motion" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">無障礙指南</div>
+          <div class="resource-name">web.dev &mdash; prefers-reduced-motion</div>
+          <div class="resource-desc">深入解釋為什麼動畫無障礙很重要，以及如何正確實作 prefers-reduced-motion，含實際案例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.joshwcomeau.com/css/css-variables-for-react-devs/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">深度文章</div>
+          <div class="resource-name">Josh Comeau &mdash; CSS Variables</div>
+          <div class="resource-desc">業界最好的 CSS 自訂屬性深入解析，涵蓋進階技巧如動態計算、作用域主題和 JavaScript 互動。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://css.glass/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">設計工具</div>
+          <div class="resource-name">CSS Glass Generator</div>
+          <div class="resource-desc">快速生成玻璃擬態（glassmorphism）效果的 CSS，順便學習 backdrop-filter 和 rgba 的組合用法。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week2.html" class="nav-btn">&larr; Week 02：CSS 排版</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week4.html" class="nav-btn">Week 04：JavaScript 基礎 &rarr;</a>
+  </div>
+</main>
+
+<script>
+// Progress bar
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progressBar').style.width = Math.min(p, 100) + '%';
+});
+
+// Scroll reveal
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.07 });
+document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+// TOC active
+const secIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls = secIds.map(id => document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll', () => {
+  let cur = '';
+  secEls.forEach(el => { if (window.scrollY >= el.offsetTop - 130) cur = el.id; });
+  document.querySelectorAll('.toc-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + cur);
+  });
+});
+
+// CSS Variable Playground
+const radiusSlider = document.getElementById('radiusSlider');
+const padSlider    = document.getElementById('padSlider');
+const bgColor      = document.getElementById('bgColor');
+const preview      = document.getElementById('varPreview');
+function updatePreview() {
+  const r  = radiusSlider.value;
+  const p  = padSlider.value;
+  const bg = bgColor.value;
+  document.getElementById('radiusVal').textContent = r;
+  document.getElementById('padVal').textContent = p;
+  // Convert hex to rgba
+  const hex = bg.replace('#','');
+  const ri = parseInt(hex.substring(0,2),16);
+  const gi = parseInt(hex.substring(2,4),16);
+  const bi = parseInt(hex.substring(4,6),16);
+  preview.style.borderRadius = r + 'px';
+  preview.style.padding = p + 'px';
+  preview.style.background = `rgba(${ri},${gi},${bi},0.15)`;
+  preview.style.borderColor = `rgba(${ri},${gi},${bi},0.4)`;
+}
+radiusSlider.addEventListener('input', updatePreview);
+padSlider.addEventListener('input', updatePreview);
+bgColor.addEventListener('input', updatePreview);
+
+// Animation Controls Demo
+let fillMode = 'forwards', iterCount = '1', direction = 'normal';
+
+const fillDescs = {
+  forwards:  'forwards：動畫結束後停在最後一幀（opacity:1）',
+  backwards: 'backwards：延遲期間套用第一幀樣式（opacity:0）',
+  both:      'both：同時套用 forwards + backwards，交錯動畫最常用',
+  none:      'none：播完後跳回原本樣式（opacity:0）',
+};
+
+function replayAnim() {
+  const t = document.getElementById('ctrlTarget');
+  t.style.animation = 'none';
+  t.offsetHeight; // reflow
+  t.style.opacity = '0';
+  t.style.animation = `popIn .8s ease-out .2s ${fillMode}`;
+  t.style.animationIterationCount = iterCount;
+  t.style.animationDirection = direction;
+}
+
+document.querySelectorAll('[data-fill]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-fill]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    fillMode = btn.dataset.fill;
+    document.getElementById('ctrlDesc').textContent = fillDescs[fillMode];
+    replayAnim();
+  });
+});
+document.querySelectorAll('[data-iter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-iter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    iterCount = btn.dataset.iter;
+    replayAnim();
+  });
+});
+document.querySelectorAll('[data-dir]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-dir]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    direction = btn.dataset.dir;
+    replayAnim();
+  });
+});
+document.getElementById('replayBtn').addEventListener('click', replayAnim);
+setTimeout(replayAnim, 600);
+
+// Quiz
+document.querySelectorAll('.quiz-block').forEach(block => {
+  const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts = block.querySelectorAll('.quiz-opt');
+  const fbs  = block.querySelectorAll('.quiz-fb');
+  let done = false;
+  opts.forEach((opt, i) => {
+    opt.addEventListener('click', () => {
+      if (done) return;
+      done = true;
+      opts.forEach(o => o.style.pointerEvents = 'none');
+      if (i === correct) {
+        opt.classList.add('correct');
+        fbs[0] && fbs[0].classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        opts[correct].classList.add('correct');
+        fbs[1] && fbs[1].classList.add('show');
+        setTimeout(() => {
+          done = false;
+          opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+          fbs.forEach(f => f.classList.remove('show'));
+        }, 2800);
+      }
+    });
+  });
+});
+
+// Checklist
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+}
+</script>
+</body>
+</html>

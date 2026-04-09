@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 02 — CSS3 排版、Flexbox、Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1c2333;
+    --surface: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --accent: #2dd4bf;
+    --accent-dim: rgba(45,212,191,0.12);
+    --accent2: #f59e0b;
+    --accent3: #34d399;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --code-bg: #0d1117;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lora', serif;
+    font-weight: 400;
+    line-height: 1.75;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 2px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    width: 0%; z-index: 500;
+    transition: width 0.08s linear;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 2.5rem;
+    background: rgba(13,17,23,0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; color: var(--accent);
+    letter-spacing: 0.12em; text-decoration: none;
+  }
+  .header-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; color: var(--muted);
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.75rem;
+  }
+  .header-nav { display: flex; gap: 1.5rem; }
+  .header-nav a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.06em;
+    transition: color 0.2s;
+  }
+  .header-nav a:hover { color: var(--accent); }
+
+  /* ── TOC ── */
+  .toc {
+    position: fixed; left: 0; top: 50%;
+    transform: translateY(-50%);
+    z-index: 100; padding: 0.8rem 0;
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .toc-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.28rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.08em;
+    white-space: nowrap; transition: color 0.2s;
+  }
+  .toc-item::before {
+    content: ''; display: block;
+    width: 3px; height: 3px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0;
+    transition: background 0.2s, transform 0.2s, width 0.2s;
+  }
+  .toc-item:hover, .toc-item.active { color: var(--accent); }
+  .toc-item:hover::before, .toc-item.active::before {
+    background: var(--accent);
+    width: 6px; border-radius: 1px;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* ── MAIN ── */
+  main { padding-top: 60px; margin-left: 150px; position: relative; z-index: 1; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 5rem 3.5rem 4rem;
+    border-bottom: 1px solid var(--border);
+    position: relative; overflow: hidden;
+    min-height: 440px; display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .hero-grid-decoration {
+    position: absolute; top: 0; right: 0;
+    width: 55%; height: 100%;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 1px; opacity: 0.08;
+    pointer-events: none;
+  }
+  .hero-grid-decoration > div {
+    border: 1px solid var(--accent);
+  }
+  .hero-grid-decoration > div:nth-child(2),
+  .hero-grid-decoration > div:nth-child(5),
+  .hero-grid-decoration > div:nth-child(9) {
+    background: var(--accent);
+  }
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem; color: var(--accent);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    opacity: 0; animation: fadeUp 0.5s 0.15s forwards;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.6rem, 5.5vw, 5rem);
+    font-weight: 800; line-height: 1.02;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem; max-width: 760px;
+    opacity: 0; animation: fadeUp 0.5s 0.28s forwards;
+  }
+  .hero h1 .accent { color: var(--accent); }
+  .hero h1 .accent2 { color: var(--accent2); }
+  .hero-desc {
+    font-size: 1rem; color: var(--muted);
+    max-width: 560px; line-height: 1.75;
+    margin-bottom: 2.5rem;
+    font-family: 'Lora', serif;
+    opacity: 0; animation: fadeUp 0.5s 0.4s forwards;
+  }
+  .hero-badges {
+    display: flex; flex-wrap: wrap; gap: 0.6rem;
+    opacity: 0; animation: fadeUp 0.5s 0.52s forwards;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border); color: var(--muted);
+    background: var(--bg2);
+  }
+  .badge.hi { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  /* ── CONTENT ── */
+  .content { max-width: 880px; padding: 0 3.5rem; margin: 0 auto; }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: 4rem 0; border-bottom: 1px solid var(--border);
+    opacity: 0; transform: translateY(18px);
+    transition: opacity 0.55s, transform 0.55s;
+  }
+  .section.visible { opacity: 1; transform: none; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; color: var(--accent);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .eyebrow::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--accent), transparent);
+    max-width: 80px; opacity: 0.5;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.9rem; font-weight: 700;
+    color: var(--text); margin-bottom: 1.8rem; line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .section-intro {
+    font-size: 0.95rem; color: var(--muted);
+    margin-bottom: 2.5rem; max-width: 660px; line-height: 1.8;
+  }
+
+  /* ── OBJECTIVE CARDS ── */
+  .objectives {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .obj-item {
+    background: var(--bg2); padding: 1.3rem 1.5rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    transition: background 0.2s;
+  }
+  .obj-item:hover { background: var(--bg3); }
+  .obj-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(45,212,191,0.3);
+    padding: 0.15rem 0.4rem;
+    flex-shrink: 0; margin-top: 0.2rem;
+  }
+  .obj-text { font-size: 0.87rem; line-height: 1.65; font-family: 'Lora', serif; }
+
+  /* ── CONCEPT BLOCKS ── */
+  .concept-block {
+    margin-bottom: 2.8rem;
+    border: 1px solid var(--border); overflow: hidden;
+  }
+  .concept-header {
+    padding: 1.2rem 1.8rem; background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .concept-icon {
+    width: 30px; height: 30px;
+    background: var(--accent); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .concept-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.1rem; }
+  .concept-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--muted); }
+  .concept-body { padding: 1.8rem; background: var(--bg); }
+  .concept-body p { font-size: 0.9rem; color: #adb8c2; line-height: 1.8; margin-bottom: 1.1rem; }
+  .concept-body p:last-child { margin-bottom: 0; }
+  .concept-body strong { color: var(--text); font-weight: 500; }
+  .concept-body em { color: var(--accent); font-style: normal; font-weight: 500; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-left: 2px solid var(--accent2);
+    background: rgba(245,158,11,0.06);
+    padding: 1rem 1.4rem; margin: 1.2rem 0;
+    font-size: 0.85rem; color: #d4b896; line-height: 1.7;
+    font-family: 'Lora', serif;
+  }
+  .callout-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.12em;
+    color: var(--accent2); display: block; margin-bottom: 0.4rem;
+  }
+  .callout.info { border-left-color: var(--blue); background: rgba(96,165,250,0.06); color: #a8c4e0; }
+  .callout.info .callout-label { color: var(--blue); }
+  .callout.good { border-left-color: var(--accent3); background: rgba(52,211,153,0.06); color: #9dd4bc; }
+  .callout.good .callout-label { color: var(--accent3); }
+  .callout.bad { border-left-color: var(--red); background: rgba(248,113,113,0.06); color: #d4a0a0; }
+  .callout.bad .callout-label { color: var(--red); }
+
+  /* ── CODE ── */
+  .code-block {
+    border: 1px solid var(--border);
+    overflow: hidden; margin: 1.5rem 0;
+  }
+  .code-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.55rem 1.1rem;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+  }
+  .code-dots { display: flex; gap: 5px; }
+  .code-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .code-dot:nth-child(1) { background: #ff5f57; }
+  .code-dot:nth-child(2) { background: #febc2e; }
+  .code-dot:nth-child(3) { background: #28c840; }
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 1.4rem 1.6rem; overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem; line-height: 1.7;
+    color: #e6edf3;
+  }
+  .t { color: #7dd3fc; }   /* tag/selector */
+  .p { color: #86efac; }   /* property */
+  .v { color: #fde68a; }   /* value */
+  .c { color: #4a5568; font-style: italic; } /* comment */
+  .s { color: #c4b5fd; }   /* special/keyword */
+  .u { color: #f9a8d4; }   /* unit */
+  .n { color: #fb923c; }   /* number accent */
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: var(--bg3); color: var(--accent);
+    padding: 0.1em 0.4em;
+    border: 1px solid var(--border);
+  }
+
+  /* ── PROPERTY TABLE ── */
+  .prop-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.83rem; margin: 1.5rem 0;
+    border: 1px solid var(--border);
+  }
+  .prop-table thead tr { background: var(--bg3); }
+  .prop-table th {
+    text-align: left; padding: 0.75rem 1.1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 400; border-bottom: 1px solid var(--border);
+  }
+  .prop-table td {
+    padding: 0.75rem 1.1rem;
+    border-bottom: 1px solid rgba(48,54,61,0.6);
+    vertical-align: top; line-height: 1.6;
+    font-family: 'Lora', serif;
+  }
+  .prop-table tr:last-child td { border-bottom: none; }
+  .prop-table tr:hover td { background: var(--bg2); }
+  .prop-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; color: var(--accent); white-space: nowrap;
+  }
+  .prop-table td:nth-child(2) { color: var(--text); }
+  .prop-table td:nth-child(3) { color: var(--muted); font-size: 0.8rem; }
+
+  /* ── VISUAL DEMOS ── */
+  .demo-wrap {
+    border: 1px solid var(--border); overflow: hidden; margin: 1.5rem 0;
+  }
+  .demo-label-bar {
+    padding: 0.5rem 1.1rem; background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .demo-label-bar span { color: var(--accent); }
+  .demo-content { padding: 1.5rem; background: var(--bg); }
+
+  /* Box Model Demo */
+  .box-model-demo {
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .bm-margin {
+    background: rgba(248,113,113,0.12);
+    border: 1px dashed var(--red);
+    padding: 20px; position: relative;
+  }
+  .bm-border {
+    background: rgba(251,191,36,0.12);
+    border: 3px solid var(--accent2);
+    padding: 16px; position: relative;
+  }
+  .bm-padding {
+    background: rgba(45,212,191,0.1);
+    border: 1px dashed var(--accent);
+    padding: 16px; position: relative;
+  }
+  .bm-content {
+    background: var(--accent);
+    color: var(--bg); font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; padding: 0.6rem 1rem; text-align: center; white-space: nowrap;
+  }
+  .bm-label {
+    position: absolute; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem; letter-spacing: 0.08em; line-height: 1;
+  }
+  .bm-margin .bm-label { color: var(--red); top: 3px; left: 5px; }
+  .bm-border .bm-label { color: var(--accent2); top: 3px; left: 5px; }
+  .bm-padding .bm-label { color: var(--accent); top: 3px; left: 5px; }
+
+  /* Flexbox Demo */
+  .flex-demo-area {
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap;
+    margin: 0.8rem 0;
+  }
+  .flex-item {
+    background: var(--accent); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    padding: 0.5rem 0.9rem; flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .flex-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; }
+  .flex-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+    padding: 0.3rem 0.7rem;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; letter-spacing: 0.06em;
+    transition: all 0.15s;
+  }
+  .flex-btn:hover, .flex-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .flex-prop-display {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+    color: var(--accent); background: var(--bg3); padding: 0.5rem 1rem;
+    margin-bottom: 0.8rem; border-left: 2px solid var(--accent);
+  }
+
+  /* Grid Demo */
+  .grid-demo-area {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px; background: var(--border); margin: 0.8rem 0;
+  }
+  .grid-item {
+    background: var(--bg3); padding: 0.8rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); text-align: center;
+    transition: background 0.2s;
+  }
+  .grid-item:hover { background: var(--accent-dim); color: var(--accent); }
+  .grid-item.span2 { grid-column: span 2; background: rgba(45,212,191,0.08); color: var(--accent); }
+  .grid-item.span-row { grid-row: span 2; background: rgba(245,158,11,0.08); color: var(--accent2); }
+
+  /* Specificity Visual */
+  .specificity-row {
+    display: flex; gap: 0; margin: 0.8rem 0;
+    border: 1px solid var(--border); overflow: hidden;
+  }
+  .spec-cell {
+    flex: 1; padding: 1rem 0.8rem; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .spec-cell:last-child { border-right: none; }
+  .spec-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem; font-weight: 700; line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+  .spec-label { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.1em; }
+  .spec-example { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── COMPARE BLOCKS ── */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); margin: 1.5rem 0;
+  }
+  .compare-panel { background: var(--bg); padding: 0; overflow: hidden; }
+  .compare-header {
+    padding: 0.7rem 1.2rem; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .compare-header.good-h { background: rgba(52,211,153,0.08); color: var(--accent3); border-bottom: 1px solid rgba(52,211,153,0.2); }
+  .compare-header.bad-h { background: rgba(248,113,113,0.08); color: var(--red); border-bottom: 1px solid rgba(248,113,113,0.2); }
+  .compare-panel pre { border: none; }
+
+  /* ── QUIZ ── */
+  .quiz-block {
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 2rem; margin: 2rem 0;
+  }
+  .quiz-eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+    color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8rem;
+  }
+  .quiz-q { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 1.2rem; color: var(--text); line-height: 1.4; }
+  .quiz-options { display: flex; flex-direction: column; gap: 0.5rem; }
+  .quiz-opt {
+    display: flex; align-items: flex-start; gap: 0.8rem;
+    padding: 0.85rem 1.1rem;
+    background: var(--bg); border: 1px solid var(--border);
+    cursor: pointer; font-family: 'Lora', serif; font-size: 0.87rem;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none; line-height: 1.5;
+  }
+  .quiz-opt:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .quiz-opt.correct { border-color: var(--accent3); background: rgba(52,211,153,0.06); color: var(--accent3); }
+  .quiz-opt.wrong { border-color: var(--red); background: rgba(248,113,113,0.06); color: var(--red); }
+  .quiz-key {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+    width: 22px; height: 22px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--muted); margin-top: 0.1rem;
+  }
+  .quiz-feedback { margin-top: 1rem; padding: 0.9rem 1.1rem; display: none; font-size: 0.85rem; font-family: 'Lora', serif; }
+  .quiz-feedback.show { display: block; }
+
+  /* ── CHECKLIST ── */
+  .checklist { display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 0.8rem;
+    padding: 0.8rem 1rem; background: var(--bg2); border: 1px solid var(--border);
+    font-size: 0.87rem; cursor: pointer; transition: background 0.15s;
+    user-select: none; font-family: 'Lora', serif;
+  }
+  .check-item:hover { background: var(--bg3); }
+  .check-item.done { background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.3); }
+  .check-item.done .check-box { background: var(--accent3); border-color: var(--accent3); color: var(--bg); }
+  .check-box {
+    width: 20px; height: 20px; border: 1.5px solid var(--border);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; transition: all 0.2s; margin-top: 0.15rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── PROJECT ── */
+  .project-hero {
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 2.5rem; margin-bottom: 2rem; position: relative; overflow: hidden;
+  }
+  .project-hero::after {
+    content: 'CSS';
+    position: absolute; right: 1.5rem; bottom: -0.5rem;
+    font-family: 'Syne', sans-serif; font-size: 7rem; font-weight: 800;
+    color: var(--accent); opacity: 0.05; line-height: 1; pointer-events: none;
+  }
+  .project-eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
+    color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8rem;
+  }
+  .project-name {
+    font-family: 'Syne', sans-serif; font-size: 1.9rem; font-weight: 700;
+    color: var(--text); margin-bottom: 0.8rem; line-height: 1.2;
+  }
+  .project-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.7; max-width: 520px; }
+  .project-steps { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; counter-reset: step; }
+  .step {
+    counter-increment: step; background: var(--bg2);
+    padding: 1.4rem 1.8rem;
+    display: grid; grid-template-columns: 44px 1fr; gap: 1.4rem; align-items: start;
+    transition: background 0.2s;
+  }
+  .step:hover { background: var(--bg3); }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+    color: var(--accent); font-weight: 500; line-height: 1.4;
+  }
+  .step-num::before { content: counter(step, decimal-leading-zero); }
+  .step-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.35rem; }
+  .step-body { font-size: 0.83rem; color: var(--muted); line-height: 1.65; font-family: 'Lora', serif; }
+
+  /* ── RESOURCES ── */
+  .resource-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+  }
+  .resource-card {
+    background: var(--bg2); padding: 1.4rem;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 0.4rem;
+    transition: background 0.2s;
+  }
+  .resource-card:hover { background: var(--bg3); }
+  .resource-type { font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .resource-name { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 600; color: var(--text); }
+  .resource-desc { font-size: 0.78rem; color: var(--muted); font-family: 'Lora', serif; line-height: 1.6; }
+  .resource-arrow { font-size: 0.85rem; color: var(--accent); margin-top: auto; padding-top: 0.5rem; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 2.5rem 3.5rem; border-top: 1px solid var(--border);
+  }
+  .nav-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    color: var(--muted); text-decoration: none; letter-spacing: 0.06em;
+    padding: 0.75rem 1.4rem; border: 1px solid var(--border);
+    background: var(--bg2); transition: border-color 0.2s, color 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .home-link {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    color: var(--muted); text-decoration: none; transition: color 0.2s;
+  }
+  .home-link:hover { color: var(--accent); }
+
+  kbd {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78em;
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 0.1em 0.4em; border-bottom-width: 2px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 1100px) { .toc { display: none; } main { margin-left: 0; } }
+  @media (max-width: 768px) {
+    header { padding: 0.8rem 1.2rem; }
+    .header-pill { display: none; }
+    .hero { padding: 4rem 1.5rem 3rem; }
+    .content { padding: 0 1.5rem; }
+    .objectives { grid-template-columns: 1fr; }
+    .resource-grid { grid-template-columns: 1fr; }
+    .compare-grid { grid-template-columns: 1fr; }
+    .bottom-nav { padding: 2rem 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    pre { font-size: 0.7rem; }
+    .specificity-row { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-pill">WEEK 02 / 18 &mdash; CSS3</div>
+  <nav class="header-nav">
+    <a href="week1.html">&larr; Week 01</a>
+    <a href="index.html">總覽</a>
+    <a href="week3.html">Week 03 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">選擇器與優先權</a>
+  <a class="toc-item" href="#concept-2">盒模型</a>
+  <a class="toc-item" href="#concept-3">Flexbox</a>
+  <a class="toc-item" href="#concept-4">CSS Grid</a>
+  <a class="toc-item" href="#concept-5">媒體查詢</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+  <div class="hero">
+    <div class="hero-grid-decoration" aria-hidden="true" id="heroGrid"></div>
+    <div class="hero-label">PHASE 01 &mdash; 打穩基礎 / WEEK 02</div>
+    <h1>CSS3 <span class="accent">排版</span>、<br><span class="accent2">Flexbox</span>、Grid</h1>
+    <p class="hero-desc">
+      讓頁面從「有結構」到「好看又能用」的關鍵一步。這週你將掌握現代 CSS 排版的核心工具，並把第一週的純 HTML 履歷變成有視覺設計的頁面。
+    </p>
+    <div class="hero-badges">
+      <span class="badge hi">CSS 選擇器</span>
+      <span class="badge hi">盒模型</span>
+      <span class="badge hi">Flexbox</span>
+      <span class="badge hi">CSS Grid</span>
+      <span class="badge">媒體查詢</span>
+      <span class="badge">8&ndash;10 小時</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個可量化的學習成果。建議學完後逐一對照，確認能獨立完成再繼續。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">理解 CSS 的三種引入方式，並說明為什麼外部樣式表是最佳實踐</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">計算 CSS 選擇器的特異性（specificity），預測當多個規則衝突時哪個會生效</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">理解盒模型的四個層次，並解釋 <code>box-sizing: border-box</code> 解決了什麼問題</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">使用 Flexbox 實作橫向排列、垂直置中、等間距分配等常見版面需求</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">使用 CSS Grid 建立二維版面，設定欄寬、跨欄、以及 gap 間距</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">使用媒體查詢為頁面設定至少兩個斷點，讓版面在手機和桌面都能正常顯示</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: 選擇器與優先權 -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">選擇器與優先權</h2>
+      <p class="section-intro">CSS 最讓初學者困惑的問題之一：「我明明寫了這個樣式，為什麼沒有生效？」答案通常在於優先權（Specificity）。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">01</div>
+          <div>
+            <div class="concept-title">CSS 引入方式</div>
+            <div class="concept-sub">Inline / Internal / External</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>CSS 有三種引入方式，優先權由高到低：<em>行內樣式</em>（直接寫在 style 屬性）、<em>內部樣式表</em>（&lt;style&gt; 標籤）、<em>外部樣式表</em>（連結 .css 檔案）。</p>
+          <p>雖然行內樣式優先權最高，但這不代表要大量使用它。<strong>外部樣式表是最佳實踐</strong>——它讓 HTML 專注結構、CSS 專注樣式，多個頁面可共用同一份樣式表，也便於維護和覆寫。</p>
+          <div class="callout bad">
+            <span class="callout-label">避免</span>
+            不要大量使用行內樣式（<code>style="color:red"</code>）或 <code>!important</code>。這樣做雖然能暫時解決問題，但會讓你的 CSS 變得難以維護，並產生難以預測的優先權衝突。
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">01</div>
+          <div>
+            <div class="concept-title">特異性計算</div>
+            <div class="concept-sub">Specificity Score</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>每個 CSS 選擇器都有一個特異性分數，由三個數字組成：<em>ID 數量</em>、<em>類別/屬性/偽類數量</em>、<em>元素/偽元素數量</em>。分數越高的規則越優先。</p>
+          <p>當兩個選擇器特異性相同時，<strong>後寫的規則覆蓋先寫的</strong>。這就是「層疊」（Cascade）的意義——CSS 的 C 就是 Cascading。</p>
+        </div>
+      </div>
+
+      <div class="specificity-row">
+        <div class="spec-cell" style="background:rgba(248,113,113,0.06)">
+          <div class="spec-num" style="color:var(--red)">1,0,0</div>
+          <div class="spec-label">ID 選擇器</div>
+          <div class="spec-example">#header</div>
+        </div>
+        <div class="spec-cell" style="background:rgba(245,158,11,0.06)">
+          <div class="spec-num" style="color:var(--accent2)">0,1,0</div>
+          <div class="spec-label">類別 / 屬性 / 偽類</div>
+          <div class="spec-example">.card &nbsp;|&nbsp; :hover</div>
+        </div>
+        <div class="spec-cell" style="background:rgba(45,212,191,0.06)">
+          <div class="spec-num" style="color:var(--accent)">0,0,1</div>
+          <div class="spec-label">元素 / 偽元素</div>
+          <div class="spec-example">p &nbsp;|&nbsp; ::before</div>
+        </div>
+        <div class="spec-cell" style="background:rgba(96,165,250,0.06)">
+          <div class="spec-num" style="color:var(--blue)">0,0,0</div>
+          <div class="spec-label">通用選擇器</div>
+          <div class="spec-example">* &nbsp;|&nbsp; 繼承值</div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 選擇器類型與特異性計算</div>
+        </div>
+        <pre><span class="c">/* ── 選擇器類型 ── */</span>
+
+<span class="t">*</span>              { <span class="p">color</span>: <span class="v">gray</span>; }    <span class="c">/* 通用選擇器 — 特異性 0,0,0 */</span>
+<span class="t">p</span>              { <span class="p">color</span>: <span class="v">black</span>; }   <span class="c">/* 元素選擇器 — 0,0,1 */</span>
+<span class="t">.card</span>          { <span class="p">color</span>: <span class="v">blue</span>; }    <span class="c">/* 類別選擇器 — 0,1,0 */</span>
+<span class="t">#header</span>        { <span class="p">color</span>: <span class="v">red</span>; }     <span class="c">/* ID 選擇器 — 1,0,0 */</span>
+
+<span class="c">/* ── 組合選擇器 ── */</span>
+
+<span class="t">nav a</span>          { <span class="p">color</span>: <span class="v">teal</span>; }    <span class="c">/* 後代選擇器 — 0,0,2 */</span>
+<span class="t">nav > a</span>        { <span class="p">color</span>: <span class="v">teal</span>; }    <span class="c">/* 直接子元素 — 0,0,2 */</span>
+<span class="t">h2 + p</span>        { <span class="p">color</span>: <span class="v">teal</span>; }    <span class="c">/* 相鄰兄弟 — 0,0,2 */</span>
+
+<span class="c">/* ── 偽類與屬性選擇器 ── */</span>
+
+<span class="t">a:hover</span>        { <span class="p">color</span>: <span class="v">orange</span>; }  <span class="c">/* 偽類 — 0,1,1 */</span>
+<span class="t">input[type="text"]</span> { <span class="p">border</span>: <span class="v">1px solid #ccc</span>; } <span class="c">/* 屬性 — 0,1,1 */</span>
+<span class="t">li:nth-child(2n)</span>  { <span class="p">background</span>: <span class="v">#f5f5f5</span>; } <span class="c">/* 0,1,1 */</span>
+
+<span class="c">/* ── 特異性計算範例 ── */</span>
+
+<span class="t">.nav a:hover</span>   { <span class="p">color</span>: <span class="v">red</span>; }    <span class="c">/* 0,1,1 + 0,1,0 = 0,2,1 */</span>
+<span class="t">#header .logo</span>  { <span class="p">color</span>: <span class="v">blue</span>; }   <span class="c">/* 1,0,0 + 0,1,0 = 1,1,0 → 勝出 */</span></pre>
+      </div>
+
+      <table class="prop-table">
+        <thead><tr><th>選擇器</th><th>說明</th><th>使用時機</th></tr></thead>
+        <tbody>
+          <tr><td>.class</td><td>類別選擇器</td><td>最常用，可重複使用在多個元素上</td></tr>
+          <tr><td>#id</td><td>ID 選擇器</td><td>頁面內唯一元素，因特異性高而應謹慎使用</td></tr>
+          <tr><td>el el</td><td>後代選擇器</td><td>選取特定容器內的所有後代</td></tr>
+          <tr><td>el > el</td><td>直接子元素</td><td>只選取直接子元素，不包含更深層的後代</td></tr>
+          <tr><td>:hover</td><td>懸停偽類</td><td>鼠標移入時觸發</td></tr>
+          <tr><td>:nth-child(n)</td><td>第 n 個子元素</td><td>斑馬紋、每隔幾個設定樣式</td></tr>
+          <tr><td>:not(selector)</td><td>否定偽類</td><td>排除特定元素，如 <code>li:not(:last-child)</code></td></tr>
+          <tr><td>::before / ::after</td><td>偽元素</td><td>在元素前後插入裝飾性內容</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 2: 盒模型 -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">盒模型</h2>
+      <p class="section-intro">CSS 中每個元素都是一個盒子，由四個層次組成。理解盒模型是掌握版面的基礎，也是解決「為什麼我的版面跑掉了」的關鍵。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">02</div>
+          <div>
+            <div class="concept-title">四層結構</div>
+            <div class="concept-sub">content / padding / border / margin</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><em>content</em> 是元素實際顯示內容的區域，<code>width</code> 和 <code>height</code> 預設只控制這個區域。</p>
+          <p><em>padding</em> 是 content 與 border 之間的內間距，背景色會延伸到 padding 區域。</p>
+          <p><em>border</em> 是邊框，可設定寬度、樣式、顏色。</p>
+          <p><em>margin</em> 是元素與相鄰元素之間的外間距，背景色不會延伸到這裡。注意：垂直方向的 margin 會發生「外邊距折疊」（margin collapse），兩個相鄰的 margin 取較大值，而不是相加。</p>
+        </div>
+      </div>
+
+      <div class="demo-wrap">
+        <div class="demo-label-bar">
+          <span>BOX MODEL VISUAL</span>
+          <span>紅=margin / 黃=border / 青=padding / 實色=content</span>
+        </div>
+        <div class="demo-content">
+          <div class="box-model-demo">
+            <div class="bm-margin">
+              <span class="bm-label">margin</span>
+              <div class="bm-border">
+                <span class="bm-label">border</span>
+                <div class="bm-padding">
+                  <span class="bm-label">padding</span>
+                  <div class="bm-content">content (width &times; height)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">02</div>
+          <div>
+            <div class="concept-title">box-sizing: border-box</div>
+            <div class="concept-sub">最重要的 CSS Reset</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>預設情況下，<code>width: 200px</code> 只是 content 的寬度。加上 <code>padding: 20px</code> 和 <code>border: 2px</code>，元素的實際佔用寬度是 <strong>244px</strong>（200 + 20×2 + 2×2），這經常讓初學者困惑。</p>
+          <p>設定 <code>box-sizing: border-box</code> 後，<code>width: 200px</code> 代表元素的<em>總寬度</em>包含 padding 和 border，讓尺寸計算更直覺。<strong>幾乎所有現代專案都會在全域設定這個屬性</strong>。</p>
+        </div>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-header bad-h">&#10005; content-box（預設，計算複雜）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:0.76rem;"><span class="t">.box</span> {
+  <span class="p">width</span>: <span class="v">200px</span>;
+  <span class="p">padding</span>: <span class="v">20px</span>;
+  <span class="p">border</span>: <span class="v">2px solid</span>;
+  <span class="c">/* 實際寬度：244px */</span>
+  <span class="c">/* 200 + 20*2 + 2*2 */</span>
+}</pre>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-header good-h">&#10003; border-box（直覺，推薦）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:0.76rem;"><span class="t">.box</span> {
+  <span class="p">box-sizing</span>: <span class="v">border-box</span>;
+  <span class="p">width</span>: <span class="v">200px</span>;
+  <span class="p">padding</span>: <span class="v">20px</span>;
+  <span class="p">border</span>: <span class="v">2px solid</span>;
+  <span class="c">/* 實際寬度：200px */</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 全域 box-sizing 與常用盒模型屬性</div>
+        </div>
+        <pre><span class="c">/* ── 全域重設（幾乎每個專案都需要）── */</span>
+<span class="t">*, *::before, *::after</span> {
+  <span class="p">box-sizing</span>: <span class="v">border-box</span>;
+  <span class="p">margin</span>: <span class="v">0</span>;
+  <span class="p">padding</span>: <span class="v">0</span>;
+}
+
+<span class="c">/* ── padding 簡寫 ── */</span>
+<span class="t">.card</span> {
+  <span class="p">padding</span>: <span class="v">16px</span>;           <span class="c">/* 四邊相同 */</span>
+  <span class="p">padding</span>: <span class="v">16px 24px</span>;     <span class="c">/* 上下 16px，左右 24px */</span>
+  <span class="p">padding</span>: <span class="v">8px 16px 24px 12px</span>; <span class="c">/* 上右下左（順時針）*/</span>
+}
+
+<span class="c">/* ── margin 自動居中 ── */</span>
+<span class="t">.container</span> {
+  <span class="p">max-width</span>: <span class="v">1200px</span>;
+  <span class="p">margin</span>: <span class="v">0 auto</span>;  <span class="c">/* 上下0，左右自動 = 水平置中 */</span>
+  <span class="p">padding</span>: <span class="v">0 1.5rem</span>;
+}
+
+<span class="c">/* ── border 語法 ── */</span>
+<span class="t">.button</span> {
+  <span class="p">border</span>: <span class="v">1px solid #e2e8f0</span>;
+  <span class="p">border-radius</span>: <span class="v">6px</span>;    <span class="c">/* 圓角 */</span>
+  <span class="p">border-radius</span>: <span class="v">50%</span>;    <span class="c">/* 圓形（需要正方形元素）*/</span>
+}
+
+<span class="c">/* ── display 屬性 ── */</span>
+<span class="t">span</span>   { <span class="p">display</span>: <span class="v">inline</span>; }        <span class="c">/* 行內：不換行，無法設寬高 */</span>
+<span class="t">div</span>    { <span class="p">display</span>: <span class="v">block</span>; }         <span class="c">/* 區塊：自動換行，可設寬高 */</span>
+<span class="t">.icon</span> { <span class="p">display</span>: <span class="v">inline-block</span>; }  <span class="c">/* 兩者兼顧 */</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: Flexbox -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">Flexbox</h2>
+      <p class="section-intro">Flexbox 是一維排版工具，專門解決一個方向（橫向或縱向）的排列問題。它是現代 CSS 最常用的佈局方式之一，掌握它能解決大多數排版需求。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">03</div>
+          <div>
+            <div class="concept-title">Flex Container vs Flex Items</div>
+            <div class="concept-sub">容器屬性 vs 子元素屬性</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>Flexbox 分為兩個角色：<em>Flex 容器</em>（設定 <code>display: flex</code> 的父元素）和 <em>Flex 子元素</em>（容器的直接子元素）。容器屬性控制整體排列方式，子元素屬性控制自身的大小和對齊。</p>
+          <p><strong>主軸（Main Axis）</strong>是排列方向，預設為水平（row）。<strong>交叉軸（Cross Axis）</strong>與主軸垂直。<code>justify-content</code> 控制主軸對齊，<code>align-items</code> 控制交叉軸對齊。記住這組概念，大部分 Flexbox 問題就迎刃而解。</p>
+          <div class="callout info">
+            <span class="callout-label">常見需求：垂直水平置中</span>
+            在父元素設定 <code>display: flex; justify-content: center; align-items: center;</code>，子元素就能完美置中於容器內。這個技巧在現代 CSS 中幾乎取代了過去所有置中的 hack。
+          </div>
+        </div>
+      </div>
+
+      <!-- 互動式 Flexbox Demo -->
+      <div class="demo-wrap">
+        <div class="demo-label-bar"><span>INTERACTIVE DEMO</span><span>點擊按鈕即時預覽效果</span></div>
+        <div class="demo-content">
+          <div class="flex-controls" id="flexControls">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--muted);align-self:center;">justify-content:</span>
+            <button class="flex-btn active" data-prop="justify" data-val="flex-start">flex-start</button>
+            <button class="flex-btn" data-prop="justify" data-val="center">center</button>
+            <button class="flex-btn" data-prop="justify" data-val="flex-end">flex-end</button>
+            <button class="flex-btn" data-prop="justify" data-val="space-between">space-between</button>
+            <button class="flex-btn" data-prop="justify" data-val="space-around">space-around</button>
+            <button class="flex-btn" data-prop="justify" data-val="space-evenly">space-evenly</button>
+          </div>
+          <div class="flex-controls">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--muted);align-self:center;">align-items:</span>
+            <button class="flex-btn" data-prop="align" data-val="flex-start">flex-start</button>
+            <button class="flex-btn active" data-prop="align" data-val="center">center</button>
+            <button class="flex-btn" data-prop="align" data-val="flex-end">flex-end</button>
+            <button class="flex-btn" data-prop="align" data-val="stretch">stretch</button>
+            <button class="flex-btn" data-prop="align" data-val="baseline">baseline</button>
+          </div>
+          <div class="flex-prop-display" id="flexDisplay">display: flex; justify-content: flex-start; align-items: center;</div>
+          <div class="flex-demo-area" id="flexArea" style="height:100px;align-items:center;">
+            <div class="flex-item">Item 1</div>
+            <div class="flex-item" style="font-size:0.9rem;">Item 2</div>
+            <div class="flex-item" style="font-size:0.75rem;">Item 3</div>
+            <div class="flex-item">Item 4</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; Flexbox 完整參考</div>
+        </div>
+        <pre><span class="c">/* ── 容器屬性 ── */</span>
+<span class="t">.flex-container</span> {
+  <span class="p">display</span>: <span class="v">flex</span>;
+
+  <span class="c">/* 排列方向 */</span>
+  <span class="p">flex-direction</span>: <span class="v">row</span>;         <span class="c">/* 預設：水平由左至右 */</span>
+  <span class="p">flex-direction</span>: <span class="v">column</span>;      <span class="c">/* 垂直由上至下 */</span>
+  <span class="p">flex-direction</span>: <span class="v">row-reverse</span>; <span class="c">/* 水平由右至左 */</span>
+
+  <span class="c">/* 主軸對齊（水平，當 direction=row）*/</span>
+  <span class="p">justify-content</span>: <span class="v">flex-start</span>;    <span class="c">/* 靠左 */</span>
+  <span class="p">justify-content</span>: <span class="v">center</span>;        <span class="c">/* 置中 */</span>
+  <span class="p">justify-content</span>: <span class="v">flex-end</span>;      <span class="c">/* 靠右 */</span>
+  <span class="p">justify-content</span>: <span class="v">space-between</span>; <span class="c">/* 兩端對齊，中間等間 */</span>
+  <span class="p">justify-content</span>: <span class="v">space-evenly</span>;  <span class="c">/* 所有間距相等 */</span>
+
+  <span class="c">/* 交叉軸對齊（垂直，當 direction=row）*/</span>
+  <span class="p">align-items</span>: <span class="v">center</span>;   <span class="c">/* 垂直置中 */</span>
+  <span class="p">align-items</span>: <span class="v">stretch</span>;  <span class="c">/* 拉伸填滿高度（預設）*/</span>
+  <span class="p">align-items</span>: <span class="v">flex-start</span>; <span class="c">/* 對齊頂部 */</span>
+
+  <span class="c">/* 換行 */</span>
+  <span class="p">flex-wrap</span>: <span class="v">wrap</span>;     <span class="c">/* 超出時自動換行 */</span>
+  <span class="p">flex-wrap</span>: <span class="v">nowrap</span>;   <span class="c">/* 預設：不換行 */</span>
+  <span class="p">gap</span>: <span class="v">16px</span>;            <span class="c">/* 子元素間距（現代瀏覽器均支援）*/</span>
+}
+
+<span class="c">/* ── 子元素屬性 ── */</span>
+<span class="t">.flex-item</span> {
+  <span class="p">flex-grow</span>: <span class="v">1</span>;     <span class="c">/* 佔用剩餘空間的比例（0=不增長）*/</span>
+  <span class="p">flex-shrink</span>: <span class="v">0</span>;   <span class="c">/* 空間不足時是否縮小（0=不縮小）*/</span>
+  <span class="p">flex-basis</span>: <span class="v">200px</span>;<span class="c">/* 初始寬度 */</span>
+  <span class="p">flex</span>: <span class="v">1 0 200px</span>;  <span class="c">/* 簡寫：grow shrink basis */</span>
+  <span class="p">flex</span>: <span class="v">1</span>;           <span class="c">/* 等比例分配剩餘空間 */</span>
+  <span class="p">align-self</span>: <span class="v">flex-end</span>; <span class="c">/* 覆蓋容器的 align-items */</span>
+  <span class="p">order</span>: <span class="v">2</span>;          <span class="c">/* 視覺排列順序（不改變 DOM 順序）*/</span>
+}</pre>
+      </div>
+
+      <table class="prop-table">
+        <thead><tr><th>屬性</th><th>作用</th><th>常用值</th></tr></thead>
+        <tbody>
+          <tr><td>justify-content</td><td>主軸對齊方式</td><td>flex-start / center / space-between / space-evenly</td></tr>
+          <tr><td>align-items</td><td>交叉軸對齊（單行）</td><td>stretch / center / flex-start / baseline</td></tr>
+          <tr><td>flex-wrap</td><td>是否允許換行</td><td>nowrap / wrap / wrap-reverse</td></tr>
+          <tr><td>gap</td><td>子元素間距</td><td>像素值，如 <code>gap: 16px</code> 或 <code>gap: 8px 16px</code></td></tr>
+          <tr><td>flex-direction</td><td>主軸方向</td><td>row / column / row-reverse / column-reverse</td></tr>
+          <tr><td>flex</td><td>子元素大小（簡寫）</td><td><code>flex: 1</code> 等比例，<code>flex: 0 0 auto</code> 固定大小</td></tr>
+          <tr><td>align-self</td><td>個別子元素的交叉軸對齊</td><td>同 align-items 的值</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 4: CSS Grid -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">CSS Grid</h2>
+      <p class="section-intro">Grid 是二維排版工具，同時控制欄（column）和列（row）。適合用在整個頁面的大版面架構，或需要精確對齊的卡片系統。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">04</div>
+          <div>
+            <div class="concept-title">Grid vs Flexbox：如何選擇？</div>
+            <div class="concept-sub">一維 vs 二維</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>這兩者不是競爭關係，而是互補：<em>Flexbox</em> 適合一維排列——一排按鈕、一列導覽項目、卡片組件的內部佈局。<em>Grid</em> 適合二維版面——整個頁面的欄位架構、需要橫跨多欄或多列的版面。</p>
+          <p>實際上，<strong>兩者常常一起使用</strong>：Grid 定義頁面的大區塊，Flexbox 處理各個區塊內部的排列。</p>
+        </div>
+      </div>
+
+      <!-- Grid 視覺示意 -->
+      <div class="demo-wrap">
+        <div class="demo-label-bar"><span>GRID LAYOUT DEMO</span><span>青色=跨欄 / 橙色=跨列</span></div>
+        <div class="demo-content">
+          <div class="grid-demo-area">
+            <div class="grid-item span2">grid-column: span 2</div>
+            <div class="grid-item span-row">grid-row:<br>span 2</div>
+            <div class="grid-item">item</div>
+            <div class="grid-item">item</div>
+            <div class="grid-item">item</div>
+            <div class="grid-item">item</div>
+            <div class="grid-item">item</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; Grid 完整參考</div>
+        </div>
+        <pre><span class="c">/* ── Grid 容器 ── */</span>
+<span class="t">.grid-container</span> {
+  <span class="p">display</span>: <span class="v">grid</span>;
+
+  <span class="c">/* 定義欄位 */</span>
+  <span class="p">grid-template-columns</span>: <span class="v">200px 1fr 1fr</span>;    <span class="c">/* 固定+彈性 */</span>
+  <span class="p">grid-template-columns</span>: <span class="v">repeat(3, 1fr)</span>;   <span class="c">/* 三等份 */</span>
+  <span class="p">grid-template-columns</span>: <span class="v">repeat(auto-fill, minmax(250px, 1fr))</span>; <span class="c">/* 響應式卡片 */</span>
+
+  <span class="c">/* 定義列高 */</span>
+  <span class="p">grid-template-rows</span>: <span class="v">auto 1fr auto</span>;   <span class="c">/* header / main / footer */</span>
+
+  <span class="c">/* 間距 */</span>
+  <span class="p">gap</span>: <span class="v">24px</span>;             <span class="c">/* 欄列間距相同 */</span>
+  <span class="p">gap</span>: <span class="v">16px 24px</span>;        <span class="c">/* 列間距 16px，欄間距 24px */</span>
+
+  <span class="c">/* 對齊 */</span>
+  <span class="p">justify-items</span>: <span class="v">start</span>;   <span class="c">/* 格內橫向對齊 */</span>
+  <span class="p">align-items</span>: <span class="v">center</span>;   <span class="c">/* 格內縱向對齊 */</span>
+}
+
+<span class="c">/* ── Grid 子元素：跨欄/列 ── */</span>
+<span class="t">.header</span> {
+  <span class="p">grid-column</span>: <span class="v">1 / -1</span>;    <span class="c">/* 從第1欄到最後一欄（橫跨全寬）*/</span>
+  <span class="p">grid-column</span>: <span class="v">span 2</span>;    <span class="c">/* 佔 2 欄 */</span>
+}
+
+<span class="t">.sidebar</span> {
+  <span class="p">grid-row</span>: <span class="v">2 / 4</span>;         <span class="c">/* 跨越第 2 到第 4 列 */</span>
+}
+
+<span class="c">/* ── 實用版面範例 ── */</span>
+<span class="t">.page-layout</span> {
+  <span class="p">display</span>: <span class="v">grid</span>;
+  <span class="p">grid-template-columns</span>: <span class="v">240px 1fr</span>;
+  <span class="p">grid-template-rows</span>: <span class="v">60px 1fr 60px</span>;
+  <span class="p">min-height</span>: <span class="v">100vh</span>;
+}
+<span class="t">.page-layout header</span>  { <span class="p">grid-column</span>: <span class="v">1 / -1</span>; }
+<span class="t">.page-layout footer</span>  { <span class="p">grid-column</span>: <span class="v">1 / -1</span>; }
+
+<span class="c">/* ── 響應式卡片 grid（最常用技巧）── */</span>
+<span class="t">.card-grid</span> {
+  <span class="p">display</span>: <span class="v">grid</span>;
+  <span class="p">grid-template-columns</span>: <span class="v">repeat(auto-fill, minmax(280px, 1fr))</span>;
+  <span class="p">gap</span>: <span class="v">1.5rem</span>;
+  <span class="c">/* 自動填充，每張卡片最小 280px，空間夠就自動排多列 */</span>
+}</pre>
+      </div>
+
+      <table class="prop-table">
+        <thead><tr><th>屬性</th><th>作用</th><th>範例</th></tr></thead>
+        <tbody>
+          <tr><td>grid-template-columns</td><td>定義欄的數量和寬度</td><td><code>repeat(3, 1fr)</code> / <code>200px 1fr</code></td></tr>
+          <tr><td>grid-template-rows</td><td>定義列的高度</td><td><code>auto 1fr auto</code></td></tr>
+          <tr><td>gap</td><td>格線間距</td><td><code>16px</code> 或 <code>8px 16px</code></td></tr>
+          <tr><td>grid-column</td><td>子元素佔用的欄範圍</td><td><code>1 / -1</code>（全寬）/ <code>span 2</code></td></tr>
+          <tr><td>grid-row</td><td>子元素佔用的列範圍</td><td><code>2 / 4</code> / <code>span 3</code></td></tr>
+          <tr><td>auto-fill vs auto-fit</td><td>自動填充模式</td><td><code>repeat(auto-fill, minmax(200px, 1fr))</code></td></tr>
+          <tr><td>fr 單位</td><td>彈性比例單位</td><td><code>1fr</code> 代表剩餘空間的一份</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout good">
+        <span class="callout-label">最實用技巧：auto-fill + minmax</span>
+        <code>grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))</code> 是製作響應式卡片列表的神奇公式。它告訉瀏覽器：「盡量多排幾欄，每欄最小 280px，剩餘空間平均分配。」寬度夠寬時自動 3 欄，縮窄後自動變 2 欄，再窄變 1 欄，<strong>完全不需要媒體查詢</strong>。
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: 媒體查詢 -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">媒體查詢與 RWD</h2>
+      <p class="section-intro">響應式設計（Responsive Web Design）讓同一份 HTML/CSS 在手機、平板、桌面都能良好呈現。媒體查詢是實現 RWD 的核心工具。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">05</div>
+          <div>
+            <div class="concept-title">Mobile-First 設計思維</div>
+            <div class="concept-sub">從小螢幕開始設計</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>有兩種設計策略：<em>Mobile-First</em> 先寫手機版樣式，再用 <code>min-width</code> 媒體查詢漸進增強到大螢幕；<em>Desktop-First</em> 則相反，先寫桌面版再用 <code>max-width</code> 縮減。</p>
+          <p><strong>現代開發推薦 Mobile-First</strong>，原因是：手機版通常是最簡單的版面，基礎樣式應該是最通用的，而桌面版的複雜度是在手機版基礎上「增加」的，這樣的 CSS 結構更乾淨，效能也更好（手機不會載入不需要的桌面樣式）。</p>
+          <div class="callout info">
+            <span class="callout-label">HEAD 中的 viewport meta 標籤</span>
+            記得在 <code>&lt;head&gt;</code> 中加上 <code>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</code>，否則手機會把桌面版頁面縮小顯示，媒體查詢也不會正常作用。
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 媒體查詢語法與 Mobile-First 策略</div>
+        </div>
+        <pre><span class="c">/* ── 媒體查詢基本語法 ── */</span>
+<span class="s">@media</span> (<span class="p">min-width</span>: <span class="v">768px</span>) {
+  <span class="c">/* 只在 768px 以上才套用的樣式 */</span>
+}
+
+<span class="s">@media</span> (<span class="p">max-width</span>: <span class="v">767px</span>) {
+  <span class="c">/* 只在 767px 以下才套用（Desktop-First 寫法）*/</span>
+}
+
+<span class="c">/* ── Mobile-First 斷點策略（推薦）── */</span>
+
+<span class="c">/* 基礎樣式：針對手機，沒有媒體查詢 */</span>
+<span class="t">.layout</span> {
+  <span class="p">display</span>: <span class="v">flex</span>;
+  <span class="p">flex-direction</span>: <span class="v">column</span>;  <span class="c">/* 手機：垂直堆疊 */</span>
+  <span class="p">gap</span>: <span class="v">1rem</span>;
+}
+
+<span class="c">/* 平板：640px 以上 */</span>
+<span class="s">@media</span> (<span class="p">min-width</span>: <span class="v">640px</span>) {
+  <span class="t">.layout</span> {
+    <span class="p">flex-direction</span>: <span class="v">row</span>;     <span class="c">/* 平板：橫向排列 */</span>
+    <span class="p">flex-wrap</span>: <span class="v">wrap</span>;
+  }
+}
+
+<span class="c">/* 桌面：1024px 以上 */</span>
+<span class="s">@media</span> (<span class="p">min-width</span>: <span class="v">1024px</span>) {
+  <span class="t">.layout</span> {
+    <span class="p">gap</span>: <span class="v">2rem</span>;
+  }
+  <span class="t">.sidebar</span> {
+    <span class="p">display</span>: <span class="v">block</span>;          <span class="c">/* 桌面才顯示側欄 */</span>
+  }
+}
+
+<span class="c">/* ── 常見 CSS 斷點參考 ── */</span>
+<span class="c">/* sm:  640px  — 大型手機、小型平板  */</span>
+<span class="c">/* md:  768px  — 平板               */</span>
+<span class="c">/* lg:  1024px — 小型桌面           */</span>
+<span class="c">/* xl:  1280px — 標準桌面           */</span>
+<span class="c">/* 2xl: 1536px — 大型桌面、超寬螢幕  */</span>
+
+<span class="c">/* ── 其他媒體條件 ── */</span>
+<span class="s">@media</span> (<span class="p">prefers-color-scheme</span>: <span class="v">dark</span>) {
+  <span class="t">:root</span> { <span class="p">--bg</span>: <span class="v">#0d1117</span>; <span class="p">--text</span>: <span class="v">#e6edf3</span>; } <span class="c">/* 深色模式 */</span>
+}
+<span class="s">@media</span> (<span class="p">prefers-reduced-motion</span>: <span class="v">reduce</span>) {
+  <span class="t">*</span> { <span class="p">animation-duration</span>: <span class="v">0.01ms</span> <span class="s">!important</span>; }  <span class="c">/* 停止動畫 */</span>
+}</pre>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">05</div>
+          <div>
+            <div class="concept-title">CSS 自訂屬性（變數）</div>
+            <div class="concept-sub">Design Tokens</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>CSS 自訂屬性（Custom Properties）讓你在 <code>:root</code> 定義全域變數，在整個樣式表中重複使用。當需要修改主色時，只需改一個地方，所有用到這個變數的地方都會自動更新。</p>
+          <p>這個機制也可以搭配媒體查詢實現深色模式：在 <code>@media (prefers-color-scheme: dark)</code> 中重新定義顏色變數，不需要重寫所有樣式規則，只需要覆寫變數值。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">CSS &mdash; 自訂屬性（Design Tokens）</div>
+        </div>
+        <pre><span class="c">/* ── 定義設計 Token ── */</span>
+<span class="t">:root</span> {
+  <span class="c">/* 顏色 */</span>
+  <span class="p">--color-bg</span>:       <span class="v">#ffffff</span>;
+  <span class="p">--color-text</span>:     <span class="v">#1a1a2e</span>;
+  <span class="p">--color-primary</span>:  <span class="v">#2563eb</span>;
+  <span class="p">--color-muted</span>:    <span class="v">#6b7280</span>;
+
+  <span class="c">/* 間距 */</span>
+  <span class="p">--space-sm</span>:  <span class="v">0.5rem</span>;
+  <span class="p">--space-md</span>:  <span class="v">1rem</span>;
+  <span class="p">--space-lg</span>:  <span class="v">2rem</span>;
+  <span class="p">--space-xl</span>:  <span class="v">4rem</span>;
+
+  <span class="c">/* 字體 */</span>
+  <span class="p">--font-sans</span>:  <span class="v">'DM Sans', sans-serif</span>;
+  <span class="p">--font-mono</span>:  <span class="v">'JetBrains Mono', monospace</span>;
+
+  <span class="c">/* 圓角 */</span>
+  <span class="p">--radius-sm</span>: <span class="v">4px</span>;
+  <span class="p">--radius-md</span>: <span class="v">8px</span>;
+  <span class="p">--radius-lg</span>: <span class="v">16px</span>;
+}
+
+<span class="c">/* ── 深色模式自動切換 ── */</span>
+<span class="s">@media</span> (<span class="p">prefers-color-scheme</span>: <span class="v">dark</span>) {
+  <span class="t">:root</span> {
+    <span class="p">--color-bg</span>:   <span class="v">#0d1117</span>;
+    <span class="p">--color-text</span>: <span class="v">#e6edf3</span>;
+    <span class="c">/* 只需改變數值，其他樣式自動更新 */</span>
+  }
+}
+
+<span class="c">/* ── 使用變數 ── */</span>
+<span class="t">body</span> {
+  <span class="p">background</span>: <span class="v">var(--color-bg)</span>;
+  <span class="p">color</span>: <span class="v">var(--color-text)</span>;
+  <span class="p">font-family</span>: <span class="v">var(--font-sans)</span>;
+}
+
+<span class="t">.card</span> {
+  <span class="p">padding</span>: <span class="v">var(--space-lg)</span>;
+  <span class="p">border-radius</span>: <span class="v">var(--radius-md)</span>;
+  <span class="p">background</span>: <span class="v">var(--color-bg)</span>;
+}</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">三道題目，涵蓋本週最重要的概念。點擊選項即時顯示解答。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eyebrow">QUIZ 01 / 03</div>
+        <div class="quiz-q">以下哪個 CSS 規則的特異性（specificity）分數最高？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>p { color: red; }</code>&nbsp;— 元素選擇器</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>.card p { color: blue; }</code>&nbsp;— 類別 + 元素</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>#header .nav a { color: green; }</code>&nbsp;— ID + 類別 + 元素</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>.nav .link { color: orange; }</code>&nbsp;— 類別 + 類別</div>
+        </div>
+        <div class="quiz-feedback callout good"><span class="callout-label">CORRECT</span><code>#header .nav a</code> 的特異性是 1,1,1（1個ID + 1個類別 + 1個元素），是選項中最高的。A 是 0,0,1；B 是 0,1,1；D 是 0,2,0。特異性比較規則是先比較最左邊的數字，ID 只要出現一個就能壓過所有類別和元素的組合。</div>
+        <div class="quiz-feedback callout bad"><span class="callout-label">TRY AGAIN</span>分析每個選項的選擇器，計算 ID、類別、元素的數量，組成三位數進行比較。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eyebrow">QUIZ 02 / 03</div>
+        <div class="quiz-q">一個元素設定了 <code>width: 300px; padding: 20px; border: 5px solid;</code>，若使用預設的 <code>box-sizing: content-box</code>，它的實際佔用寬度是多少？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>300px</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>320px</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>340px</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>350px</div>
+        </div>
+        <div class="quiz-feedback callout good"><span class="callout-label">CORRECT</span>計算方式：content(300) + padding-left(20) + padding-right(20) + border-left(5) + border-right(5) = <strong>350px</strong>。這正是 <code>box-sizing: border-box</code> 要解決的問題——當設定 border-box 後，300px 就代表總寬度，不會再有這個計算困惑。</div>
+        <div class="quiz-feedback callout bad"><span class="callout-label">TRY AGAIN</span>記得要把左右兩邊的 padding 和 border 都加進去。width + padding*2 + border*2 = ?</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eyebrow">QUIZ 03 / 03</div>
+        <div class="quiz-q">你想讓一個 flex 容器內的子元素「等間距排列，兩端不留空隙」。應該使用哪個 <code>justify-content</code> 值？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>space-evenly</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>space-between</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>space-around</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>center</code></div>
+        </div>
+        <div class="quiz-feedback callout good"><span class="callout-label">CORRECT</span><code>space-between</code> 讓第一個元素貼左邊、最後一個元素貼右邊，中間的間距平均分配。<code>space-around</code> 每個元素兩側各有相等間距（所以兩端會有一半的間距）；<code>space-evenly</code> 所有間距完全相等（包含兩端）。</div>
+        <div class="quiz-feedback callout bad"><span class="callout-label">TRY AGAIN</span>想想「兩端不留空隙」這個條件——哪個值會讓第一個元素從最左端開始、最後一個元素到最右端結束？</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：美化個人履歷</h2>
+      <p class="section-intro">繼續第一週的 HTML 履歷，這週為它加上完整的 CSS 樣式，讓它從「純文字」變成「有設計感的履歷頁面」。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 02 PROJECT</div>
+        <div class="project-name">履歷頁面<br>CSS 美化版</div>
+        <p class="project-desc">為第一週的 HTML 履歷加上樣式：設計配色系統、使用 Flexbox 排列導覽列、使用 Grid 排列技能卡片，並加入響應式斷點讓手機版正常顯示。</p>
+      </div>
+
+      <h3 style="font-family:'Syne',sans-serif;font-weight:600;font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="project-steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 style.css 並設定全域重設</div>
+            <div class="step-body">新建 <code>style.css</code>，在 HTML <code>&lt;head&gt;</code> 用 <code>&lt;link rel="stylesheet" href="style.css"&gt;</code> 引入。先寫全域重設：<code>*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }</code>。設定 <code>:root</code> 顏色變數，至少包含背景色、文字色、主色調。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">設定排版基礎：字體與間距</div>
+            <div class="step-body">為 <code>body</code> 設定 font-family（從 Google Fonts 選一款）、line-height（建議 1.6–1.8）、background、color。建立 <code>.container</code> 類別：<code>max-width: 900px; margin: 0 auto; padding: 0 1.5rem;</code> 控制內容寬度。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">用 Flexbox 排列 header 導覽列</div>
+            <div class="step-body">讓 header 使用 Flexbox：左側放名字（<code>flex: 1</code>），右側放導覽連結（<code>display: flex; gap: 1.5rem;</code>）。設定 <code>position: sticky; top: 0;</code> 讓 header 固定在頁面頂部。加上 <code>backdrop-filter: blur()</code> 模糊效果（選修）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">用 Grid 排列技能卡片</div>
+            <div class="step-body">把技能清單改成卡片樣式，每個 <code>&lt;li&gt;</code> 改為卡片外觀（padding、border、border-radius）。容器使用 <code>display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;</code> 自動響應欄數。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">設計工作經歷區塊</div>
+            <div class="step-body">為每個 <code>&lt;article&gt;</code> 工作經歷加上樣式：左側加一條彩色邊框（<code>border-left: 3px solid var(--color-primary)</code>），搭配適當的 padding 和 margin。時間標籤使用 <code>display: inline-block</code> 設計成標籤樣式。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">美化表單</div>
+            <div class="step-body">為 input 和 textarea 設定統一樣式：<code>width: 100%; padding: 0.6rem 1rem; border: 1px solid #ccc; border-radius: 4px;</code>。加上 <code>:focus</code> 偽類樣式讓輸入框獲取焦點時有視覺回饋（border-color 改變）。為 button 設計配色和 hover 效果。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入響應式媒體查詢</div>
+            <div class="step-body">在 CSS 最底部加入媒體查詢。手機版（<code>max-width: 768px</code>）：讓 header 變成縱向堆疊、調小字體大小、增加各區塊的 padding。測試方式：Chrome DevTools 按 <kbd>Ctrl+Shift+M</kbd> 進入手機模擬模式。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分項：Hover 動效與過渡</div>
+            <div class="step-body">為導覽連結、技能卡片、按鈕加上 <code>transition: all 0.2s ease;</code> 和 <code>:hover</code> 樣式，讓互動更順滑。嘗試為卡片加上 <code>:hover { transform: translateY(-4px); box-shadow: ... }</code> 的浮起效果。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:'Syne',sans-serif;font-weight:600;font-size:1.1rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>建立了獨立的 <code>style.css</code> 檔案並正確連結，沒有使用行內樣式</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span><code>:root</code> 中定義了至少 5 個顏色和間距自訂變數</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>全域設定了 <code>box-sizing: border-box</code> 和 <code>margin/padding: 0</code></span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>Header 使用 Flexbox 排列，名字和導覽連結分居左右兩側</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>技能區塊使用 CSS Grid 排列卡片，有適當的 gap</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>加入了至少一個媒體查詢，讓手機版（<768px）的版面正常顯示</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>連結和按鈕有 <code>:hover</code> 樣式，互動有視覺回饋</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>在 Chrome DevTools 手機模式下測試，版面沒有跑版或溢出</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">這些是本週核心技術的最佳學習資源，尤其是 Flexbox 和 Grid 的遊戲式練習，強烈建議花時間完成。</p>
+      <div class="resource-grid">
+        <a href="https://flexboxfroggy.com/#zh-tw" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">遊戲 / 中文</div>
+          <div class="resource-name">Flexbox Froggy</div>
+          <div class="resource-desc">用遊戲方式學 Flexbox，24 關卡從簡單到複雜，中文介面，學完基本掌握 Flexbox 所有屬性。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://cssgridgarden.com/#zh-tw" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">遊戲 / 中文</div>
+          <div class="resource-name">Grid Garden</div>
+          <div class="resource-desc">用澆水遊戲學 CSS Grid，28 關卡，同樣有中文介面，學完能掌握 Grid 的核心屬性。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://css-tricks.com/snippets/css/a-guide-to-flexbox/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">視覺化參考</div>
+          <div class="resource-name">CSS Tricks &mdash; Flexbox 完全指南</div>
+          <div class="resource-desc">業界最知名的 Flexbox 參考圖解，每個屬性都有視覺示意，是開發時最佳的對照工具。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://css-tricks.com/snippets/css/complete-guide-grid/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">視覺化參考</div>
+          <div class="resource-name">CSS Tricks &mdash; Grid 完全指南</div>
+          <div class="resource-desc">同樣出色的 CSS Grid 圖解參考，涵蓋所有屬性和使用範例，建議加入書籤。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://web.dev/learn/css" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">深度教程</div>
+          <div class="resource-name">web.dev &mdash; Learn CSS</div>
+          <div class="resource-desc">Google 出品的完整 CSS 課程，從盒模型到進階主題，每節都有互動範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://specificity.keegan.st/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">工具</div>
+          <div class="resource-name">CSS Specificity Calculator</div>
+          <div class="resource-desc">輸入任何 CSS 選擇器，即時計算並視覺化特異性分數，幫助理解優先權計算。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div><!-- end .content -->
+
+  <div class="bottom-nav">
+    <a href="week1.html" class="nav-btn">&larr; Week 01：HTML5 結構</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week3.html" class="nav-btn">Week 03：CSS 動畫 &rarr;</a>
+  </div>
+</main>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+    document.getElementById('progressBar').style.width = Math.min(p, 100) + '%';
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+  // TOC active
+  const sectionIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','quiz','project','resources'];
+  const sectionEls = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sectionEls.forEach(el => { if (window.scrollY >= el.offsetTop - 130) current = el.id; });
+    document.querySelectorAll('.toc-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+    });
+  });
+
+  // Hero grid
+  const hg = document.getElementById('heroGrid');
+  if (hg) {
+    for (let i = 0; i < 12; i++) {
+      const d = document.createElement('div');
+      hg.appendChild(d);
+    }
+  }
+
+  // Interactive Flexbox Demo
+  let jc = 'flex-start', ai = 'center';
+  document.querySelectorAll('.flex-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prop = btn.dataset.prop;
+      const val = btn.dataset.val;
+      document.querySelectorAll(`.flex-btn[data-prop="${prop}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (prop === 'justify') jc = val;
+      else ai = val;
+      const area = document.getElementById('flexArea');
+      area.style.justifyContent = jc;
+      area.style.alignItems = ai;
+      document.getElementById('flexDisplay').textContent =
+        `display: flex; justify-content: ${jc}; align-items: ${ai};`;
+    });
+  });
+
+  // Quiz
+  document.querySelectorAll('.quiz-block').forEach(block => {
+    const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+    const opts = block.querySelectorAll('.quiz-opt');
+    const fbs = block.querySelectorAll('.quiz-feedback');
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach(o => o.style.pointerEvents = 'none');
+        if (i === correct) {
+          opt.classList.add('correct');
+          fbs[0] && fbs[0].classList.add('show');
+        } else {
+          opt.classList.add('wrong');
+          opts[correct].classList.add('correct');
+          fbs[1] && fbs[1].classList.add('show');
+          setTimeout(() => {
+            done = false;
+            opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+            fbs.forEach(f => f.classList.remove('show'));
+          }, 2800);
+        }
+      });
+    });
+  });
+
+  // Checklist
+  function toggleCheck(el) {
+    el.classList.toggle('done');
+    el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+  }
+</script>
+</body>
+</html>

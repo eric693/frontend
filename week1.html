@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 01 — HTML5 結構與語意化標籤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --bg2: #ede8df;
+    --surface: #fff;
+    --border: #d8d0c4;
+    --text: #1a1612;
+    --muted: #8a826f;
+    --accent: #c4581a;
+    --accent2: #1a6bc4;
+    --accent3: #2a8a4a;
+    --code-bg: #1a1612;
+    --code-text: #f0ede8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.7; overflow-x: hidden; }
+
+  .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); width: 0%; z-index: 300; transition: width 0.1s; }
+
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; padding: 1rem 3rem; background: rgba(245,240,232,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent); letter-spacing: 0.1em; text-decoration: none; }
+  .header-center { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; }
+  .header-nav { display: flex; gap: 1.5rem; }
+  .header-nav a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .header-nav a:hover { color: var(--text); }
+
+  .toc { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 100; padding: 1rem 0; display: flex; flex-direction: column; gap: 0.4rem; }
+  .toc-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 1rem; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.08em; transition: color 0.2s; white-space: nowrap; }
+  .toc-item::before { content: ''; display: block; width: 4px; height: 4px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background 0.2s, transform 0.2s; }
+  .toc-item:hover, .toc-item.active { color: var(--accent); }
+  .toc-item:hover::before, .toc-item.active::before { background: var(--accent); transform: scale(1.5); }
+
+  main { padding-top: 64px; margin-left: 160px; }
+
+  .hero { padding: 5rem 4rem 4rem; background: var(--bg); border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }
+  .hero-bg-text { position: absolute; right: -1rem; top: 50%; transform: translateY(-50%); font-family: 'Fraunces', serif; font-size: 20vw; font-weight: 600; color: var(--border); opacity: 0.35; pointer-events: none; line-height: 1; user-select: none; }
+  .breadcrumb { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 2rem; display: flex; gap: 0.8rem; align-items: center; opacity: 0; animation: fadeUp 0.6s 0.1s forwards; }
+  .breadcrumb span { color: var(--border); }
+  .week-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; background: var(--accent); color: white; padding: 0.2rem 0.7rem; letter-spacing: 0.08em; margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s 0.2s forwards; }
+  .hero h1 { font-family: 'Fraunces', serif; font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 400; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 1.5rem; max-width: 700px; opacity: 0; animation: fadeUp 0.6s 0.3s forwards; }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero-desc { font-size: 1.05rem; color: var(--muted); max-width: 560px; line-height: 1.75; margin-bottom: 3rem; opacity: 0; animation: fadeUp 0.6s 0.4s forwards; }
+  .hero-meta { display: flex; gap: 0; border: 1px solid var(--border); width: fit-content; opacity: 0; animation: fadeUp 0.6s 0.5s forwards; }
+  .meta-cell { padding: 1rem 2rem; border-right: 1px solid var(--border); }
+  .meta-cell:last-child { border-right: none; }
+  .meta-cell-label { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.3rem; }
+  .meta-cell-value { font-size: 0.9rem; color: var(--text); font-weight: 500; }
+
+  .content { max-width: 860px; padding: 0 4rem; margin: 0 auto; }
+
+  .section { padding: 4.5rem 0; border-bottom: 1px solid var(--border); opacity: 0; transform: translateY(20px); transition: opacity 0.6s, transform 0.6s; }
+  .section.visible { opacity: 1; transform: none; }
+  .section-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.6rem; }
+  .section-title { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 400; color: var(--text); margin-bottom: 2rem; line-height: 1.2; }
+  .section-intro { font-size: 0.95rem; color: var(--muted); margin-bottom: 2.5rem; max-width: 640px; line-height: 1.75; }
+
+  .objectives { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .obj-item { background: var(--surface); padding: 1.4rem 1.6rem; display: flex; gap: 1rem; align-items: flex-start; transition: background 0.2s; }
+  .obj-item:hover { background: #faf8f4; }
+  .obj-num { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--accent); background: #fce8d8; padding: 0.15rem 0.4rem; flex-shrink: 0; margin-top: 0.15rem; }
+  .obj-text { font-size: 0.88rem; line-height: 1.6; }
+
+  .concept-block { margin-bottom: 3rem; border: 1px solid var(--border); overflow: hidden; }
+  .concept-header { padding: 1.4rem 2rem; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1.2rem; }
+  .concept-icon { width: 32px; height: 32px; background: var(--accent); color: white; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .concept-title { font-weight: 500; font-size: 1rem; color: var(--text); margin-bottom: 0.1rem; }
+  .concept-subtitle { font-size: 0.75rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .concept-body { padding: 2rem; background: var(--surface); }
+  .concept-body p { font-size: 0.9rem; color: #3a3530; line-height: 1.75; margin-bottom: 1.2rem; }
+  .concept-body p:last-child { margin-bottom: 0; }
+  .concept-body strong { color: var(--text); font-weight: 500; }
+  .concept-body em { color: var(--accent); font-style: normal; font-weight: 500; }
+
+  .note { border-left: 3px solid var(--accent2); background: #e8f0fa; padding: 1rem 1.4rem; margin: 1.2rem 0; font-size: 0.85rem; color: #1a3060; line-height: 1.65; }
+  .note-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: var(--accent2); display: block; margin-bottom: 0.4rem; }
+  .tip { border-left-color: var(--accent3); background: #e8f5ee; color: #0f3020; }
+  .tip .note-label { color: var(--accent3); }
+  .warn { border-left-color: var(--accent); background: #fce8d8; color: #4a1a00; }
+  .warn .note-label { color: var(--accent); }
+
+  .code-block { background: var(--code-bg); overflow: hidden; margin: 1.5rem 0; border: 1px solid #333; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1.2rem; background: #111; border-bottom: 1px solid #333; }
+  .code-lang { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #666; letter-spacing: 0.1em; text-transform: uppercase; }
+  .code-dots { display: flex; gap: 5px; }
+  .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .code-dot:nth-child(1) { background: #ff5f57; }
+  .code-dot:nth-child(2) { background: #febc2e; }
+  .code-dot:nth-child(3) { background: #28c840; }
+  pre { padding: 1.5rem 1.8rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.7; color: var(--code-text); }
+  .hl-tag { color: #7ec8e3; }
+  .hl-attr { color: #c8e3a0; }
+  .hl-val { color: #f0c070; }
+  .hl-cmt { color: #666; font-style: italic; }
+
+  .tag-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1.5rem 0; }
+  .tag-table thead tr { background: var(--bg2); border-bottom: 2px solid var(--border); }
+  .tag-table th { text-align: left; padding: 0.8rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+  .tag-table td { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.6; }
+  .tag-table tr:hover td { background: #faf8f4; }
+  .tag-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent); white-space: nowrap; }
+  .tag-table td:nth-child(2) { color: var(--text); font-weight: 500; }
+  .tag-table td:nth-child(3) { color: var(--muted); font-size: 0.82rem; }
+
+  .demo-box { border: 1px solid var(--border); overflow: hidden; margin: 1.5rem 0; }
+  .demo-label { padding: 0.6rem 1.2rem; background: var(--bg2); border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; }
+  .demo-content { padding: 1.5rem 2rem; background: var(--surface); }
+  .demo-resume h1 { font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 400; color: var(--text); opacity: 1; transform: none; animation: none; padding: 0; margin: 0 0 0.3rem; letter-spacing: 0; }
+  .demo-resume p { font-size: 0.85rem; color: var(--muted); margin: 0 0 1.2rem; }
+  .demo-resume h2 { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin: 0 0 0.8rem; }
+  .demo-resume ul { padding-left: 1.2rem; font-size: 0.85rem; color: #555; }
+  .demo-resume ul li { margin-bottom: 0.3rem; }
+
+  .quiz-block { background: var(--bg2); border: 1px solid var(--border); padding: 2rem; margin: 2rem 0; }
+  .quiz-title { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; }
+  .quiz-q { font-size: 0.95rem; font-weight: 500; margin-bottom: 1.2rem; color: var(--text); }
+  .quiz-options { display: flex; flex-direction: column; gap: 0.6rem; }
+  .quiz-opt { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1.2rem; background: var(--surface); border: 1px solid var(--border); cursor: pointer; font-size: 0.88rem; transition: border-color 0.2s, background 0.2s; user-select: none; }
+  .quiz-opt:hover { border-color: var(--accent); background: #faf8f4; }
+  .quiz-opt.correct { border-color: var(--accent3); background: #e8f5ee; color: #0f3020; }
+  .quiz-opt.wrong { border-color: var(--accent); background: #fce8d8; color: #4a1a00; }
+  .quiz-key { width: 22px; height: 22px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; flex-shrink: 0; color: var(--muted); }
+  .quiz-feedback { margin-top: 1rem; font-size: 0.85rem; padding: 0.8rem 1rem; display: none; }
+  .quiz-feedback.show { display: block; }
+
+  .checklist { display: flex; flex-direction: column; gap: 0.6rem; margin: 1.5rem 0; }
+  .check-item { display: flex; align-items: flex-start; gap: 0.8rem; padding: 0.8rem 1rem; background: var(--surface); border: 1px solid var(--border); font-size: 0.88rem; cursor: pointer; transition: background 0.15s; user-select: none; }
+  .check-item:hover { background: #faf8f4; }
+  .check-item.done { background: #e8f5ee; border-color: var(--accent3); }
+  .check-item.done .check-box { background: var(--accent3); border-color: var(--accent3); color: white; }
+  .check-box { width: 20px; height: 20px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.2s; margin-top: 0.1rem; }
+
+  .project-hero { background: var(--code-bg); color: var(--code-text); padding: 3rem; margin-bottom: 2rem; position: relative; overflow: hidden; }
+  .project-hero::before { content: '</>'; position: absolute; right: 2rem; bottom: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 5rem; color: #fff; opacity: 0.04; line-height: 1; }
+  .project-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #c8f06e; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.8rem; }
+  .project-name { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 400; margin-bottom: 1rem; line-height: 1.2; }
+  .project-desc-dark { font-size: 0.88rem; color: #aaa; line-height: 1.7; max-width: 520px; }
+
+  .project-steps { counter-reset: step; display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2rem; }
+  .step { counter-increment: step; background: var(--surface); padding: 1.5rem 2rem; display: grid; grid-template-columns: 40px 1fr; gap: 1.5rem; align-items: start; }
+  .step-num { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--accent); font-weight: 500; line-height: 1.4; }
+  .step-num::before { content: counter(step, decimal-leading-zero); }
+  .step-title { font-weight: 500; margin-bottom: 0.4rem; font-size: 0.95rem; }
+  .step-body { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
+
+  .resource-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .resource-card { background: var(--surface); padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0.5rem; transition: background 0.2s; }
+  .resource-card:hover { background: #faf8f4; }
+  .resource-type { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .resource-name { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+  .resource-desc { font-size: 0.8rem; color: var(--muted); }
+  .resource-arrow { font-size: 0.85rem; color: var(--accent); margin-top: auto; }
+
+  .bottom-nav { display: flex; justify-content: space-between; align-items: center; padding: 3rem 4rem; border-top: 1px solid var(--border); }
+  .nav-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted); text-decoration: none; letter-spacing: 0.06em; padding: 0.8rem 1.5rem; border: 1px solid var(--border); transition: border-color 0.2s, color 0.2s; background: var(--surface); }
+  .nav-btn:hover { border-color: var(--accent); color: var(--text); }
+  .home-link { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); text-decoration: none; letter-spacing: 0.1em; transition: color 0.2s; }
+  .home-link:hover { color: var(--accent); }
+
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.82em; background: #ede8df; color: var(--accent); padding: 0.1em 0.4em; border: 1px solid var(--border); }
+  kbd { font-family: 'JetBrains Mono', monospace; font-size: 0.78em; background: var(--bg2); border: 1px solid var(--border); padding: 0.1em 0.4em; border-bottom-width: 2px; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 1100px) { .toc { display: none; } main { margin-left: 0; } }
+  @media (max-width: 768px) {
+    header { padding: 1rem 1.5rem; }
+    .header-center { display: none; }
+    .hero { padding: 4rem 1.5rem 3rem; }
+    .content { padding: 0 1.5rem; }
+    .objectives { grid-template-columns: 1fr; }
+    .resource-grid { grid-template-columns: 1fr; }
+    .hero-meta { flex-direction: column; width: 100%; }
+    .meta-cell { border-right: none; border-bottom: 1px solid var(--border); }
+    .meta-cell:last-child { border-bottom: none; }
+    .bottom-nav { padding: 2rem 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    pre { font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-center">WEEK 01 / 18 &mdash; HTML5</div>
+  <nav class="header-nav">
+    <a href="index.html">總覽</a>
+    <a href="week2.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">文件結構</a>
+  <a class="toc-item" href="#concept-2">語意標籤</a>
+  <a class="toc-item" href="#concept-3">文字內容</a>
+  <a class="toc-item" href="#concept-4">連結與媒體</a>
+  <a class="toc-item" href="#concept-5">表單基礎</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+  <div class="hero">
+    <div class="hero-bg-text" aria-hidden="true">HTML</div>
+    <div class="breadcrumb">
+      <span>PHASE 01</span><span>&rsaquo;</span><span>打穩基礎</span><span>&rsaquo;</span><span>WEEK 01</span>
+    </div>
+    <div class="week-badge">WEEK 01 / 18</div>
+    <h1>HTML5 結構<br>與<em>語意化</em>標籤</h1>
+    <p class="hero-desc">網頁的骨架。在這週你將學會用正確的 HTML 結構描述內容，讓瀏覽器、搜尋引擎與輔助技術都能理解你的頁面。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 01 &mdash; 打穩基礎</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">8&ndash;10 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">本週專案</div><div class="meta-cell-value">個人履歷頁面</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">無，從零開始</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="section-eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">這些是本週的核心學習成果。建議在開始前先閱讀一遍，學完後對照確認是否都能獨立完成。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">理解 HTML 文件的基本結構，知道 <code>DOCTYPE</code>、<code>html</code>、<code>head</code>、<code>body</code> 各自的用途</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">區分語意化標籤（如 <code>article</code>、<code>nav</code>）與無語意標籤（<code>div</code>、<code>span</code>），並知道何時使用</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">使用正確的標題層級（<code>h1</code>&ndash;<code>h6</code>）建立清晰的內容層次，避免跳級使用</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">建立可正確運作的超連結，設定 <code>href</code>、<code>target</code> 屬性，並理解絕對與相對路徑的差異</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">在頁面中嵌入圖片並設定有意義的 <code>alt</code> 文字，了解其對可及性（accessibility）的重要性</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">建立基本的 HTML 表單，包含文字輸入、選擇與提交按鈕，並正確關聯 <code>label</code> 與 <code>input</code></span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1 -->
+    <section class="section" id="concept-1">
+      <div class="section-eyebrow">核心概念 01</div>
+      <h2 class="section-title">HTML 文件結構</h2>
+      <p class="section-intro">每個 HTML 頁面都有固定的基本骨架。理解這個骨架，你就理解了瀏覽器如何解讀你的文件。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">01</div>
+          <div>
+            <div class="concept-title">DOCTYPE 宣告</div>
+            <div class="concept-subtitle">&lt;!DOCTYPE html&gt;</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><strong>DOCTYPE 不是 HTML 標籤</strong>，它是一段給瀏覽器的指令，告訴瀏覽器這個文件是 HTML5 格式。它必須放在文件的第一行，在所有其他內容之前。</p>
+          <p>如果省略 DOCTYPE，瀏覽器會進入「怪異模式」（Quirks Mode），以舊版的不一致方式渲染頁面，導致很多難以預期的樣式問題。</p>
+          <div class="note">
+            <span class="note-label">NOTE</span>
+            在 HTML4 時代，DOCTYPE 是一段很長的宣告字串。HTML5 大幅簡化為 <code>&lt;!DOCTYPE html&gt;</code>，這也是現代網頁開發的標準。
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">02</div>
+          <div>
+            <div class="concept-title">三大核心區塊</div>
+            <div class="concept-subtitle">html / head / body</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><code>&lt;html&gt;</code> 是整個文件的根元素，所有內容都在它裡面。<code>lang</code> 屬性告訴瀏覽器與螢幕閱讀器這個頁面使用的語言，對可及性非常重要，中文頁面應設為 <code>zh-TW</code>。</p>
+          <p><code>&lt;head&gt;</code> 包含頁面的<strong>中繼資訊</strong>（metadata），這些內容不會顯示在頁面上，但對瀏覽器、搜尋引擎非常重要：文件編碼、頁面標題、CSS 引用等都放在這裡。</p>
+          <p><code>&lt;body&gt;</code> 包含頁面上<strong>所有可見的內容</strong>：文字、圖片、連結、表單⋯⋯使用者看到的一切都在 body 裡。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">HTML &mdash; 基本文件骨架</div>
+        </div>
+        <pre><span class="hl-cmt">&lt;!-- 每個 HTML 頁面的最小骨架 --&gt;</span>
+<span class="hl-tag">&lt;!DOCTYPE html&gt;</span>
+<span class="hl-tag">&lt;html</span> <span class="hl-attr">lang</span>=<span class="hl-val">"zh-TW"</span><span class="hl-tag">&gt;</span>
+
+<span class="hl-tag">&lt;head&gt;</span>
+  <span class="hl-cmt">&lt;!-- 告訴瀏覽器使用 UTF-8 編碼，支援中文 --&gt;</span>
+  <span class="hl-tag">&lt;meta</span> <span class="hl-attr">charset</span>=<span class="hl-val">"UTF-8"</span><span class="hl-tag">&gt;</span>
+
+  <span class="hl-cmt">&lt;!-- 讓手機版面正常縮放 --&gt;</span>
+  <span class="hl-tag">&lt;meta</span> <span class="hl-attr">name</span>=<span class="hl-val">"viewport"</span> <span class="hl-attr">content</span>=<span class="hl-val">"width=device-width, initial-scale=1.0"</span><span class="hl-tag">&gt;</span>
+
+  <span class="hl-cmt">&lt;!-- 顯示在瀏覽器分頁與搜尋結果的標題 --&gt;</span>
+  <span class="hl-tag">&lt;title&gt;</span>陳小明的個人履歷<span class="hl-tag">&lt;/title&gt;</span>
+<span class="hl-tag">&lt;/head&gt;</span>
+
+<span class="hl-tag">&lt;body&gt;</span>
+  <span class="hl-cmt">&lt;!-- 所有可見內容放這裡 --&gt;</span>
+  <span class="hl-tag">&lt;h1&gt;</span>Hello, World!<span class="hl-tag">&lt;/h1&gt;</span>
+<span class="hl-tag">&lt;/body&gt;</span>
+
+<span class="hl-tag">&lt;/html&gt;</span></pre>
+      </div>
+
+      <div class="note tip">
+        <span class="note-label">VS CODE 快速建立骨架</span>
+        在 VS Code 中，新建一個 <code>.html</code> 檔案後，輸入 <kbd>!</kbd> 再按 <kbd>Tab</kbd> 或 <kbd>Enter</kbd>，就會自動產生完整的 HTML5 骨架。這個功能叫做 Emmet，是前端開發者每天都在用的效率工具。
+      </div>
+    </section>
+
+    <!-- CONCEPT 2 -->
+    <section class="section" id="concept-2">
+      <div class="section-eyebrow">核心概念 02</div>
+      <h2 class="section-title">語意化標籤</h2>
+      <p class="section-intro">語意化標籤（Semantic HTML）讓標籤本身傳達內容的意義，而不僅僅是視覺呈現。這對 SEO、可及性和程式碼可讀性都有重大影響。</p>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">02</div>
+          <div>
+            <div class="concept-title">為什麼語意化很重要？</div>
+            <div class="concept-subtitle">Semantic vs Non-semantic</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>想像你看到一份文件，裡面全部用相同字體、相同大小寫著所有內容——沒有標題、沒有段落，只是一大段文字。你很難快速理解哪裡是重點。HTML 語意化就是解決這個問題。</p>
+          <p><strong>搜尋引擎</strong>用語意標籤理解你的內容結構，決定搜尋排名。<strong>螢幕閱讀器</strong>靠語意標籤幫助視障使用者導覽頁面。<strong>其他開發者</strong>閱讀你的程式碼時，語意標籤讓意圖一目瞭然。</p>
+          <div class="note warn">
+            <span class="note-label">常見錯誤</span>
+            很多初學者習慣用 <code>&lt;div&gt;</code> 包裝所有東西，雖然不會出錯，但這樣的程式碼對搜尋引擎和輔助技術毫無意義。養成使用語意標籤的習慣，是成為專業前端的第一步。
+          </div>
+        </div>
+      </div>
+
+      <table class="tag-table">
+        <thead><tr><th>標籤</th><th>語意</th><th>使用時機</th></tr></thead>
+        <tbody>
+          <tr><td>&lt;header&gt;</td><td>頁首 / 區塊標頭</td><td>網站頂部導覽列，或一個 article 的標題區塊</td></tr>
+          <tr><td>&lt;nav&gt;</td><td>導覽區</td><td>網站主選單、分頁導覽、麵包屑導覽</td></tr>
+          <tr><td>&lt;main&gt;</td><td>主要內容</td><td>每個頁面只能有一個，包裝頁面的核心內容</td></tr>
+          <tr><td>&lt;section&gt;</td><td>主題區塊</td><td>頁面中有獨立主題的區塊，通常有標題</td></tr>
+          <tr><td>&lt;article&gt;</td><td>獨立內容單元</td><td>部落格文章、新聞、論壇貼文等可獨立存在的內容</td></tr>
+          <tr><td>&lt;aside&gt;</td><td>附屬內容</td><td>側邊欄、相關文章連結、補充說明</td></tr>
+          <tr><td>&lt;footer&gt;</td><td>頁尾 / 區塊頁尾</td><td>網站底部版權資訊，或 article 的作者資訊</td></tr>
+          <tr><td>&lt;figure&gt;</td><td>獨立媒體內容</td><td>包裝圖片、圖表，搭配 figcaption 使用</td></tr>
+          <tr><td>&lt;time&gt;</td><td>時間</td><td>日期或時間，搭配 datetime 屬性提供機器可讀格式</td></tr>
+          <tr><td>&lt;address&gt;</td><td>聯絡資訊</td><td>作者或組織的聯絡方式</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">HTML &mdash; 語意化頁面結構範例</div>
+        </div>
+        <pre><span class="hl-tag">&lt;body&gt;</span>
+  <span class="hl-tag">&lt;header&gt;</span>
+    <span class="hl-tag">&lt;nav&gt;</span>
+      <span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>=<span class="hl-val">"/"</span><span class="hl-tag">&gt;</span>首頁<span class="hl-tag">&lt;/a&gt;</span>
+      <span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>=<span class="hl-val">"/about"</span><span class="hl-tag">&gt;</span>關於我<span class="hl-tag">&lt;/a&gt;</span>
+    <span class="hl-tag">&lt;/nav&gt;</span>
+  <span class="hl-tag">&lt;/header&gt;</span>
+
+  <span class="hl-tag">&lt;main&gt;</span>
+    <span class="hl-tag">&lt;section&gt;</span>
+      <span class="hl-tag">&lt;h1&gt;</span>關於我<span class="hl-tag">&lt;/h1&gt;</span>
+      <span class="hl-tag">&lt;p&gt;</span>前端開發者，熱愛創造使用者體驗。<span class="hl-tag">&lt;/p&gt;</span>
+    <span class="hl-tag">&lt;/section&gt;</span>
+
+    <span class="hl-tag">&lt;section&gt;</span>
+      <span class="hl-tag">&lt;h2&gt;</span>工作經歷<span class="hl-tag">&lt;/h2&gt;</span>
+      <span class="hl-tag">&lt;article&gt;</span>
+        <span class="hl-tag">&lt;h3&gt;</span>前端工程師 @ 某公司<span class="hl-tag">&lt;/h3&gt;</span>
+        <span class="hl-tag">&lt;time</span> <span class="hl-attr">datetime</span>=<span class="hl-val">"2022-01"</span><span class="hl-tag">&gt;</span>2022 年 1 月<span class="hl-tag">&lt;/time&gt;</span> &mdash; 至今
+      <span class="hl-tag">&lt;/article&gt;</span>
+    <span class="hl-tag">&lt;/section&gt;</span>
+  <span class="hl-tag">&lt;/main&gt;</span>
+
+  <span class="hl-tag">&lt;footer&gt;</span>
+    <span class="hl-tag">&lt;p&gt;</span>&copy; 2025 陳小明<span class="hl-tag">&lt;/p&gt;</span>
+  <span class="hl-tag">&lt;/footer&gt;</span>
+<span class="hl-tag">&lt;/body&gt;</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3 -->
+    <section class="section" id="concept-3">
+      <div class="section-eyebrow">核心概念 03</div>
+      <h2 class="section-title">文字內容標籤</h2>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">03</div>
+          <div>
+            <div class="concept-title">標題層級</div>
+            <div class="concept-subtitle">h1 &mdash; h6</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p>HTML 提供六個層級的標題，從 <code>&lt;h1&gt;</code> 到 <code>&lt;h6&gt;</code>。這不只是文字大小的差異，更代表了<strong>內容的層次結構</strong>，就像文章的章節、小節、段落標題。</p>
+          <p>重要規則：<em>每個頁面只應有一個 h1</em>，作為整個頁面的主標題。不要為了讓文字變大就跳過層級（例如 h1 直接跳 h3），這會破壞文件結構並影響 SEO。</p>
+          <div class="note warn">
+            <span class="note-label">常見錯誤</span>
+            不要用標題標籤來控制文字大小。標題層級應反映<strong>內容的語意層次</strong>，視覺大小應交給 CSS 處理。
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">03</div>
+          <div>
+            <div class="concept-title">行內強調標籤</div>
+            <div class="concept-subtitle">strong / em / mark</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><code>&lt;strong&gt;</code> 代表<strong>重要性強調</strong>，視覺上通常顯示為粗體。螢幕閱讀器會以不同語調朗讀。使用時機：警告文字、關鍵詞彙。</p>
+          <p><code>&lt;em&gt;</code> 代表<strong>語氣強調</strong>，視覺上通常為斜體，類似於說話時特別加重的語氣。</p>
+          <p>注意：<code>&lt;b&gt;</code> 和 <code>&lt;i&gt;</code> 只是視覺上的粗體、斜體，沒有語意。在現代開發中，樣式控制應交給 CSS，標籤只負責語意。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">HTML &mdash; 文字標籤實例</div>
+        </div>
+        <pre><span class="hl-cmt">&lt;!-- 段落與強調 --&gt;</span>
+<span class="hl-tag">&lt;p&gt;</span>
+  這個職位<span class="hl-tag">&lt;strong&gt;</span>需要 3 年以上經驗<span class="hl-tag">&lt;/strong&gt;</span>，
+  並且<span class="hl-tag">&lt;em&gt;</span>必須熟悉 React<span class="hl-tag">&lt;/em&gt;</span>。
+<span class="hl-tag">&lt;/p&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 無序清單（技能清單）--&gt;</span>
+<span class="hl-tag">&lt;h3&gt;</span>技能清單<span class="hl-tag">&lt;/h3&gt;</span>
+<span class="hl-tag">&lt;ul&gt;</span>
+  <span class="hl-tag">&lt;li&gt;</span>HTML / CSS<span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;li&gt;</span>JavaScript<span class="hl-tag">&lt;/li&gt;</span>
+<span class="hl-tag">&lt;/ul&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 有序清單（步驟流程）--&gt;</span>
+<span class="hl-tag">&lt;h3&gt;</span>開發步驟<span class="hl-tag">&lt;/h3&gt;</span>
+<span class="hl-tag">&lt;ol&gt;</span>
+  <span class="hl-tag">&lt;li&gt;</span>了解需求<span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;li&gt;</span>設計原型<span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;li&gt;</span>開發與測試<span class="hl-tag">&lt;/li&gt;</span>
+<span class="hl-tag">&lt;/ol&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 引用區塊 --&gt;</span>
+<span class="hl-tag">&lt;blockquote&gt;</span>
+  <span class="hl-tag">&lt;p&gt;</span>先讓它能用，再讓它好用，最後讓它快。<span class="hl-tag">&lt;/p&gt;</span>
+  <span class="hl-tag">&lt;footer&gt;</span>&mdash; 程式開發諺語<span class="hl-tag">&lt;/footer&gt;</span>
+<span class="hl-tag">&lt;/blockquote&gt;</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4 -->
+    <section class="section" id="concept-4">
+      <div class="section-eyebrow">核心概念 04</div>
+      <h2 class="section-title">連結與媒體</h2>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">04</div>
+          <div>
+            <div class="concept-title">超連結 &lt;a&gt;</div>
+            <div class="concept-subtitle">Anchor Element</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><code>href</code> 屬性是連結的目標地址，可以是：<em>外部網址</em>（https://...）、<em>相對路徑</em>（../about.html）、<em>頁面內錨點</em>（#section-id）、<em>email</em>（mailto:）或<em>電話</em>（tel:）。</p>
+          <p><code>target="_blank"</code> 讓連結在新分頁開啟。使用時請務必同時加上 <code>rel="noopener noreferrer"</code>——這是一個安全性最佳實踐，防止目標頁面通過 <code>window.opener</code> 存取你的頁面。</p>
+          <div class="note">
+            <span class="note-label">絕對路徑 vs 相對路徑</span>
+            <strong>絕對路徑</strong>：完整 URL，如 <code>https://example.com/page.html</code>，適合連結到其他網站。<strong>相對路徑</strong>：相對於當前檔案的位置，如 <code>./about.html</code> 或 <code>../images/photo.jpg</code>，適合連結到同一網站的其他頁面。
+          </div>
+        </div>
+      </div>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">04</div>
+          <div>
+            <div class="concept-title">圖片 &lt;img&gt;</div>
+            <div class="concept-subtitle">Image Element</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><code>src</code> 屬性指定圖片來源，<code>alt</code> 屬性提供替代文字。<em>alt 屬性不是選填的</em>——當圖片無法載入時顯示，更重要的是讓螢幕閱讀器能描述圖片給視障使用者。</p>
+          <p>如果圖片是純裝飾性的（對理解內容沒有幫助），使用 <code>alt=""</code>（空字串），螢幕閱讀器會直接略過它。如果圖片有資訊意義，請撰寫具體描述性的 alt 文字。</p>
+          <p><code>width</code> 和 <code>height</code> 屬性可以告訴瀏覽器圖片的尺寸，讓瀏覽器在圖片載入前就保留空間，避免頁面跳動（Cumulative Layout Shift）。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">HTML &mdash; 連結與圖片</div>
+        </div>
+        <pre><span class="hl-cmt">&lt;!-- 外部連結，在新分頁開啟 --&gt;</span>
+<span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>=<span class="hl-val">"https://github.com/username"</span>
+   <span class="hl-attr">target</span>=<span class="hl-val">"_blank"</span>
+   <span class="hl-attr">rel</span>=<span class="hl-val">"noopener noreferrer"</span><span class="hl-tag">&gt;</span>
+  我的 GitHub
+<span class="hl-tag">&lt;/a&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 頁面內錨點跳轉 --&gt;</span>
+<span class="hl-tag">&lt;a</span> <span class="hl-attr">href</span>=<span class="hl-val">"#contact"</span><span class="hl-tag">&gt;</span>聯絡我<span class="hl-tag">&lt;/a&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 有意義的圖片 --&gt;</span>
+<span class="hl-tag">&lt;img</span>
+  <span class="hl-attr">src</span>=<span class="hl-val">"./images/profile.jpg"</span>
+  <span class="hl-attr">alt</span>=<span class="hl-val">"陳小明的個人照片"</span>
+  <span class="hl-attr">width</span>=<span class="hl-val">"200"</span>
+  <span class="hl-attr">height</span>=<span class="hl-val">"200"</span>
+<span class="hl-tag">&gt;</span>
+
+<span class="hl-cmt">&lt;!-- 圖片 + 說明文字 --&gt;</span>
+<span class="hl-tag">&lt;figure&gt;</span>
+  <span class="hl-tag">&lt;img</span> <span class="hl-attr">src</span>=<span class="hl-val">"chart.png"</span> <span class="hl-attr">alt</span>=<span class="hl-val">"2024 前端技術使用率統計圖"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;figcaption&gt;</span>圖一：2024 年前端技術使用率<span class="hl-tag">&lt;/figcaption&gt;</span>
+<span class="hl-tag">&lt;/figure&gt;</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5 -->
+    <section class="section" id="concept-5">
+      <div class="section-eyebrow">核心概念 05</div>
+      <h2 class="section-title">表單基礎</h2>
+
+      <div class="concept-block">
+        <div class="concept-header">
+          <div class="concept-icon">05</div>
+          <div>
+            <div class="concept-title">表單結構</div>
+            <div class="concept-subtitle">form / input / label</div>
+          </div>
+        </div>
+        <div class="concept-body">
+          <p><code>&lt;form&gt;</code> 是表單的容器，<code>action</code> 屬性指定提交後送往的 URL，<code>method</code> 決定使用 GET 或 POST 方式送出。</p>
+          <p><em>label 與 input 的關聯極其重要</em>：使用 <code>for</code> 屬性與 input 的 <code>id</code> 對應，讓點擊 label 文字時，焦點自動跳到對應的 input。這對鍵盤使用者和螢幕閱讀器非常關鍵。</p>
+          <p><code>type</code> 屬性決定 input 的類型，不同 type 在行動裝置上會觸發不同鍵盤，並有內建的基本驗證：<code>email</code> 會驗證 @ 符號，<code>number</code> 只接受數字，<code>required</code> 屬性讓欄位成為必填。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">HTML &mdash; 聯絡表單</div>
+        </div>
+        <pre><span class="hl-tag">&lt;form</span> <span class="hl-attr">action</span>=<span class="hl-val">"/contact"</span> <span class="hl-attr">method</span>=<span class="hl-val">"POST"</span><span class="hl-tag">&gt;</span>
+
+  <span class="hl-cmt">&lt;!-- for="id" 對應 input 的 id="id" --&gt;</span>
+  <span class="hl-tag">&lt;label</span> <span class="hl-attr">for</span>=<span class="hl-val">"name"</span><span class="hl-tag">&gt;</span>姓名<span class="hl-tag">&lt;/label&gt;</span>
+  <span class="hl-tag">&lt;input</span> <span class="hl-attr">type</span>=<span class="hl-val">"text"</span> <span class="hl-attr">id</span>=<span class="hl-val">"name"</span> <span class="hl-attr">name</span>=<span class="hl-val">"name"</span> <span class="hl-attr">required</span><span class="hl-tag">&gt;</span>
+
+  <span class="hl-tag">&lt;label</span> <span class="hl-attr">for</span>=<span class="hl-val">"email"</span><span class="hl-tag">&gt;</span>電子郵件<span class="hl-tag">&lt;/label&gt;</span>
+  <span class="hl-tag">&lt;input</span> <span class="hl-attr">type</span>=<span class="hl-val">"email"</span> <span class="hl-attr">id</span>=<span class="hl-val">"email"</span> <span class="hl-attr">name</span>=<span class="hl-val">"email"</span> <span class="hl-attr">required</span><span class="hl-tag">&gt;</span>
+
+  <span class="hl-tag">&lt;label</span> <span class="hl-attr">for</span>=<span class="hl-val">"message"</span><span class="hl-tag">&gt;</span>訊息<span class="hl-tag">&lt;/label&gt;</span>
+  <span class="hl-tag">&lt;textarea</span> <span class="hl-attr">id</span>=<span class="hl-val">"message"</span> <span class="hl-attr">name</span>=<span class="hl-val">"message"</span> <span class="hl-attr">rows</span>=<span class="hl-val">"5"</span><span class="hl-tag">&gt;&lt;/textarea&gt;</span>
+
+  <span class="hl-tag">&lt;button</span> <span class="hl-attr">type</span>=<span class="hl-val">"submit"</span><span class="hl-tag">&gt;</span>送出<span class="hl-tag">&lt;/button&gt;</span>
+
+<span class="hl-tag">&lt;/form&gt;</span></pre>
+      </div>
+
+      <table class="tag-table">
+        <thead><tr><th>type 值</th><th>用途</th><th>行動裝置鍵盤</th></tr></thead>
+        <tbody>
+          <tr><td>text</td><td>一般文字輸入</td><td>一般鍵盤</td></tr>
+          <tr><td>email</td><td>電子郵件，自動驗證格式</td><td>含 @ 符號的鍵盤</td></tr>
+          <tr><td>tel</td><td>電話號碼</td><td>數字鍵盤</td></tr>
+          <tr><td>number</td><td>數字，可設定 min / max / step</td><td>數字鍵盤</td></tr>
+          <tr><td>password</td><td>密碼，輸入內容隱藏顯示</td><td>一般鍵盤</td></tr>
+          <tr><td>checkbox</td><td>多選核取方塊</td><td>&mdash;</td></tr>
+          <tr><td>radio</td><td>單選按鈕（同 name 群組互斥）</td><td>&mdash;</td></tr>
+          <tr><td>date</td><td>日期選擇器</td><td>日期滾輪</td></tr>
+          <tr><td>file</td><td>檔案上傳</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="section-eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">完成以下題目，確認對本週核心概念的掌握程度。點擊選項後會立即顯示解答說明。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-title">QUIZ 01 / 03</div>
+        <div class="quiz-q">以下哪個標籤最適合包裝「網站的主導覽選單」？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>&lt;div class="menu"&gt;</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>&lt;header&gt;</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>&lt;nav&gt;</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>&lt;section&gt;</div>
+        </div>
+        <div class="quiz-feedback note tip"><span class="note-label">CORRECT</span><code>&lt;nav&gt;</code> 是專門用來包裝導覽連結的語意標籤。雖然用 <code>&lt;div&gt;</code> 視覺上也能正常顯示，但 <code>&lt;nav&gt;</code> 讓瀏覽器、搜尋引擎和螢幕閱讀器都能明確識別這是導覽區塊。</div>
+        <div class="quiz-feedback note warn"><span class="note-label">TRY AGAIN</span>再想想看——哪個標籤是專門為「導覽」這個用途設計的？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-title">QUIZ 02 / 03</div>
+        <div class="quiz-q">關於 &lt;img&gt; 的 alt 屬性，以下哪個說法是正確的？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>alt 屬性是選填的，可以不寫</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>裝飾性圖片應該使用 alt=""（空字串）</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>alt 文字只有在圖片載入失敗時才有用</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>alt 文字越長越詳細越好</div>
+        </div>
+        <div class="quiz-feedback note tip"><span class="note-label">CORRECT</span>裝飾性圖片設定 <code>alt=""</code> 告訴螢幕閱讀器「這個圖片沒有資訊意義，跳過它」。如果省略 alt 屬性，螢幕閱讀器可能會讀出檔案名稱，造成混亂的使用體驗。</div>
+        <div class="quiz-feedback note warn"><span class="note-label">TRY AGAIN</span>想想螢幕閱讀器如何處理不同情況的 alt 屬性。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-title">QUIZ 03 / 03</div>
+        <div class="quiz-q">以下哪種寫法最符合 label 與 input 的最佳實踐？</div>
+        <div class="quiz-options" data-answer="0">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>&lt;label for="email"&gt;信箱&lt;/label&gt; &lt;input id="email" type="email"&gt;</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>&lt;p&gt;信箱&lt;/p&gt; &lt;input type="email"&gt;</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>&lt;label&gt;信箱&lt;/label&gt; &lt;input type="email"&gt;</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>&lt;input type="email" placeholder="信箱"&gt;</div>
+        </div>
+        <div class="quiz-feedback note tip"><span class="note-label">CORRECT</span>透過 <code>for</code> 與 <code>id</code> 的對應關聯 label 和 input，讓點擊 label 文字時焦點自動跳到 input。只用 placeholder 而不用 label 是常見的可及性錯誤——placeholder 消失後使用者可能忘記這個欄位的用途。</div>
+        <div class="quiz-feedback note warn"><span class="note-label">TRY AGAIN</span>注意 label 的 <code>for</code> 屬性和 input 的 <code>id</code> 屬性之間的對應關係。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="section-eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：個人履歷頁面</h2>
+      <p class="section-intro">將本週所學應用在一個真實場景中。這個專案會在第二週繼續加上 CSS 樣式，所以這週的重點是正確的語意結構，不需要在意視覺效果。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 01 PROJECT</div>
+        <div class="project-name">個人履歷頁面<br><em style="font-style:italic;color:#c8f06e;">（純 HTML 版本）</em></div>
+        <p class="project-desc-dark">建立一個只用 HTML 的個人履歷頁面，包含個人資訊、技能清單、工作/學習經歷與聯絡表單。不需要任何 CSS，重點在於正確的語意結構。</p>
+      </div>
+
+      <h3 style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:400;margin-bottom:1.5rem;color:var(--text);">完成步驟</h3>
+      <div class="project-steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 HTML 文件骨架</div>
+            <div class="step-body">新建 <code>index.html</code>，加入完整的 DOCTYPE、html（含 lang）、head（含 charset、viewport、title）、body 結構。用 VS Code 的 Emmet 快捷鍵 <kbd>!</kbd> + <kbd>Tab</kbd> 快速完成。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">規劃語意化外層結構</div>
+            <div class="step-body">在 body 中加入：<code>&lt;header&gt;</code>（你的名字與職稱）、<code>&lt;main&gt;</code>（主要內容）、<code>&lt;footer&gt;</code>（版權資訊）。main 內用多個 <code>&lt;section&gt;</code> 區分不同區塊，每個 section 給予有意義的 id。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">填入個人資訊區塊</div>
+            <div class="step-body">在 header 或第一個 section 加入：<code>&lt;h1&gt;</code> 你的名字、<code>&lt;p&gt;</code> 簡短自介、一個 <code>&lt;img&gt;</code>（使用任意圖片 URL，記得設定有意義的 alt）、<code>&lt;address&gt;</code> 聯絡資訊。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入技能與經歷</div>
+            <div class="step-body">技能清單使用 <code>&lt;ul&gt;&lt;li&gt;</code>。工作/學習經歷每筆使用一個 <code>&lt;article&gt;</code>，包含 <code>&lt;h3&gt;</code> 職稱/學校名稱、<code>&lt;time datetime="YYYY-MM"&gt;</code> 時間區間、<code>&lt;p&gt;</code> 描述文字。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入導覽與社群連結</div>
+            <div class="step-body">在 header 加入 <code>&lt;nav&gt;</code>，包含指向各 section id 的頁面內錨點連結。加入 GitHub、LinkedIn 等外部連結，記得使用 <code>target="_blank" rel="noopener noreferrer"</code>。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入聯絡表單</div>
+            <div class="step-body">在最後一個 section 加入聯絡表單，包含：姓名（type="text"）、信箱（type="email"）、訊息（textarea）。每個欄位都要有正確關聯的 label，並加上 required 屬性。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">驗證與測試</div>
+            <div class="step-body">使用 <a href="https://validator.w3.org/" target="_blank" rel="noopener noreferrer">W3C HTML Validator</a> 驗證是否有語法錯誤。打開瀏覽器開發者工具（F12）確認 Elements 面板的結構。嘗試只用 <kbd>Tab</kbd> 鍵導覽整個頁面，確認焦點順序正確。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-box">
+        <div class="demo-label">PREVIEW &mdash; 純 HTML 成品大致長這樣（無 CSS）</div>
+        <div class="demo-content">
+          <div class="demo-resume">
+            <h1>陳小明</h1>
+            <p>前端開發學習者 | 台北</p>
+            <h2>關於我</h2>
+            <p>正在學習前端開發，對 UI 設計充滿熱情。</p>
+            <h2>技能</h2>
+            <ul><li>HTML5</li><li>CSS3（學習中）</li><li>JavaScript（學習中）</li></ul>
+            <h2>學習經歷</h2>
+            <p><strong>前端開發實戰課程</strong> &mdash; 2025 年至今</p>
+          </div>
+          <p style="font-size:0.75rem;color:var(--muted);margin-top:1.5rem;font-family:'JetBrains Mono',monospace;">* 純 HTML 無樣式是正常的——第二週加入 CSS 後將大幅改善外觀</p>
+        </div>
+      </div>
+
+      <h3 style="font-family:'Fraunces',serif;font-size:1.2rem;font-weight:400;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>HTML 文件有正確的 DOCTYPE、lang="zh-TW"、charset 與 viewport 設定</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>使用 header、main、footer 語意標籤，main 內有多個 section</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>h1 只用了一次，作為頁面主標題，其餘標題使用 h2–h4 且沒有跳級</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有圖片都有意義明確的 alt 屬性（或裝飾性圖片用 alt=""）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>外部連結有加上 target="_blank" 與 rel="noopener noreferrer"</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>表單的每個 input/textarea 都有對應關聯的 label（透過 for/id）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>W3C Validator 驗證通過，無 Error（Warning 可暫時忽略）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>用 Tab 鍵能按照合理順序導覽整個頁面，焦點順序正確</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="section-eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">這些資源涵蓋本週的核心概念，建議搭配實作一起使用。MDN 是前端開發的百科全書，書籤起來一定用得到。</p>
+      <div class="resource-grid">
+        <a href="https://developer.mozilla.org/zh-TW/docs/Learn/HTML/Introduction_to_HTML" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件 / 中文</div>
+          <div class="resource-name">MDN &mdash; HTML 入門</div>
+          <div class="resource-desc">最權威的 HTML 學習資源，有完整中文翻譯，從基礎到進階都涵蓋。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.freecodecamp.org/learn/2022/responsive-web-design/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">互動課程 / 免費</div>
+          <div class="resource-name">freeCodeCamp &mdash; 響應式網頁設計</div>
+          <div class="resource-desc">透過做中學的方式學習 HTML 與 CSS，每個練習都有即時回饋。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://validator.w3.org/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">工具</div>
+          <div class="resource-name">W3C HTML Validator</div>
+          <div class="resource-desc">貼上你的 HTML 或輸入網址，立即檢查語法錯誤與規範問題。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">參考手冊</div>
+          <div class="resource-name">MDN HTML 元素完整參考</div>
+          <div class="resource-desc">所有 HTML 標籤的完整列表與說明，開發時的最佳查詢工具。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://web.dev/learn/html" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">深度教程</div>
+          <div class="resource-name">web.dev &mdash; Learn HTML</div>
+          <div class="resource-desc">Google 出品的現代 HTML 完整課程，涵蓋語意化、可及性與最佳實踐。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://htmlreference.io/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">視覺化參考</div>
+          <div class="resource-name">HTML Reference</div>
+          <div class="resource-desc">用視覺化方式呈現所有 HTML 標籤與屬性，附有即時預覽，非常直觀。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <span></span>
+    <a href="index.html" class="home-link">&#8598; 回課程總覽</a>
+    <a href="week2.html" class="nav-btn">第 2 週：CSS 排版 &#8594;</a>
+  </div>
+</main>
+
+<script>
+  // Progress bar
+  window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+    document.getElementById('progressBar').style.width = Math.min(p, 100) + '%';
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.section').forEach(s => observer.observe(s));
+
+  // TOC active state
+  const sectionIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','quiz','project','resources'];
+  const sectionEls = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sectionEls.forEach(el => { if (window.scrollY >= el.offsetTop - 130) current = el.id; });
+    document.querySelectorAll('.toc-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+    });
+  });
+
+  // Quiz
+  document.querySelectorAll('.quiz-block').forEach(block => {
+    const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+    const opts = block.querySelectorAll('.quiz-opt');
+    const fbs = block.querySelectorAll('.quiz-feedback');
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach(o => o.style.pointerEvents = 'none');
+        if (i === correct) {
+          opt.classList.add('correct');
+          fbs[0] && fbs[0].classList.add('show');
+        } else {
+          opt.classList.add('wrong');
+          opts[correct].classList.add('correct');
+          fbs[1] && fbs[1].classList.add('show');
+          setTimeout(() => {
+            done = false;
+            opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+            fbs.forEach(f => f.classList.remove('show'));
+          }, 2800);
+        }
+      });
+    });
+  });
+
+  // Checklist
+  function toggleCheck(el) {
+    el.classList.toggle('done');
+    el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+  }
+</script>
+</body>
+</html>
