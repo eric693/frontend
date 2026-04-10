@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 06 — Fetch API 與非同步程式設計</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f;
+  --bg2:#0c1018;
+  --bg3:#121825;
+  --surface:#161d2e;
+  --border:#1e2a40;
+  --text:#dce8ff;
+  --muted:#5a7299;
+  --accent:#60a5fa;
+  --accent-g:linear-gradient(135deg,#60a5fa,#a78bfa);
+  --accent2:#a78bfa;
+  --accent3:#34d399;
+  --amber:#f59e0b;
+  --red:#f87171;
+  --glow:rgba(96,165,250,0.18);
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(100px);opacity:0.1;
+}
+body::before{width:520px;height:520px;background:radial-gradient(circle,#60a5fa,transparent);top:-140px;right:-100px;}
+body::after{width:400px;height:400px;background:radial-gradient(circle,#a78bfa,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{
+  position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;
+  background:var(--accent-g);
+  box-shadow:0 0 10px var(--accent);
+  transition:width .08s linear;
+}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  background:rgba(7,9,15,.9);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{
+  display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;
+  font-family:var(--font-m);font-size:.58rem;color:var(--muted);
+  text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;
+}
+.toc-item::before{
+  content:'';width:3px;height:3px;border-radius:50%;background:var(--border);
+  flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;
+}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{
+  background:var(--accent);width:14px;border-radius:2px;
+  box-shadow:0 0 6px var(--accent);
+}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{
+  padding:5rem 3.5rem 4.5rem;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;min-height:460px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+.hero-glow{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(96,165,250,.08),transparent);
+  pointer-events:none;
+}
+.hero-label{
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;
+  opacity:0;animation:fadeUp .5s .1s forwards;
+}
+.hero h1{
+  font-family:var(--font-d);font-weight:900;
+  font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;
+  letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;
+  opacity:0;animation:fadeUp .5s .25s forwards;
+}
+.hero h1 .hi{
+  background:var(--accent-g);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-desc{
+  font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;
+  opacity:0;animation:fadeUp .5s .38s forwards;
+}
+.hero-deco{
+  position:absolute;right:4rem;top:50%;transform:translateY(-50%);
+  width:200px;height:200px;pointer-events:none;
+  opacity:0;animation:fadeUp .5s .6s forwards;
+}
+.hero-deco-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent),var(--accent2)) border-box;
+  animation:spin 8s linear infinite;
+}
+.hero-deco-ring:nth-child(2){
+  inset:20px;animation-duration:5s;animation-direction:reverse;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent2),var(--accent3)) border-box;
+}
+.hero-deco-ring:nth-child(3){
+  inset:40px;animation-duration:3s;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+             linear-gradient(135deg,var(--accent3),var(--accent)) border-box;
+}
+.hero-deco-center{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.1em;
+}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;
+  padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);
+}
+.badge.hi{border-color:rgba(96,165,250,.5);color:var(--accent);background:rgba(96,165,250,.08);}
+.badge.hi2{border-color:rgba(167,139,250,.4);color:var(--accent2);background:rgba(167,139,250,.07);}
+.badge.hi3{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.07);}
+
+/* CONTENT */
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{
+  padding:4rem 0;border-bottom:1px solid var(--border);
+  opacity:0;transform:translateY(18px);
+  transition:opacity .55s,transform .55s;
+}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{
+  font-family:var(--font-m);font-size:.63rem;color:var(--accent);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.7rem;
+}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{
+  font-family:var(--font-d);font-size:1.95rem;font-weight:700;
+  color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;
+}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+/* OBJECTIVES */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{
+  background:var(--bg2);padding:1.3rem 1.5rem;
+  display:flex;gap:1rem;align-items:flex-start;transition:background .2s;
+}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);
+  background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);
+  padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;
+}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+/* CONCEPT BLOCKS */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{
+  padding:1.2rem 1.8rem;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+}
+.cicon{
+  width:30px;height:30px;background:var(--accent-g);color:var(--bg);
+  font-family:var(--font-m);font-size:.65rem;font-weight:500;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#8ab0d8;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+/* CALLOUTS */
+.note{
+  border-left:2px solid var(--accent);background:rgba(96,165,250,.05);
+  padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;
+  color:#8ab0d8;line-height:1.7;
+}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent3);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent3);}
+.note.info{border-left-color:var(--accent2);background:rgba(167,139,250,.06);color:#b8a8e8;}
+.note.info .note-label{color:var(--accent2);}
+.note.warn{border-left-color:var(--amber);background:rgba(245,158,11,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.06);color:#e8a0a0;}
+.note.danger .note-label{color:var(--red);}
+
+/* CODE */
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{
+  background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);
+}
+.kw{color:#60a5fa;}
+.fn{color:#a78bfa;}
+.str{color:#fde68a;}
+.num{color:#f0abfc;}
+.cmt{color:#2a3d58;font-style:italic;}
+.op{color:#34d399;}
+.type{color:#f59e0b;}
+.prop{color:#a5f3fc;}
+.bool{color:#fb7185;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+/* TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(30,42,64,.6);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{
+  padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;
+  display:flex;align-items:center;gap:.5rem;
+}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent3);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+.cpanel-hdr.neutral{background:rgba(96,165,250,.07);color:var(--accent);border-bottom:1px solid rgba(96,165,250,.2);}
+
+/* TIMELINE / FLOW */
+.async-flow{border:1px solid var(--border);background:var(--bg);padding:1.8rem;margin:1.5rem 0;overflow-x:auto;}
+.flow-row{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;font-family:var(--font-m);font-size:.75rem;}
+.flow-row:last-child{margin-bottom:0;}
+.flow-label{
+  min-width:120px;padding:.3rem .6rem;font-size:.65rem;letter-spacing:.08em;text-align:center;
+}
+.flow-label.call-stack{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:var(--accent);}
+.flow-label.web-api{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:var(--accent2);}
+.flow-label.task-queue{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--accent3);}
+.flow-label.event-loop{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--amber);}
+.flow-arrow{color:var(--muted);font-size:.9rem;}
+.flow-box{
+  flex:1;padding:.35rem .8rem;background:var(--bg2);border:1px solid var(--border);
+  font-size:.7rem;color:var(--text);
+}
+
+/* PROMISE STATES */
+.promise-states{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.ps-card{background:var(--bg2);padding:1.4rem;text-align:center;}
+.ps-icon{font-size:1.6rem;margin-bottom:.6rem;}
+.ps-name{font-family:var(--font-m);font-size:.7rem;letter-spacing:.1em;margin-bottom:.4rem;}
+.ps-name.pending{color:var(--amber);}
+.ps-name.fulfilled{color:var(--accent3);}
+.ps-name.rejected{color:var(--red);}
+.ps-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+
+/* DEMO WRAP */
+.demo-wrap{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.demo-bar span{color:var(--accent);}
+.demo-content{padding:2rem;background:var(--bg);}
+
+/* WEATHER APP DEMO */
+.weather-app{
+  background:var(--bg2);border:1px solid var(--border);padding:1.8rem;
+  max-width:480px;
+}
+.weather-app-title{
+  font-family:var(--font-d);font-size:1.2rem;font-weight:700;
+  color:var(--text);margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:.8rem;
+}
+.weather-app-title span{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);
+  background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);
+  padding:.15rem .5rem;
+}
+.search-row{display:flex;gap:.6rem;margin-bottom:1.2rem;}
+.city-input{
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font-b);font-size:.85rem;
+  padding:.55rem .9rem;outline:none;transition:border-color .2s;
+}
+.city-input:focus{border-color:var(--accent);}
+.city-input::placeholder{color:var(--muted);}
+.search-btn{
+  font-family:var(--font-m);font-size:.68rem;letter-spacing:.06em;
+  background:var(--accent);color:var(--bg);border:none;
+  padding:.55rem 1rem;cursor:pointer;transition:opacity .2s;font-weight:500;
+}
+.search-btn:hover{opacity:.85;}
+.search-btn:disabled{opacity:.4;cursor:not-allowed;}
+.weather-result{
+  background:var(--bg);border:1px solid var(--border);
+  padding:1.4rem;display:none;
+}
+.weather-result.show{display:block;}
+.weather-city{font-family:var(--font-d);font-size:1.4rem;font-weight:700;color:var(--text);margin-bottom:.3rem;}
+.weather-country{font-family:var(--font-m);font-size:.62rem;color:var(--muted);margin-bottom:1rem;}
+.weather-main{display:flex;align-items:center;gap:1.2rem;margin-bottom:1rem;}
+.weather-temp{font-family:var(--font-d);font-size:2.8rem;font-weight:700;color:var(--accent);}
+.weather-desc{font-size:.9rem;color:var(--text);text-transform:capitalize;}
+.weather-icon{font-size:2.5rem;}
+.weather-details{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.wd-item{background:var(--bg2);padding:.7rem;border:1px solid var(--border);}
+.wd-label{font-family:var(--font-m);font-size:.55rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.3rem;}
+.wd-val{font-family:var(--font-m);font-size:.82rem;color:var(--text);}
+.weather-error{
+  padding:.8rem;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);
+  color:#f87171;font-size:.82rem;font-family:var(--font-m);display:none;margin-top:.8rem;
+}
+.weather-error.show{display:block;}
+.weather-loading{
+  padding:.8rem;text-align:center;color:var(--muted);
+  font-family:var(--font-m);font-size:.75rem;letter-spacing:.1em;display:none;
+}
+.weather-loading.show{display:block;}
+.loading-dot{
+  display:inline-block;animation:blink 1.2s infinite;
+}
+.loading-dot:nth-child(2){animation-delay:.2s;}
+.loading-dot:nth-child(3){animation-delay:.4s;}
+
+/* METHOD GRID */
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.method-card{background:var(--bg2);padding:1.3rem 1.5rem;transition:background .2s;}
+.method-card:hover{background:var(--bg3);}
+.method-name{font-family:var(--font-m);font-size:.82rem;color:var(--accent);margin-bottom:.3rem;}
+.method-sig{font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.6rem;}
+.method-desc{font-size:.82rem;color:#8ab0d8;line-height:1.6;margin-bottom:.6rem;}
+.method-ex{font-family:var(--font-m);font-size:.72rem;color:var(--amber);background:var(--bg);padding:.4rem .7rem;border:1px solid var(--border);}
+
+/* HTTP STATUS GRID */
+.status-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.status-card{background:var(--bg2);padding:1rem;text-align:center;transition:background .2s;}
+.status-card:hover{background:var(--bg3);}
+.status-code{font-family:var(--font-m);font-size:1.1rem;font-weight:500;margin-bottom:.3rem;}
+.status-code.s2{color:var(--accent3);}
+.status-code.s3{color:var(--accent);}
+.status-code.s4{color:var(--amber);}
+.status-code.s5{color:var(--red);}
+.status-name{font-size:.72rem;color:var(--text);margin-bottom:.2rem;}
+.status-desc{font-size:.65rem;color:var(--muted);line-height:1.5;}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;
+  background:var(--bg);border:1px solid var(--border);cursor:pointer;
+  font-size:.87rem;transition:border-color .15s,background .15s;
+  user-select:none;line-height:1.5;
+}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(96,165,250,.05);}
+.quiz-opt.correct{border-color:var(--accent3);background:rgba(52,211,153,.06);color:var(--accent3);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent3);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;
+  background:var(--bg2);border:1px solid var(--border);font-size:.87rem;
+  cursor:pointer;transition:background .15s;user-select:none;
+}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent3);border-color:var(--accent3);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* PROJECT */
+.project-hero{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;
+}
+.project-hero::after{
+  content:'fetch()';position:absolute;right:1.5rem;bottom:-.5rem;
+  font-family:var(--font-m);font-size:3.5rem;color:var(--accent);
+  opacity:.05;line-height:1;pointer-events:none;white-space:nowrap;
+}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}
+  .header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .method-grid{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .status-grid{grid-template-columns:repeat(3,1fr);}
+  .promise-states{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 06 / 18 &mdash; Fetch API &amp; 非同步</div>
+  <nav class="header-nav">
+    <a href="week5.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week7.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#event-loop">Event Loop</a>
+  <a class="toc-item" href="#callbacks">Callback</a>
+  <a class="toc-item" href="#promises">Promise</a>
+  <a class="toc-item" href="#async-await">async / await</a>
+  <a class="toc-item" href="#fetch">Fetch API</a>
+  <a class="toc-item" href="#error">錯誤處理</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-deco">
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-center">async</div>
+  </div>
+  <div class="hero-label">Phase 02 &mdash; Week 06 of 18</div>
+  <h1>Fetch API<br><span class="hi">非同步程式設計</span></h1>
+  <p class="hero-desc">
+    理解 JavaScript 單執行緒的本質，掌握 Callback、Promise 到 async/await 的演進，
+    並透過 Fetch API 串接真實世界的 API 資料。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">Event Loop</span>
+    <span class="badge hi">Promise</span>
+    <span class="badge hi">async / await</span>
+    <span class="badge hi">Fetch API</span>
+    <span class="badge hi2">REST API</span>
+    <span class="badge hi2">JSON</span>
+    <span class="badge hi3">天氣 App 專案</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ═══════════════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">完成本週課程後，你應能解釋 JavaScript 的非同步機制，並獨立完成一個串接公開 API 的天氣查詢應用程式。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">理解 JavaScript <strong>單執行緒</strong>與 <strong>Event Loop</strong> 的運作原理，解釋為何非同步是必要的</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">了解 <code>Callback</code> 模式，認識 Callback Hell 的問題並說明為何需要 Promise</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">熟練使用 <code>Promise</code>：<code>.then()</code>、<code>.catch()</code>、<code>.finally()</code> 以及 <code>Promise.all()</code></span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">能用 <code>async/await</code> 語法改寫 Promise 鏈，並搭配 <code>try/catch</code> 進行錯誤處理</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">掌握 <code>fetch()</code> 的完整用法：發送 GET/POST 請求、處理 JSON 回應、設定 Headers</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">完成天氣查詢 App，實作 Loading 狀態、錯誤提示與 UI 更新</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ EVENT LOOP -->
+<section class="section" id="event-loop">
+  <div class="eyebrow">02 &mdash; Event Loop</div>
+  <h2 class="section-title">JavaScript 為何是非同步的？</h2>
+  <p class="section-intro">
+    JavaScript 是<strong>單執行緒（Single-Threaded）</strong>語言，同一時間只能執行一件事。
+    但瀏覽器提供了 Web API（計時器、網路請求、DOM 事件），讓這些耗時操作可以在背景執行，
+    完成後再透過 <strong>Event Loop</strong> 把結果推回執行佇列。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">EL</div>
+      <div>
+        <div class="ctitle">Event Loop 的四個角色</div>
+        <div class="csub">Call Stack / Web API / Task Queue / Event Loop</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <em>Call Stack（呼叫堆疊）</em> 是 JS 執行程式碼的地方，函式呼叫時被推入，執行完畢後彈出。
+        當遇到非同步操作（如 <code>fetch</code>、<code>setTimeout</code>），該操作會被<strong>移交給 Web API</strong> 處理，
+        Call Stack 繼續執行後續的同步程式碼，不會等待。
+      </p>
+      <p>
+        Web API 完成工作後，將 Callback 函式放入 <em>Task Queue（任務佇列）</em>。
+        <em>Event Loop</em> 持續檢查：「Call Stack 是否清空了？」——清空後才從 Task Queue 取出任務執行。
+        這就是非同步的核心機制。
+      </p>
+      <p>
+        <strong>Microtask Queue</strong>（Promise 的 callback）優先級高於 Task Queue，
+        每次 Call Stack 清空後，會先清空所有 Microtask，才處理 Task Queue。
+      </p>
+    </div>
+  </div>
+
+  <div class="async-flow">
+    <div class="flow-row">
+      <div class="flow-label call-stack">CALL STACK</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><code>console.log("start")</code> → 執行並彈出</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-label call-stack">CALL STACK</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><code>fetch(...)</code> → 推入後移交給 Web API，立即彈出</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-label web-api">WEB API</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">網路請求在背景執行（500ms）</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-label call-stack">CALL STACK</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><code>console.log("end")</code> → 執行並彈出（不等 fetch）</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-label task-queue">MICROTASK</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">fetch 完成 → .then() callback 放入 Microtask Queue</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-label event-loop">EVENT LOOP</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Call Stack 空了 → 取出 .then() callback 執行</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 執行順序示範</span>
+    </div>
+    <pre>console.<span class="fn">log</span>(<span class="str">"1 — 同步，立即執行"</span>)
+
+<span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> {
+  console.<span class="fn">log</span>(<span class="str">"3 — Task Queue，最後執行"</span>)
+}, <span class="num">0</span>)
+
+<span class="type">Promise</span>.<span class="fn">resolve</span>().<span class="fn">then</span>(() <span class="op">=&gt;</span> {
+  console.<span class="fn">log</span>(<span class="str">"2 — Microtask，setTimeout 之前"</span>)
+})
+
+console.<span class="fn">log</span>(<span class="str">"1.5 — 同步，立即執行"</span>)
+
+<span class="cmt">// 輸出順序：
+// 1 — 同步，立即執行
+// 1.5 — 同步，立即執行
+// 2 — Microtask，setTimeout 之前
+// 3 — Task Queue，最後執行</span></pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">⚠ 常見誤解</span>
+    <code>setTimeout(fn, 0)</code> 並不代表「立即執行」，而是「盡快執行，但要等 Call Stack 清空並讓 Microtask 先跑完」。
+    在繁忙的頁面中，實際延遲可能遠超過 0ms。
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CALLBACKS -->
+<section class="section" id="callbacks">
+  <div class="eyebrow">03 &mdash; Callback Pattern</div>
+  <h2 class="section-title">Callback：非同步的第一代解法</h2>
+  <p class="section-intro">
+    Callback 是最原始的非同步處理方式——把「完成後要做的事」作為函式傳入。
+    雖然直觀，但多層嵌套會形成惡名昭彰的 <strong>Callback Hell</strong>。
+  </p>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr bad">✗ Callback Hell（金字塔末日）</div>
+      <pre><span class="fn">getUser</span>(userId, (<span class="prop">user</span>) <span class="op">=&gt;</span> {
+  <span class="fn">getPosts</span>(user.id, (<span class="prop">posts</span>) <span class="op">=&gt;</span> {
+    <span class="fn">getComments</span>(posts[<span class="num">0</span>].id, (<span class="prop">comments</span>) <span class="op">=&gt;</span> {
+      <span class="fn">getLikes</span>(comments[<span class="num">0</span>].id, (<span class="prop">likes</span>) <span class="op">=&gt;</span> {
+        <span class="cmt">// 越來越深，難以維護</span>
+        console.<span class="fn">log</span>(likes)
+      }, <span class="fn">handleError</span>)
+    }, <span class="fn">handleError</span>)
+  }, <span class="fn">handleError</span>)
+}, <span class="fn">handleError</span>)</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">✓ Promise 鏈（扁平化）</div>
+      <pre><span class="fn">getUser</span>(userId)
+  .<span class="fn">then</span>(<span class="prop">user</span> <span class="op">=&gt;</span> <span class="fn">getPosts</span>(user.id))
+  .<span class="fn">then</span>(<span class="prop">posts</span> <span class="op">=&gt;</span> <span class="fn">getComments</span>(posts[<span class="num">0</span>].id))
+  .<span class="fn">then</span>(<span class="prop">comments</span> <span class="op">=&gt;</span> <span class="fn">getLikes</span>(comments[<span class="num">0</span>].id))
+  .<span class="fn">then</span>(<span class="prop">likes</span> <span class="op">=&gt;</span> console.<span class="fn">log</span>(likes))
+  .<span class="fn">catch</span>(<span class="fn">handleError</span>)
+<span class="cmt">// 扁平、可讀、單一 catch</span></pre>
+    </div>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">CB</div>
+      <div>
+        <div class="ctitle">Callback 的正確用途</div>
+        <div class="csub">並非所有 Callback 都是問題</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        Callback 本身並不是反模式，問題在於<strong>多層巢狀的非同步 Callback</strong>。
+        對於同步操作（如 <code>Array.forEach</code>、<code>Array.map</code>、事件監聽器），
+        Callback 依然是標準且正確的用法。
+      </p>
+      <p>
+        只有當你需要「依序等待多個非同步操作」時，才需要升級到 Promise 或 async/await。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — Node.js 風格 Callback（Error-First）</span>
+    </div>
+    <pre><span class="cmt">// Node.js 慣例：第一個參數是 error，第二個是結果</span>
+<span class="kw">function</span> <span class="fn">readFile</span>(path, callback) {
+  <span class="cmt">// 模擬非同步檔案讀取</span>
+  <span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (!path) {
+      <span class="fn">callback</span>(<span class="kw">new</span> <span class="type">Error</span>(<span class="str">"路徑不能為空"</span>), <span class="bool">null</span>)
+    } <span class="kw">else</span> {
+      <span class="fn">callback</span>(<span class="bool">null</span>, <span class="str">"檔案內容..."</span>)
+    }
+  }, <span class="num">500</span>)
+}
+
+<span class="fn">readFile</span>(<span class="str">"./data.txt"</span>, (err, data) <span class="op">=&gt;</span> {
+  <span class="kw">if</span> (err) {
+    console.<span class="fn">error</span>(<span class="str">"讀取失敗："</span>, err.<span class="prop">message</span>)
+    <span class="kw">return</span>
+  }
+  console.<span class="fn">log</span>(<span class="str">"讀取成功："</span>, data)
+})</pre>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PROMISES -->
+<section class="section" id="promises">
+  <div class="eyebrow">04 &mdash; Promise</div>
+  <h2 class="section-title">Promise：非同步的優雅解法</h2>
+  <p class="section-intro">
+    Promise 是一個代表「<strong>未來某個時刻才會有結果</strong>」的物件。
+    它有三種狀態，且狀態只能轉換一次，讓非同步流程變得可預測、可組合。
+  </p>
+
+  <div class="promise-states">
+    <div class="ps-card">
+      <div class="ps-icon">⏳</div>
+      <div class="ps-name pending">PENDING</div>
+      <div class="ps-desc">初始狀態，操作尚未完成</div>
+    </div>
+    <div class="ps-card">
+      <div class="ps-icon">✅</div>
+      <div class="ps-name fulfilled">FULFILLED</div>
+      <div class="ps-desc">操作成功完成，有結果值</div>
+    </div>
+    <div class="ps-card">
+      <div class="ps-icon">❌</div>
+      <div class="ps-name rejected">REJECTED</div>
+      <div class="ps-desc">操作失敗，有錯誤原因</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 建立與使用 Promise</span>
+    </div>
+    <pre><span class="cmt">// ── 建立 Promise ──</span>
+<span class="kw">const</span> fetchData <span class="op">=</span> <span class="kw">new</span> <span class="type">Promise</span>((resolve, reject) <span class="op">=&gt;</span> {
+  <span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> {
+    <span class="kw">const</span> success <span class="op">=</span> <span class="bool">true</span>
+    <span class="kw">if</span> (success) {
+      <span class="fn">resolve</span>({ name: <span class="str">"Eric"</span>, score: <span class="num">98</span> })  <span class="cmt">// 成功 → FULFILLED</span>
+    } <span class="kw">else</span> {
+      <span class="fn">reject</span>(<span class="kw">new</span> <span class="type">Error</span>(<span class="str">"請求失敗"</span>))          <span class="cmt">// 失敗 → REJECTED</span>
+    }
+  }, <span class="num">1000</span>)
+})
+
+<span class="cmt">// ── 消費 Promise ──</span>
+fetchData
+  .<span class="fn">then</span>(data <span class="op">=&gt;</span> {
+    console.<span class="fn">log</span>(<span class="str">"成功："</span>, data)       <span class="cmt">// { name: "Eric", score: 98 }</span>
+    <span class="kw">return</span> data.<span class="prop">score</span> <span class="op">*</span> <span class="num">2</span>            <span class="cmt">// 可以 return 值，傳給下個 .then</span>
+  })
+  .<span class="fn">then</span>(doubled <span class="op">=&gt;</span> console.<span class="fn">log</span>(<span class="str">"Double："</span>, doubled))  <span class="cmt">// 196</span>
+  .<span class="fn">catch</span>(err <span class="op">=&gt;</span> console.<span class="fn">error</span>(<span class="str">"失敗："</span>, err.<span class="prop">message</span>))
+  .<span class="fn">finally</span>(() <span class="op">=&gt;</span> console.<span class="fn">log</span>(<span class="str">"無論成敗都執行"</span>))</pre>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">Promise 的靜態方法</h3>
+
+  <div class="method-grid">
+    <div class="method-card">
+      <div class="method-name">Promise.all()</div>
+      <div class="method-sig">Promise.all([p1, p2, p3])</div>
+      <div class="method-desc">等待<strong style="color:var(--text)">全部</strong> Promise 完成，任一 reject 就整體 reject。適合並行獨立請求。</div>
+      <div class="method-ex">const [user, posts] = await Promise.all([getUser(), getPosts()])</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">Promise.allSettled()</div>
+      <div class="method-sig">Promise.allSettled([p1, p2, p3])</div>
+      <div class="method-desc">等待<strong style="color:var(--text)">全部</strong> Promise 完成，不管成敗，每個都回傳狀態 + 值/原因。</div>
+      <div class="method-ex">results.forEach(r => r.status === 'fulfilled' ? ... : ...)</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">Promise.race()</div>
+      <div class="method-sig">Promise.race([p1, p2, p3])</div>
+      <div class="method-desc">取<strong style="color:var(--text)">最快</strong>完成（或失敗）的那個，常用於設定請求逾時。</div>
+      <div class="method-ex">Promise.race([fetch(url), timeout(5000)])</div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">Promise.any()</div>
+      <div class="method-sig">Promise.any([p1, p2, p3])</div>
+      <div class="method-desc">取<strong style="color:var(--text)">最快成功</strong>的那個，全部 reject 才 reject，適合備援請求。</div>
+      <div class="method-ex">const data = await Promise.any([server1(), server2()])</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — Promise.all 並行請求</span>
+    </div>
+    <pre><span class="cmt">// 並行請求三個 API（比串行快 3 倍）</span>
+<span class="kw">const</span> [weather, movies, news] <span class="op">=</span> <span class="kw">await</span> <span class="type">Promise</span>.<span class="fn">all</span>([
+  <span class="fn">fetch</span>(<span class="str">"https://api.example.com/weather"</span>).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>()),
+  <span class="fn">fetch</span>(<span class="str">"https://api.example.com/movies"</span>).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>()),
+  <span class="fn">fetch</span>(<span class="str">"https://api.example.com/news"</span>).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>()),
+])
+
+<span class="cmt">// vs 串行（慢）：</span>
+<span class="kw">const</span> w <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(weatherUrl).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>()) <span class="cmt">// 等這個</span>
+<span class="kw">const</span> m <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(moviesUrl).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>())   <span class="cmt">// 再等這個</span>
+<span class="kw">const</span> n <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(newsUrl).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>())    <span class="cmt">// 再等這個</span></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ ASYNC/AWAIT -->
+<section class="section" id="async-await">
+  <div class="eyebrow">05 &mdash; async / await</div>
+  <h2 class="section-title">async / await：讓非同步像同步一樣讀</h2>
+  <p class="section-intro">
+    <code>async/await</code> 是 ES2017 引入的語法糖，建立在 Promise 之上。
+    它讓非同步程式碼看起來像同步，大幅提升可讀性，是現代 JS 的標準寫法。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">A</div>
+      <div>
+        <div class="ctitle">async 函式的本質</div>
+        <div class="csub">永遠回傳 Promise</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        在函式前加 <em>async</em> 關鍵字，該函式就會自動將回傳值包裝成 Promise。
+        即使你 <code>return 42</code>，外部拿到的也是 <code>Promise.resolve(42)</code>。
+      </p>
+      <p>
+        在 async 函式內部使用 <em>await</em>，會暫停該函式的執行，等待 Promise 解析完成，
+        然後取出結果值繼續執行。注意：<strong>await 只能在 async 函式內使用</strong>（模組頂層除外）。
+      </p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Promise 鏈寫法</div>
+      <pre><span class="kw">function</span> <span class="fn">getUserData</span>(id) {
+  <span class="kw">return</span> <span class="fn">fetchUser</span>(id)
+    .<span class="fn">then</span>(user <span class="op">=&gt;</span> <span class="fn">fetchPosts</span>(user.id))
+    .<span class="fn">then</span>(posts <span class="op">=&gt;</span> {
+      <span class="kw">return</span> { posts, count: posts.<span class="prop">length</span> }
+    })
+    .<span class="fn">catch</span>(err <span class="op">=&gt;</span> {
+      console.<span class="fn">error</span>(err)
+      <span class="kw">throw</span> err
+    })
+}</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">✓ async/await 寫法</div>
+      <pre><span class="kw">async function</span> <span class="fn">getUserData</span>(id) {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> user <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetchUser</span>(id)
+    <span class="kw">const</span> posts <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetchPosts</span>(user.id)
+    <span class="kw">return</span> { posts, count: posts.<span class="prop">length</span> }
+  } <span class="kw">catch</span> (err) {
+    console.<span class="fn">error</span>(err)
+    <span class="kw">throw</span> err
+  }
+}</pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 常見 async/await 技巧</span>
+    </div>
+    <pre><span class="cmt">// ── 1. 頂層 await（ES Module）──</span>
+<span class="kw">const</span> data <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(url).<span class="fn">then</span>(r <span class="op">=&gt;</span> r.<span class="fn">json</span>())
+
+<span class="cmt">// ── 2. 並行 await（正確方式）──</span>
+<span class="kw">const</span> [a, b] <span class="op">=</span> <span class="kw">await</span> <span class="type">Promise</span>.<span class="fn">all</span>([<span class="fn">taskA</span>(), <span class="fn">taskB</span>()])
+
+<span class="cmt">// ── 3. 迴圈中的 await（注意！）──</span>
+<span class="kw">const</span> ids <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]
+
+<span class="cmt">// ✗ forEach 不支援 async callback，await 無效</span>
+ids.<span class="fn">forEach</span>(<span class="kw">async</span> id <span class="op">=&gt;</span> {
+  <span class="kw">await</span> <span class="fn">processId</span>(id) <span class="cmt">// 不會依序等待！</span>
+})
+
+<span class="cmt">// ✓ 串行：用 for...of</span>
+<span class="kw">for</span> (<span class="kw">const</span> id <span class="kw">of</span> ids) {
+  <span class="kw">await</span> <span class="fn">processId</span>(id) <span class="cmt">// 依序執行 ✓</span>
+}
+
+<span class="cmt">// ✓ 並行：用 Promise.all + map</span>
+<span class="kw">await</span> <span class="type">Promise</span>.<span class="fn">all</span>(ids.<span class="fn">map</span>(id <span class="op">=&gt;</span> <span class="fn">processId</span>(id)))</pre>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">💡 最佳實踐</span>
+    不要寫 <code>await somePromise().then(...)</code>——混用 await 和 .then() 讓程式碼風格不一致。
+    選擇一種並堅持使用：現代專案中推薦全面使用 <code>async/await + try/catch</code>。
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FETCH API -->
+<section class="section" id="fetch">
+  <div class="eyebrow">06 &mdash; Fetch API</div>
+  <h2 class="section-title">Fetch API：瀏覽器內建的 HTTP 客戶端</h2>
+  <p class="section-intro">
+    <code>fetch()</code> 是瀏覽器提供的原生 API，用來發送 HTTP 請求。
+    它取代了舊式的 <code>XMLHttpRequest</code>，以 Promise 為基礎，語法簡潔直觀。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">FS</div>
+      <div>
+        <div class="ctitle">fetch() 的重要特性</div>
+        <div class="csub">只有網路錯誤才 reject，HTTP 4xx / 5xx 不會</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <code>fetch()</code> 只有在<strong>真正的網路錯誤</strong>（如無網路連線、DNS 失敗）時才會 reject。
+        即使伺服器回傳 <code>404</code> 或 <code>500</code>，<code>fetch</code> 依然是 <em>fulfilled</em> 的狀態。
+      </p>
+      <p>
+        因此必須手動檢查 <code>response.ok</code>（<code>status</code> 在 200–299 時為 <code>true</code>），
+        或檢查 <code>response.status</code> 的值，才能正確處理 HTTP 錯誤。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — GET 請求（完整版）</span>
+    </div>
+    <pre><span class="kw">async function</span> <span class="fn">getWeather</span>(city) {
+  <span class="kw">const</span> API_KEY <span class="op">=</span> <span class="str">"your_api_key"</span>
+  <span class="kw">const</span> url <span class="op">=</span> <span class="str">`https://api.openweathermap.org/data/2.5/weather?q=<span class="op">${</span>city<span class="op">}</span>&appid=<span class="op">${</span>API_KEY<span class="op">}</span>&units=metric&lang=zh_tw`</span>
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> response <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(url)
+
+    <span class="cmt">// ⚠ 必須手動檢查 HTTP 狀態碼</span>
+    <span class="kw">if</span> (!response.<span class="prop">ok</span>) {
+      <span class="kw">throw</span> <span class="kw">new</span> <span class="type">Error</span>(<span class="str">`HTTP 錯誤：<span class="op">${</span>response.<span class="prop">status</span><span class="op">}</span> <span class="op">${</span>response.<span class="prop">statusText</span><span class="op">}</span>`</span>)
+    }
+
+    <span class="kw">const</span> data <span class="op">=</span> <span class="kw">await</span> response.<span class="fn">json</span>()  <span class="cmt">// 解析 JSON Body</span>
+    <span class="kw">return</span> data
+  } <span class="kw">catch</span> (err) {
+    <span class="kw">if</span> (err.<span class="prop">name</span> <span class="op">===</span> <span class="str">"TypeError"</span>) {
+      <span class="kw">throw</span> <span class="kw">new</span> <span class="type">Error</span>(<span class="str">"網路連線失敗，請檢查網路"</span>)
+    }
+    <span class="kw">throw</span> err  <span class="cmt">// 重新拋出，讓呼叫者處理</span>
+  }
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — POST 請求（送資料給伺服器）</span>
+    </div>
+    <pre><span class="kw">async function</span> <span class="fn">createPost</span>(postData) {
+  <span class="kw">const</span> response <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://jsonplaceholder.typicode.com/posts"</span>, {
+    method: <span class="str">"POST"</span>,              <span class="cmt">// HTTP 方法</span>
+    headers: {
+      <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,  <span class="cmt">// 告訴伺服器 Body 格式</span>
+      <span class="str">"Authorization"</span>: <span class="str">`Bearer <span class="op">${</span>token<span class="op">}</span>`</span>    <span class="cmt">// JWT Token</span>
+    },
+    body: <span class="type">JSON</span>.<span class="fn">stringify</span>(postData)  <span class="cmt">// 物件轉成 JSON 字串</span>
+  })
+
+  <span class="kw">if</span> (!response.<span class="prop">ok</span>) {
+    <span class="kw">const</span> error <span class="op">=</span> <span class="kw">await</span> response.<span class="fn">json</span>()
+    <span class="kw">throw</span> <span class="kw">new</span> <span class="type">Error</span>(error.<span class="prop">message</span> <span class="op">||</span> <span class="str">"新增失敗"</span>)
+  }
+
+  <span class="kw">return</span> <span class="kw">await</span> response.<span class="fn">json</span>()
+}
+
+<span class="cmt">// 使用範例</span>
+<span class="kw">const</span> newPost <span class="op">=</span> <span class="kw">await</span> <span class="fn">createPost</span>({
+  title: <span class="str">"我的第一篇文章"</span>,
+  body: <span class="str">"內容..."</span>,
+  userId: <span class="num">1</span>
+})</pre>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">常見 HTTP 狀態碼</h3>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-code s2">200</div>
+      <div class="status-name">OK</div>
+      <div class="status-desc">請求成功</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s2">201</div>
+      <div class="status-name">Created</div>
+      <div class="status-desc">資源已建立</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s3">304</div>
+      <div class="status-name">Not Modified</div>
+      <div class="status-desc">快取未失效</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s4">400</div>
+      <div class="status-name">Bad Request</div>
+      <div class="status-desc">請求格式錯誤</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s4">401</div>
+      <div class="status-name">Unauthorized</div>
+      <div class="status-desc">未登入 / 無效 Token</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s4">403</div>
+      <div class="status-name">Forbidden</div>
+      <div class="status-desc">無權限存取</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s4">404</div>
+      <div class="status-name">Not Found</div>
+      <div class="status-desc">資源不存在</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s4">429</div>
+      <div class="status-name">Too Many Req</div>
+      <div class="status-desc">請求速率超限</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s5">500</div>
+      <div class="status-name">Server Error</div>
+      <div class="status-desc">伺服器內部錯誤</div>
+    </div>
+    <div class="status-card">
+      <div class="status-code s5">503</div>
+      <div class="status-name">Unavailable</div>
+      <div class="status-desc">服務暫時不可用</div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;">Response 解析方法</h3>
+
+  <table class="ptable">
+    <thead>
+      <tr>
+        <th>方法</th>
+        <th>用途</th>
+        <th>回傳型別</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>response.json()</td>
+        <td>解析 JSON 格式的 Body（最常用）</td>
+        <td>Promise&lt;any&gt;</td>
+      </tr>
+      <tr>
+        <td>response.text()</td>
+        <td>讀取純文字 Body（HTML、CSV）</td>
+        <td>Promise&lt;string&gt;</td>
+      </tr>
+      <tr>
+        <td>response.blob()</td>
+        <td>讀取二進位資料（圖片、檔案）</td>
+        <td>Promise&lt;Blob&gt;</td>
+      </tr>
+      <tr>
+        <td>response.formData()</td>
+        <td>解析表單資料</td>
+        <td>Promise&lt;FormData&gt;</td>
+      </tr>
+      <tr>
+        <td>response.arrayBuffer()</td>
+        <td>讀取原始二進位緩衝區</td>
+        <td>Promise&lt;ArrayBuffer&gt;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note danger">
+    <span class="note-label">⚠ 注意</span>
+    Response Body 只能被讀取<strong>一次</strong>。呼叫 <code>response.json()</code> 後，
+    再呼叫 <code>response.text()</code> 會拋出錯誤。如需多次讀取，先呼叫 <code>response.clone()</code>。
+  </div>
+</section>
+
+<!-- ═══════════════════════════ ERROR HANDLING -->
+<section class="section" id="error">
+  <div class="eyebrow">07 &mdash; Error Handling</div>
+  <h2 class="section-title">健壯的錯誤處理策略</h2>
+  <p class="section-intro">
+    良好的錯誤處理讓使用者看到有意義的提示，而非白屏或靜默失敗。
+    以下是在串接 API 時的完整錯誤處理架構。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 分層錯誤處理架構</span>
+    </div>
+    <pre><span class="cmt">// ── 第一層：API 封裝層，統一錯誤格式 ──</span>
+<span class="kw">class</span> <span class="type">ApiError</span> <span class="kw">extends</span> <span class="type">Error</span> {
+  <span class="fn">constructor</span>(message, status, data) {
+    <span class="kw">super</span>(message)
+    <span class="kw">this</span>.<span class="prop">name</span> <span class="op">=</span> <span class="str">"ApiError"</span>
+    <span class="kw">this</span>.<span class="prop">status</span> <span class="op">=</span> status
+    <span class="kw">this</span>.<span class="prop">data</span> <span class="op">=</span> data
+  }
+}
+
+<span class="kw">async function</span> <span class="fn">apiFetch</span>(url, options <span class="op">=</span> {}) {
+  <span class="kw">const</span> response <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(url, options)
+  <span class="kw">if</span> (!response.<span class="prop">ok</span>) {
+    <span class="kw">let</span> errorData
+    <span class="kw">try</span> { errorData <span class="op">=</span> <span class="kw">await</span> response.<span class="fn">json</span>() } <span class="kw">catch</span> {}
+    <span class="kw">throw</span> <span class="kw">new</span> <span class="type">ApiError</span>(
+      errorData?.<span class="prop">message</span> <span class="op">||</span> <span class="str">`HTTP <span class="op">${</span>response.<span class="prop">status</span><span class="op">}</span>`</span>,
+      response.<span class="prop">status</span>,
+      errorData
+    )
+  }
+  <span class="kw">return</span> response.<span class="fn">json</span>()
+}
+
+<span class="cmt">// ── 第二層：UI 層，依錯誤類型給不同提示 ──</span>
+<span class="kw">async function</span> <span class="fn">loadWeather</span>(city) {
+  <span class="fn">showLoading</span>()
+  <span class="kw">try</span> {
+    <span class="kw">const</span> data <span class="op">=</span> <span class="kw">await</span> <span class="fn">apiFetch</span>(<span class="str">`/api/weather?city=<span class="op">${</span>city<span class="op">}</span>`</span>)
+    <span class="fn">renderWeather</span>(data)
+  } <span class="kw">catch</span> (err) {
+    <span class="kw">if</span> (err <span class="kw">instanceof</span> <span class="type">ApiError</span>) {
+      <span class="kw">switch</span> (err.<span class="prop">status</span>) {
+        <span class="kw">case</span> <span class="num">404</span>: <span class="fn">showError</span>(<span class="str">`找不到城市「<span class="op">${</span>city<span class="op">}</span>」，請確認拼字`</span>); <span class="kw">break</span>
+        <span class="kw">case</span> <span class="num">401</span>: <span class="fn">showError</span>(<span class="str">"API 金鑰無效"</span>); <span class="kw">break</span>
+        <span class="kw">case</span> <span class="num">429</span>: <span class="fn">showError</span>(<span class="str">"請求次數超限，請稍後再試"</span>); <span class="kw">break</span>
+        <span class="kw">default</span>:  <span class="fn">showError</span>(<span class="str">`伺服器錯誤 (${err.status})`</span>)
+      }
+    } <span class="kw">else</span> {
+      <span class="fn">showError</span>(<span class="str">"網路連線失敗，請檢查網路狀態"</span>)
+    }
+  } <span class="kw">finally</span> {
+    <span class="fn">hideLoading</span>()
+  }
+}</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">✅ 最佳實踐</span>
+    永遠在 <code>finally</code> 中隱藏 Loading 狀態，確保無論成功或失敗，UI 都能恢復正常。
+    善用自訂 Error class 讓錯誤類型可被 <code>instanceof</code> 識別，避免靠字串比對判斷錯誤。
+  </div>
+
+  <!-- Interactive Demo -->
+  <div class="demo-wrap">
+    <div class="demo-bar">
+      <span>互動示範 — 天氣查詢 App</span>
+      <span>LIVE DEMO</span>
+    </div>
+    <div class="demo-content">
+      <div class="weather-app">
+        <div class="weather-app-title">
+          天氣查詢
+          <span>OpenWeatherMap API</span>
+        </div>
+        <div class="search-row">
+          <input class="city-input" id="cityInput" type="text" placeholder="輸入城市名稱（英文）..." />
+          <button class="search-btn" id="searchBtn" onclick="searchWeather()">搜尋</button>
+        </div>
+        <div class="weather-loading" id="weatherLoading">
+          載入中<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+        </div>
+        <div class="weather-error" id="weatherError"></div>
+        <div class="weather-result" id="weatherResult">
+          <div class="weather-city" id="wCity"></div>
+          <div class="weather-country" id="wCountry"></div>
+          <div class="weather-main">
+            <div class="weather-icon" id="wIcon"></div>
+            <div>
+              <div class="weather-temp" id="wTemp"></div>
+              <div class="weather-desc" id="wDesc"></div>
+            </div>
+          </div>
+          <div class="weather-details">
+            <div class="wd-item">
+              <div class="wd-label">體感溫度</div>
+              <div class="wd-val" id="wFeels"></div>
+            </div>
+            <div class="wd-item">
+              <div class="wd-label">濕度</div>
+              <div class="wd-val" id="wHumidity"></div>
+            </div>
+            <div class="wd-item">
+              <div class="wd-label">風速</div>
+              <div class="wd-val" id="wWind"></div>
+            </div>
+            <div class="wd-item">
+              <div class="wd-label">能見度</div>
+              <div class="wd-val" id="wVisibility"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:1rem;font-size:.75rem;color:var(--muted);font-family:var(--font-m);">
+        ★ 這是模擬 Demo，輸入 "Taipei"、"Tokyo"、"London" 查看效果
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">08 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+  <p class="section-intro">測試你對非同步概念的掌握程度。點選你認為正確的答案。</p>
+
+  <!-- Q1 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">以下程式碼的輸出順序為何？<br><code>console.log('A'); setTimeout(() => console.log('B'), 0); Promise.resolve().then(() => console.log('C')); console.log('D');</code></div>
+    <div class="quiz-options" id="q1">
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">A</span>A → B → C → D</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',true)"><span class="quiz-key">B</span>A → D → C → B</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">C</span>A → D → B → C</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">D</span>A → C → D → B</div>
+    </div>
+    <div class="quiz-fb" id="q1-fb">
+      正確！同步程式碼（A、D）先執行，接著清空 Microtask Queue（Promise .then → C），最後才執行 Task Queue（setTimeout → B）。
+    </div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">fetch() 發出請求後，伺服器回傳 404 狀態碼，此時 Promise 的狀態為？</div>
+    <div class="quiz-options" id="q2">
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">A</span>rejected（因為 404 是錯誤）</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',true)"><span class="quiz-key">B</span>fulfilled（fetch 只有網路層錯誤才 reject）</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">C</span>pending（等待重試）</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">D</span>取決於伺服器的回應格式</div>
+    </div>
+    <div class="quiz-fb" id="q2-fb">
+      正確！fetch() 只有在無法發出請求（網路斷線、DNS 失敗等）時才 reject。HTTP 錯誤狀態碼（4xx、5xx）仍然會 fulfill，需手動檢查 <code>response.ok</code>。
+    </div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">以下哪種方式能正確地<strong>並行</strong>發出多個 fetch 請求，且等待全部完成後再處理結果？</div>
+    <div class="quiz-options" id="q3">
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">A</span>用 for...of 加 await 逐一發送</div>
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">B</span>用 forEach 加 async callback</div>
+      <div class="quiz-opt" onclick="answer(this,'q3',true)"><span class="quiz-key">C</span>用 Promise.all() 搭配 map 建立 Promise 陣列</div>
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">D</span>連續呼叫 fetch，最後 await 最後一個</div>
+    </div>
+    <div class="quiz-fb" id="q3-fb">
+      正確！<code>Promise.all(urls.map(url => fetch(url)))</code> 會同時發出所有請求，並等待全部完成。for...of + await 是串行的（逐一等待），效率較差。
+    </div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">關於 <code>async/await</code>，下列哪個敘述<strong>不正確</strong>？</div>
+    <div class="quiz-options" id="q4">
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">A</span>async 函式永遠回傳一個 Promise</div>
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">B</span>await 只能在 async 函式內使用（ES Module 頂層除外）</div>
+      <div class="quiz-opt" onclick="answer(this,'q4',true)"><span class="quiz-key">C</span>async/await 是全新的非同步機制，與 Promise 無關</div>
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">D</span>await 後面可以接任何 Promise 或 thenable 物件</div>
+    </div>
+    <div class="quiz-fb" id="q4-fb">
+      正確！async/await 是 Promise 的語法糖，底層完全基於 Promise。它不是新的機制，只是讓 Promise 的使用更加簡潔易讀。
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">09 &mdash; Weekly Project</div>
+  <h2 class="section-title">本週專案</h2>
+
+  <div class="project-hero">
+    <div class="project-eyebrow">WEEK 06 PROJECT</div>
+    <div class="project-name">天氣查詢 App</div>
+    <div class="project-desc">
+      串接 OpenWeatherMap 公開 API，製作一個可以查詢全球城市即時天氣的應用程式。
+      包含搜尋功能、Loading 狀態、錯誤處理，以及美觀的天氣資訊展示介面。
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">申請 API Key</div>
+        <div class="step-body">前往 openweathermap.org 免費註冊並取得 API Key。了解免費方案的限制（每分鐘 60 次請求）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">建立 HTML 結構</div>
+        <div class="step-body">設計搜尋欄位、Loading 狀態區塊、錯誤訊息區塊，以及天氣資料展示區（溫度、天氣描述、濕度、風速等）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">實作 fetchWeather() 函式</div>
+        <div class="step-body">使用 <code>async/await</code> 封裝 fetch 請求，加入 <code>response.ok</code> 檢查，針對 404（城市不存在）給出明確錯誤訊息。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">實作 Loading 與錯誤狀態</div>
+        <div class="step-body">請求發出時顯示 Loading，完成後隱藏。成功時渲染資料，失敗時顯示對應的錯誤訊息，並在 <code>finally</code> 中確保 Loading 被隱藏。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">加入 Enter 鍵支援 &amp; 防重複提交</div>
+        <div class="step-body">監聽輸入框的 <code>keydown</code> 事件，Enter 鍵觸發搜尋。請求進行中禁用搜尋按鈕，避免重複發送請求。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">進階挑戰：搜尋歷史記錄</div>
+        <div class="step-body">使用 <code>localStorage</code> 儲存最近 5 筆搜尋記錄，顯示為快速點擊的標籤。使用 <code>JSON.stringify</code> / <code>JSON.parse</code> 存取。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:0 0 1rem;">完成清單</h3>
+  <div class="checklist">
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>成功發出 Fetch GET 請求並解析 JSON 回應</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>手動檢查 <code>response.ok</code>，正確處理 HTTP 錯誤</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>搜尋時顯示 Loading 狀態，完成後隱藏</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>錯誤時顯示有意義的中文錯誤訊息</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>支援 Enter 鍵觸發搜尋</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>【進階】實作搜尋歷史儲存到 localStorage</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>【進階】同時查詢當前天氣 + 5天預報（Promise.all）</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">10 &mdash; Resources</div>
+  <h2 class="section-title">延伸閱讀資源</h2>
+  <p class="section-intro">精選文件與教學，深化對非同步機制的理解。</p>
+  <div class="resource-grid">
+    <div class="resource-card">
+      <div class="resource-type">MDN 文件</div>
+      <div class="resource-name">Using Fetch</div>
+      <div class="resource-desc">MDN 官方 Fetch API 完整說明，包含所有選項與進階用法</div>
+      <div class="resource-arrow">→ developer.mozilla.org</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">MDN 文件</div>
+      <div class="resource-name">Promise</div>
+      <div class="resource-desc">Promise 的完整 API 文件，包含所有靜態方法與實例方法</div>
+      <div class="resource-arrow">→ developer.mozilla.org</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">互動教學</div>
+      <div class="resource-name">JavaScript Visualized: Event Loop</div>
+      <div class="resource-desc">以動畫視覺化展示 Event Loop 的運作過程，直觀易懂</div>
+      <div class="resource-arrow">→ dev.to / lydiahallie</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">練習 API</div>
+      <div class="resource-name">JSONPlaceholder</div>
+      <div class="resource-desc">免費的假 REST API，可練習 GET/POST/PUT/DELETE 操作，無需 API Key</div>
+      <div class="resource-arrow">→ jsonplaceholder.typicode.com</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">深度閱讀</div>
+      <div class="resource-name">You Don't Know JS: Async &amp; Performance</div>
+      <div class="resource-desc">深入解析 JavaScript 非同步機制的免費電子書</div>
+      <div class="resource-arrow">→ github.com/getify</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">API 文件</div>
+      <div class="resource-name">OpenWeatherMap API</div>
+      <div class="resource-desc">本週專案使用的天氣 API，免費方案每分鐘 60 次請求</div>
+      <div class="resource-arrow">→ openweathermap.org/api</div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /.content -->
+
+<div class="bottom-nav">
+  <a href="week5.html" class="nav-btn">&larr; Week 05 — DOM 操作與事件監聽</a>
+  <a href="index.html" class="home-link">課程總覽</a>
+  <a href="week7.html" class="nav-btn">Week 07 — ES6+ 語法與模組化 &rarr;</a>
+</div>
+</main>
+
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('progressBar')
+  const docH = document.documentElement.scrollHeight - window.innerHeight
+  el.style.width = (window.scrollY / docH * 100) + '%'
+})
+
+// ── TOC Active ──
+const sections = document.querySelectorAll('.section[id]')
+const tocItems = document.querySelectorAll('.toc-item')
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      tocItems.forEach(t => t.classList.remove('active'))
+      const active = document.querySelector(`.toc-item[href="#${e.target.id}"]`)
+      if (active) active.classList.add('active')
+    }
+  })
+}, { rootMargin: '-30% 0px -60% 0px' })
+sections.forEach(s => obs.observe(s))
+
+// ── Section Reveal ──
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+sections.forEach(s => revealObs.observe(s))
+
+// ── Quiz ──
+function answer(el, qId, isCorrect) {
+  const container = document.getElementById(qId)
+  if (container.querySelector('.correct, .wrong')) return
+  el.classList.add(isCorrect ? 'correct' : 'wrong')
+  if (!isCorrect) container.querySelectorAll('.quiz-opt').forEach(o => {
+    if (o !== el) o.style.opacity = '0.4'
+  })
+  const fb = document.getElementById(qId + '-fb')
+  if (fb) fb.classList.add('show')
+}
+
+// ── Weather Demo ──
+const MOCK_DATA = {
+  taipei: { name:'Taipei', country:'TW', temp:28, feels:32, desc:'多雲時晴', humidity:75, wind:3.2, visibility:10, icon:'🌤' },
+  tokyo: { name:'Tokyo', country:'JP', temp:22, feels:21, desc:'晴天', humidity:55, wind:5.1, visibility:16, icon:'☀️' },
+  london: { name:'London', country:'GB', temp:14, feels:12, desc:'陰天', humidity:82, wind:6.8, visibility:8, icon:'☁️' },
+  paris: { name:'Paris', country:'FR', temp:18, feels:17, desc:'局部多雲', humidity:68, wind:4.5, visibility:12, icon:'⛅' },
+  newyork: { name:'New York', country:'US', temp:20, feels:19, desc:'晴', humidity:60, wind:4.0, visibility:14, icon:'🌞' },
+  sydney: { name:'Sydney', country:'AU', temp:24, feels:23, desc:'晴朗', humidity:65, wind:3.8, visibility:15, icon:'☀️' },
+}
+
+async function searchWeather() {
+  const input = document.getElementById('cityInput')
+  const city = input.value.trim()
+  if (!city) return
+
+  const btn = document.getElementById('searchBtn')
+  const loading = document.getElementById('weatherLoading')
+  const error = document.getElementById('weatherError')
+  const result = document.getElementById('weatherResult')
+
+  btn.disabled = true
+  loading.classList.add('show')
+  error.classList.remove('show')
+  result.classList.remove('show')
+
+  // Simulate API delay
+  await new Promise(r => setTimeout(r, 800))
+
+  const key = city.toLowerCase().replace(/\s/g,'')
+  const data = MOCK_DATA[key]
+
+  loading.classList.remove('show')
+  btn.disabled = false
+
+  if (!data) {
+    error.textContent = `找不到城市「${city}」，請輸入英文城市名（如 Taipei、Tokyo、London）`
+    error.classList.add('show')
+    return
+  }
+
+  document.getElementById('wCity').textContent = data.name
+  document.getElementById('wCountry').textContent = data.country + ' — 即時天氣'
+  document.getElementById('wTemp').textContent = data.temp + '°C'
+  document.getElementById('wDesc').textContent = data.desc
+  document.getElementById('wIcon').textContent = data.icon
+  document.getElementById('wFeels').textContent = data.feels + '°C'
+  document.getElementById('wHumidity').textContent = data.humidity + '%'
+  document.getElementById('wWind').textContent = data.wind + ' m/s'
+  document.getElementById('wVisibility').textContent = data.visibility + ' km'
+  result.classList.add('show')
+}
+
+document.getElementById('cityInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchWeather()
+})
+</script>
+</body>
+</html>
