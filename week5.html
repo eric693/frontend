@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 05 — DOM 操作與事件監聽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2efe8;--bg2:#ebe7df;--bg3:#e2ddd4;--surface:#faf8f4;
+  --border:#c8c2b4;--border2:#b0a898;
+  --text:#1a1814;--muted:#7a7268;--faint:#a8a098;
+  --accent:#2d6a2d;--accent-light:rgba(45,106,45,.1);
+  --accent2:#b85c00;--accent2-light:rgba(184,92,0,.1);
+  --accent3:#1a4f8a;--accent3-light:rgba(26,79,138,.1);
+  --neon:#5abf5a;--neon-glow:rgba(90,191,90,.3);
+  --red:#c0392b;--red-light:rgba(192,57,43,.1);
+  --code-bg:#1c1a14;--code-text:#e8e4d8;
+  --font-d:'Crimson Pro',serif;
+  --font-b:'Space Grotesk',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-b);font-weight:300;line-height:1.75;
+  overflow-x:hidden;
+}
+/* subtle dot-grid texture */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);
+  background-size:28px 28px;opacity:.35;
+}
+
+/* ── PROGRESS ── */
+.progress-bar{
+  position:fixed;top:0;left:0;height:3px;width:0%;z-index:500;
+  background:linear-gradient(to right,var(--accent),var(--neon));
+  transition:width .08s linear;
+}
+
+/* ── HEADER ── */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  background:rgba(242,239,232,.92);backdrop-filter:blur(12px);
+  border-bottom:2px solid var(--border);
+}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;font-weight:600;}
+.header-badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;
+  padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);
+  background:var(--bg3);
+}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;letter-spacing:.04em;}
+.header-nav a:hover{color:var(--accent);}
+
+/* ── TOC ── */
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{
+  display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;
+  font-family:var(--font-m);font-size:.57rem;color:var(--faint);
+  text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;
+}
+.toc-item::before{
+  content:'';width:3px;height:3px;border-radius:50%;background:var(--border2);
+  flex-shrink:0;transition:all .2s;
+}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{
+  background:var(--accent);width:12px;border-radius:1px;
+}
+
+/* ── MAIN ── */
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* ── HERO ── */
+.hero{
+  padding:5rem 3.5rem 4rem;border-bottom:2px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.hero-corner{
+  position:absolute;top:2rem;right:3rem;
+  font-family:var(--font-m);font-size:.65rem;color:var(--faint);
+  letter-spacing:.1em;text-align:right;line-height:2;
+  opacity:0;animation:fadeUp .5s .8s forwards;
+}
+.hero-corner span{display:block;color:var(--accent);}
+.hero-label{
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;
+  opacity:0;animation:fadeUp .5s .1s forwards;
+}
+.hero h1{
+  font-family:var(--font-d);font-weight:600;font-size:clamp(2.8rem,5.5vw,5rem);
+  line-height:1.05;letter-spacing:-.01em;margin-bottom:1.5rem;max-width:760px;
+  opacity:0;animation:fadeUp .5s .25s forwards;
+}
+.hero h1 .hi{color:var(--accent);font-style:italic;}
+.hero h1 .hi2{color:var(--accent2);}
+.hero-desc{
+  font-size:1rem;color:var(--muted);max-width:580px;line-height:1.8;margin-bottom:2.5rem;
+  opacity:0;animation:fadeUp .5s .38s forwards;
+}
+.hero-meta{
+  display:flex;gap:0;border:1px solid var(--border);width:fit-content;
+  opacity:0;animation:fadeUp .5s .5s forwards;
+}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--text);font-weight:600;}
+
+/* ── CONTENT ── */
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+/* ── SECTIONS ── */
+.section{
+  padding:4rem 0;border-bottom:1px solid var(--border);
+  opacity:0;transform:translateY(18px);
+  transition:opacity .55s,transform .55s;
+}
+.section.visible{opacity:1;transform:none;}
+.eyebrow{
+  font-family:var(--font-m);font-size:.63rem;color:var(--accent);
+  letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.7rem;
+}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);}
+.section-title{
+  font-family:var(--font-d);font-size:2rem;font-weight:600;
+  color:var(--text);margin-bottom:1.8rem;line-height:1.15;letter-spacing:-.01em;
+}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+/* ── OBJECTIVES ── */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:2px solid var(--border);}
+.obj-item{
+  background:var(--surface);padding:1.3rem 1.5rem;
+  display:flex;gap:1rem;align-items:flex-start;transition:background .2s;
+}
+.obj-item:hover{background:var(--bg2);}
+.obj-num{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);font-weight:600;
+  background:var(--accent-light);border:1px solid rgba(45,106,45,.25);
+  padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;
+}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+/* ── CONCEPT BLOCKS ── */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{
+  padding:1.1rem 1.8rem;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+}
+.cicon{
+  width:28px;height:28px;background:var(--accent);color:#fff;
+  font-family:var(--font-m);font-size:.65rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ctitle{font-family:var(--font-b);font-size:.95rem;font-weight:600;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--surface);}
+.cbody p{font-size:.9rem;color:#4a4640;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:600;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:600;}
+
+/* ── NOTES ── */
+.note{border-left:3px solid var(--accent2);background:var(--accent2-light);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#5a3a10;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent2);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent);background:var(--accent-light);color:#1a3a1a;}
+.note.tip .note-label{color:var(--accent);}
+.note.info{border-left-color:var(--accent3);background:var(--accent3-light);color:#1a3060;}
+.note.info .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--red);background:var(--red-light);color:#5a1a1a;}
+.note.warn .note-label{color:var(--red);}
+
+/* ── CODE ── */
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem 1.1rem;background:#141210;border-bottom:1px solid #2a2820;
+}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:#666;letter-spacing:.1em;}
+pre{
+  background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);
+}
+.t{color:#87ceeb;} /* method/tag */
+.p{color:#98d982;} /* property */
+.v{color:#ffd27a;} /* value/string */
+.c{color:#52524a;font-style:italic;} /* comment */
+.s{color:#ff9f7a;} /* keyword */
+.fn{color:#c8a6e8;} /* function name */
+.num{color:#79d4c8;} /* number */
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border2);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg2);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+/* ── TABLE ── */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:2px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(200,194,180,.4);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* ──────────────────────────────────
+   LIVE DEMO INFRASTRUCTURE
+────────────────────────────────── */
+.demo-wrap{border:2px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.1rem;background:var(--bg3);border-bottom:1px solid var(--border);
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.demo-bar strong{color:var(--accent);}
+.demo-body{padding:1.8rem;background:var(--surface);}
+
+/* ── DEMO 1: DOM Tree Visualiser ── */
+.dom-tree{font-family:var(--font-m);font-size:.82rem;line-height:2;color:var(--text);}
+.dom-node{cursor:pointer;transition:background .15s;padding:0 .3rem;border-radius:2px;}
+.dom-node:hover{background:var(--accent-light);}
+.dom-node.selected{background:var(--accent-light);outline:1px solid var(--accent);color:var(--accent);}
+.dom-tag{color:var(--accent);}
+.dom-attr{color:var(--accent2);}
+.dom-text{color:var(--muted);font-style:italic;}
+.tree-indent{border-left:1px dashed var(--border2);margin-left:.8rem;padding-left:.8rem;}
+.dom-info-box{
+  margin-top:1rem;padding:1rem 1.2rem;
+  background:var(--bg3);border:1px solid var(--border);
+  font-family:var(--font-m);font-size:.72rem;line-height:1.8;
+}
+.dom-info-box .info-label{color:var(--faint);font-size:.6rem;letter-spacing:.1em;display:block;margin-bottom:.3rem;}
+
+/* ── DEMO 2: querySelector playground ── */
+.qs-area{
+  padding:1.2rem;background:var(--bg2);border:1px solid var(--border);margin-bottom:1rem;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;
+}
+.qs-el{
+  padding:.6rem .8rem;border:1px solid var(--border);background:var(--surface);
+  font-family:var(--font-m);font-size:.68rem;text-align:center;transition:all .2s;
+  cursor:default;
+}
+.qs-el.qs-hit{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.qs-el.qs-hit2{background:var(--accent2-light);border-color:var(--accent2);color:var(--accent2);font-weight:600;}
+.qs-input-row{display:flex;gap:.6rem;align-items:center;margin-bottom:.8rem;}
+.qs-input{
+  flex:1;font-family:var(--font-m);font-size:.8rem;
+  padding:.5rem .9rem;border:1px solid var(--border2);background:var(--bg);
+  color:var(--text);outline:none;
+}
+.qs-input:focus{border-color:var(--accent);}
+.qs-btn{
+  font-family:var(--font-m);font-size:.72rem;padding:.5rem 1rem;
+  background:var(--accent);color:#fff;border:none;cursor:pointer;
+  transition:opacity .15s;letter-spacing:.05em;
+}
+.qs-btn:hover{opacity:.85;}
+.qs-result{font-family:var(--font-m);font-size:.72rem;color:var(--muted);min-height:1.4rem;}
+
+/* ── DEMO 3: Event Playground ── */
+.event-zone{
+  height:120px;border:2px dashed var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.8rem;color:var(--faint);
+  transition:background .2s,border-color .2s;
+  cursor:pointer;user-select:none;
+  position:relative;overflow:hidden;
+}
+.event-zone:hover{border-color:var(--accent);}
+.event-log{
+  max-height:160px;overflow-y:auto;
+  background:var(--code-bg);padding:.8rem 1rem;
+  font-family:var(--font-m);font-size:.72rem;line-height:1.8;
+  color:var(--code-text);
+}
+.log-entry{display:flex;gap:1rem;align-items:baseline;}
+.log-time{color:#555;flex-shrink:0;font-size:.62rem;}
+.log-event{color:var(--neon);}
+.log-detail{color:#888;}
+.event-btns{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem;}
+.e-btn{
+  font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;
+  border:1px solid var(--border2);background:var(--bg2);color:var(--muted);
+  cursor:pointer;transition:all .15s;letter-spacing:.05em;
+}
+.e-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
+
+/* ── DEMO 4: DOM Manipulation Lab ── */
+.manip-lab{display:flex;flex-direction:column;gap:1rem;}
+.manip-toolbar{display:flex;flex-wrap:wrap;gap:.5rem;}
+.m-btn{
+  font-family:var(--font-m);font-size:.65rem;padding:.35rem .9rem;
+  border:1px solid var(--border2);background:var(--surface);color:var(--muted);
+  cursor:pointer;transition:all .15s;
+}
+.m-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.manip-canvas{
+  min-height:120px;background:var(--bg2);border:1px solid var(--border);
+  padding:1rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-start;
+}
+.m-item{
+  padding:.4rem .9rem;border:1px solid var(--border2);
+  font-family:var(--font-m);font-size:.72rem;color:var(--text);
+  cursor:pointer;transition:all .2s;background:var(--surface);
+}
+.m-item:hover{border-color:var(--red);color:var(--red);}
+.m-item.highlighted{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+.m-item.styled{background:var(--accent2-light);border-color:var(--accent2);color:var(--accent2);}
+
+/* ── DEMO 5: Event Bubbling Visualiser ── */
+.bubble-wrap{
+  display:flex;align-items:center;justify-content:center;
+  padding:1.5rem;
+}
+.bubble-outer{
+  padding:1.5rem;border:2px dashed var(--border2);
+  background:rgba(26,79,138,.05);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .2s;
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent3);
+  position:relative;min-width:280px;
+}
+.bubble-outer::after{content:'document';position:absolute;top:.4rem;left:.6rem;font-size:.58rem;color:var(--faint);}
+.bubble-mid{
+  padding:1.2rem 2rem;border:2px dashed var(--border);
+  background:rgba(184,92,0,.05);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .2s;
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent2);
+  position:relative;
+}
+.bubble-mid::after{content:'div.container';position:absolute;top:.3rem;left:.5rem;font-size:.58rem;color:var(--faint);}
+.bubble-inner{
+  padding:.7rem 1.4rem;border:2px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:background .2s;
+  font-family:var(--font-m);font-size:.68rem;color:var(--accent);
+  font-weight:600;
+}
+.bubble-outer.lit{background:rgba(26,79,138,.15);}
+.bubble-mid.lit{background:rgba(184,92,0,.15);}
+.bubble-inner.lit{background:var(--accent-light);}
+.bubble-log{
+  margin-top:1rem;background:var(--code-bg);padding:.8rem 1rem;
+  font-family:var(--font-m);font-size:.72rem;line-height:1.8;color:var(--code-text);
+  min-height:60px;
+}
+
+/* ── QUIZ ── */
+.quiz-block{background:var(--bg2);border:2px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:600;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;
+  background:var(--surface);border:1px solid var(--border);cursor:pointer;
+  font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;
+}
+.quiz-opt:hover{border-color:var(--accent);background:var(--accent-light);}
+.quiz-opt.correct{border-color:var(--accent);background:var(--accent-light);color:var(--accent);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-light);color:var(--red);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* ── CHECKLIST ── */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{
+  display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;
+  background:var(--surface);border:1px solid var(--border);font-size:.87rem;
+  cursor:pointer;transition:background .15s;user-select:none;
+}
+.check-item:hover{background:var(--bg2);}
+.check-item.done{background:rgba(45,106,45,.06);border-color:rgba(45,106,45,.35);}
+.check-item.done .check-box{background:var(--accent);border-color:var(--accent);color:#fff;font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* ── PROJECT ── */
+.project-hero{background:var(--code-bg);color:var(--code-text);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'addEventListener';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:2.8rem;color:var(--neon);opacity:.08;pointer-events:none;white-space:nowrap;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--neon);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:600;color:#fff;margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:#888;line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--surface);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg2);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* ── RESOURCES ── */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--surface);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg2);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-b);font-size:.88rem;font-weight:600;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:2px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--surface);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+/* ── Compare ── */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--surface);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(45,106,45,.08);color:var(--accent);border-bottom:1px solid rgba(45,106,45,.2);}
+.cpanel-hdr.bad{background:rgba(192,57,43,.08);color:var(--red);border-bottom:1px solid rgba(192,57,43,.2);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}
+  .header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .hero-corner{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .qs-area{grid-template-columns:1fr 1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 05 / 18 &mdash; DOM &amp; EVENTS</div>
+  <nav class="header-nav">
+    <a href="week4.html">&larr; Week 04</a>
+    <a href="index.html">總覽</a>
+    <a href="week6.html">Week 06 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">DOM 是什麼</a>
+  <a class="toc-item" href="#concept-2">查詢元素</a>
+  <a class="toc-item" href="#concept-3">修改 DOM</a>
+  <a class="toc-item" href="#concept-4">事件監聽</a>
+  <a class="toc-item" href="#concept-5">事件冒泡</a>
+  <a class="toc-item" href="#concept-6">動態建立元素</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-corner">
+      <span>document.querySelector()</span>
+      addEventListener()<br>
+      createElement()<br>
+      innerHTML / textContent<br>
+      event.target / stopPropagation()
+    </div>
+    <div class="hero-label">PHASE 02 &mdash; JavaScript 核心 / WEEK 05</div>
+    <h1>DOM 操作<br>與<em class="hi">事件</em><span class="hi2">監聽</span></h1>
+    <p class="hero-desc">JavaScript 真正開始「動」起來的一週。你將學會讀取、修改、新增、刪除頁面元素，並讓頁面對使用者的每個動作做出即時回應。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 02 — JS 核心</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">10–12 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">本週專案</div><div class="meta-cell-value">互動式測驗 App</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">Week 04 JS 基礎</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個核心能力，讓你從「寫 JS 算法」進化到「操控真實頁面」。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">說明 DOM 的樹狀結構，並區分 <code>document</code>、Element、TextNode 三種節點類型</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">使用 <code>querySelector</code> 和 <code>querySelectorAll</code> 正確選取單一與多個元素，並遍歷 NodeList</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">修改元素的 <code>textContent</code>、<code>innerHTML</code>、CSS 類別（classList）、內聯樣式（style）與 HTML 屬性</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">使用 <code>addEventListener</code> 綁定各種事件，並透過 <code>event</code> 物件取得觸發位置、鍵值、目標元素等資訊</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">理解事件冒泡（bubbling）機制，並在需要時使用 <code>stopPropagation()</code> 或事件委派（delegation）模式</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">動態建立、插入、移除 DOM 元素，並比較 <code>innerHTML</code> 與 <code>createElement</code> 兩種方式的適用情境</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: 什麼是 DOM -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">DOM 是什麼？</h2>
+      <p class="section-intro">瀏覽器把 HTML 解析成一棵樹。這棵樹就是 DOM——你用 JavaScript 讀取和操控頁面的唯一介面。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">01</div>
+          <div><div class="ctitle">Document Object Model</div><div class="csub">HTML → 樹狀節點結構</div></div>
+        </div>
+        <div class="cbody">
+          <p>DOM（Document Object Model，文件物件模型）是瀏覽器把 HTML 文件解析後所建立的<strong>樹狀物件結構</strong>。每個 HTML 標籤、文字內容、甚至注釋都成為一個<em>節點（Node）</em>，節點之間有父子關係，形成一棵樹。</p>
+          <p><code>document</code> 是整棵樹的根，也是你在 JavaScript 中存取所有頁面元素的起點。<code>document.body</code>、<code>document.head</code>、<code>document.title</code> 都是 DOM 提供的便捷入口。</p>
+          <p>理解 DOM 的關鍵概念：<em>HTML 是靜態文字</em>，而 <em>DOM 是活的物件</em>。當你用 JS 修改 DOM，頁面會立刻更新；但原始 HTML 檔案不會改變。</p>
+          <div class="note info">
+            <span class="note-label">三種常見節點類型</span>
+            <strong>Element Node</strong>（元素節點）：HTML 標籤，如 <code>&lt;div&gt;</code>、<code>&lt;p&gt;</code>。<strong>Text Node</strong>（文字節點）：標籤內的文字內容。<strong>Comment Node</strong>：HTML 注釋 <code>&lt;!-- --&gt;</code>。開發中最常操作的是 Element Node。
+          </div>
+        </div>
+      </div>
+
+      <!-- DOM Tree Interactive Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>DOM TREE EXPLORER</strong><span>點擊節點查看其屬性</span></div>
+        <div class="demo-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div>
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">DOM 樹結構</div>
+            <div class="dom-tree" id="domTree">
+              <div>
+                <span class="dom-tag">&lt;</span><span class="dom-node" data-node="html" data-tag="html" data-parent="document" data-children="head, body"><span class="dom-tag">html</span></span><span class="dom-tag"> lang="zh-TW"&gt;</span>
+                <div class="tree-indent">
+                  <div><span class="dom-tag">&lt;</span><span class="dom-node" data-node="head" data-tag="head" data-parent="html" data-children="meta, title"><span class="dom-tag">head</span></span><span class="dom-tag">&gt;</span>
+                    <div class="tree-indent">
+                      <div><span class="dom-node" data-node="title" data-tag="title" data-parent="head" data-children="&quot;我的頁面&quot;"><span class="dom-tag">&lt;title&gt;</span></span><span class="dom-text">我的頁面</span><span class="dom-tag">&lt;/title&gt;</span></div>
+                    </div>
+                  <span class="dom-tag">&lt;/head&gt;</span></div>
+                  <div><span class="dom-tag">&lt;</span><span class="dom-node" data-node="body" data-tag="body" data-parent="html" data-children="h1, p, ul"><span class="dom-tag">body</span></span><span class="dom-tag">&gt;</span>
+                    <div class="tree-indent">
+                      <div><span class="dom-node" data-node="h1" data-tag="h1" data-parent="body" data-id="main-title" data-children="Text: &quot;Hello!&quot;"><span class="dom-tag">&lt;h1</span> <span class="dom-attr">id</span>=<span class="dom-text">"main-title"</span><span class="dom-tag">&gt;</span></span><span class="dom-text">Hello!</span><span class="dom-tag">&lt;/h1&gt;</span></div>
+                      <div><span class="dom-node" data-node="p" data-tag="p" data-parent="body" data-class="intro" data-children="Text: &quot;歡迎...&quot;"><span class="dom-tag">&lt;p</span> <span class="dom-attr">class</span>=<span class="dom-text">"intro"</span><span class="dom-tag">&gt;</span></span><span class="dom-text">歡迎來到我的頁面</span><span class="dom-tag">&lt;/p&gt;</span></div>
+                      <div><span class="dom-tag">&lt;</span><span class="dom-node" data-node="ul" data-tag="ul" data-parent="body" data-children="li × 3"><span class="dom-tag">ul</span></span><span class="dom-tag">&gt;</span>
+                        <div class="tree-indent">
+                          <div><span class="dom-tag">&lt;li&gt;</span><span class="dom-text">項目一</span><span class="dom-tag">&lt;/li&gt;</span></div>
+                          <div><span class="dom-tag">&lt;li&gt;</span><span class="dom-text">項目二</span><span class="dom-tag">&lt;/li&gt;</span></div>
+                        </div>
+                      <span class="dom-tag">&lt;/ul&gt;</span></div>
+                    </div>
+                  <span class="dom-tag">&lt;/body&gt;</span></div>
+                </div>
+                <span class="dom-tag">&lt;/html&gt;</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">節點屬性</div>
+            <div class="dom-info-box" id="domInfoBox">
+              <span class="info-label">點擊左側節點查看屬性</span>
+              <div style="color:var(--faint);font-size:.72rem;">— 尚未選取任何節點 —</div>
+            </div>
+            <div style="margin-top:1rem;font-family:var(--font-m);font-size:.7rem;color:var(--muted);line-height:1.9;">
+              <div><span style="color:var(--accent);">nodeType</span> &mdash; 1=Element, 3=Text</div>
+              <div><span style="color:var(--accent);">nodeName</span> &mdash; 標籤名稱大寫（DIV, P...）</div>
+              <div><span style="color:var(--accent);">parentNode</span> &mdash; 父節點</div>
+              <div><span style="color:var(--accent);">childNodes</span> &mdash; 所有子節點（含文字）</div>
+              <div><span style="color:var(--accent);">children</span> &mdash; 只含 Element 子節點</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: 查詢元素 -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">查詢元素</h2>
+      <p class="section-intro">操控 DOM 的第一步：找到你要操作的元素。現代 JS 幾乎只用兩個方法——<code>querySelector</code> 和 <code>querySelectorAll</code>。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">02</div>
+          <div><div class="ctitle">querySelector vs querySelectorAll</div><div class="csub">單一元素 vs NodeList</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>document.querySelector(selector)</code> 接受任何有效的 CSS 選擇器，<strong>回傳第一個符合的元素</strong>（或 null）。這讓你可以用第二週學的所有 CSS 選擇器技巧來精準定位元素。</p>
+          <p><code>document.querySelectorAll(selector)</code> 回傳所有符合元素組成的 <em>NodeList</em>。NodeList 看起來像陣列但不完全是——它有 <code>length</code> 和可以 <code>forEach</code>，但沒有 <code>map</code>、<code>filter</code> 等陣列方法。若需要完整陣列功能，用 <code>Array.from(nodeList)</code> 轉換。</p>
+          <p>你也可以對已選取的元素呼叫 querySelector，限縮搜尋範圍：<code>card.querySelector('.title')</code> 只在 <code>card</code> 內部尋找 <code>.title</code>，而不是全域搜尋。</p>
+          <div class="note warn">
+            <span class="note-label">舊方法 vs 新方法</span>
+            <code>getElementById</code>、<code>getElementsByClassName</code>、<code>getElementsByTagName</code> 是舊方法，雖然仍然有效，但現代開發幾乎都用 <code>querySelector</code> 取代。<strong>只需學會 querySelector 和 querySelectorAll</strong>，它們更靈活且支援所有 CSS 選擇器。
+          </div>
+        </div>
+      </div>
+
+      <!-- querySelector Playground -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>SELECTOR PLAYGROUND</strong><span>輸入 CSS 選擇器，看哪些元素被選到</span></div>
+        <div class="demo-body">
+          <div class="qs-input-row">
+            <input class="qs-input" id="qsInput" type="text" value=".card" placeholder="輸入選擇器，如 .card、h3、li:first-child">
+            <button class="qs-btn" id="qsBtn">querySelector</button>
+            <button class="qs-btn" id="qsAllBtn" style="background:var(--accent2);">querySelectorAll</button>
+          </div>
+          <div class="qs-result" id="qsResult" style="margin-bottom:.8rem;"></div>
+          <div class="qs-area" id="qsArea">
+            <div class="qs-el" data-tag="h3" data-class="" data-id="title1">&lt;h3 id="title1"&gt; 標題一</div>
+            <div class="qs-el" data-tag="p" data-class="intro" data-id="">&lt;p class="intro"&gt; 段落</div>
+            <div class="qs-el" data-tag="div" data-class="card" data-id="">&lt;div class="card"&gt; 卡片A</div>
+            <div class="qs-el" data-tag="div" data-class="card featured" data-id="">&lt;div class="card featured"&gt; 卡片B</div>
+            <div class="qs-el" data-tag="li" data-class="" data-id="">&lt;li&gt; 清單項目 1</div>
+            <div class="qs-el" data-tag="li" data-class="" data-id="">&lt;li&gt; 清單項目 2</div>
+            <div class="qs-el" data-tag="button" data-class="btn" data-id="submit">&lt;button id="submit"&gt;</div>
+            <div class="qs-el" data-tag="span" data-class="tag" data-id="">&lt;span class="tag"&gt;</div>
+            <div class="qs-el" data-tag="a" data-class="link" data-id="">&lt;a class="link"&gt; 連結</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">JavaScript &mdash; 元素查詢完整參考</div>
+        </div>
+        <pre><span class="c">// ── querySelector：回傳第一個符合元素 ──</span>
+<span class="s">const</span> title   = document.<span class="fn">querySelector</span>(<span class="v">'h1'</span>);
+<span class="s">const</span> firstBtn = document.<span class="fn">querySelector</span>(<span class="v">'.btn'</span>);
+<span class="s">const</span> nav      = document.<span class="fn">querySelector</span>(<span class="v">'#main-nav'</span>);
+<span class="s">const</span> input    = document.<span class="fn">querySelector</span>(<span class="v">'input[type="email"]'</span>);
+<span class="s">const</span> firstLi  = document.<span class="fn">querySelector</span>(<span class="v">'ul li:first-child'</span>);
+
+<span class="c">// 找不到時回傳 null，直接呼叫方法會報錯</span>
+<span class="s">const</span> el = document.<span class="fn">querySelector</span>(<span class="v">'.nonexistent'</span>);
+<span class="c">// if (el) el.textContent = '...'; ← 記得先判斷非 null</span>
+
+<span class="c">// ── querySelectorAll：回傳 NodeList ──</span>
+<span class="s">const</span> allCards = document.<span class="fn">querySelectorAll</span>(<span class="v">'.card'</span>);
+<span class="s">const</span> allLis   = document.<span class="fn">querySelectorAll</span>(<span class="v">'li'</span>);
+
+<span class="c">// NodeList 可以直接 forEach</span>
+allCards.<span class="fn">forEach</span>(card => {
+  card.style.border = <span class="v">'1px solid red'</span>;
+});
+
+<span class="c">// 轉成陣列以使用 map / filter</span>
+<span class="s">const</span> arr = Array.<span class="fn">from</span>(allCards);
+<span class="s">const</span> featured = arr.<span class="fn">filter</span>(c => c.classList.<span class="fn">contains</span>(<span class="v">'featured'</span>));
+
+<span class="c">// ── 在特定元素內搜尋（限縮範圍）──</span>
+<span class="s">const</span> card  = document.<span class="fn">querySelector</span>(<span class="v">'.card'</span>);
+<span class="s">const</span> title = card.<span class="fn">querySelector</span>(<span class="v">'h3'</span>);   <span class="c">// 只在 card 內找 h3</span>
+
+<span class="c">// ── 常用 DOM 遍歷屬性 ──</span>
+el.parentElement          <span class="c">// 父元素</span>
+el.children               <span class="c">// 直接子元素（HTMLCollection）</span>
+el.firstElementChild      <span class="c">// 第一個子元素</span>
+el.lastElementChild       <span class="c">// 最後一個子元素</span>
+el.nextElementSibling     <span class="c">// 下一個兄弟元素</span>
+el.previousElementSibling <span class="c">// 上一個兄弟元素</span>
+el.closest(<span class="v">'.container'</span>)  <span class="c">// 向上找最近的符合祖先</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: 修改 DOM -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">修改 DOM 元素</h2>
+      <p class="section-intro">選到元素之後，你可以修改它的文字、HTML、樣式、屬性和類別。每種修改方式有不同的適用場景和安全考量。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">03</div>
+          <div><div class="ctitle">textContent vs innerHTML</div><div class="csub">安全性與功能的取捨</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>textContent</code> 讀取或設定元素的<strong>純文字內容</strong>，會自動跳脫 HTML 標籤（把 <code>&lt;</code> 轉成 <code>&amp;lt;</code>），因此<em>完全安全</em>，不會被 XSS 攻擊。適合顯示使用者輸入的文字。</p>
+          <p><code>innerHTML</code> 讀取或設定元素的<strong>HTML 字串</strong>，可以插入帶有標籤的 HTML。<strong>絕對不要把使用者輸入的內容直接用 innerHTML 插入</strong>——這是 XSS（跨站腳本攻擊）的主要來源。只在插入你自己控制的 HTML 模板時使用。</p>
+          <p><code>classList</code> 提供管理 CSS 類別的乾淨 API：<code>add()</code>、<code>remove()</code>、<code>toggle()</code>（有就移除，沒有就加入）、<code>contains()</code>（檢查是否包含）。這是控制樣式狀態的標準做法，比直接修改 <code>style</code> 更好維護。</p>
+        </div>
+      </div>
+
+      <!-- DOM Manipulation Lab -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>DOM MANIPULATION LAB</strong><span>點擊按鈕即時修改元素 / 點擊元素移除它</span></div>
+        <div class="demo-body">
+          <div class="manip-lab">
+            <div class="manip-toolbar" id="manipToolbar">
+              <button class="m-btn" data-action="text">修改文字</button>
+              <button class="m-btn" data-action="html">插入 HTML</button>
+              <button class="m-btn" data-action="addClass">加 class</button>
+              <button class="m-btn" data-action="toggle">toggle class</button>
+              <button class="m-btn" data-action="style">修改 style</button>
+              <button class="m-btn" data-action="attr">修改 attribute</button>
+              <button class="m-btn" data-action="add">新增元素</button>
+              <button class="m-btn" data-action="reset" style="border-color:var(--red);color:var(--red);">重置</button>
+            </div>
+            <div class="manip-canvas" id="manipCanvas">
+              <div class="m-item" id="manip-target" data-original="點我可以移除">點我可以移除</div>
+              <div class="m-item" id="manip-text">文字節點</div>
+              <div class="m-item" id="manip-style-el">樣式元素</div>
+            </div>
+            <div id="manipCode" style="font-family:var(--font-m);font-size:.72rem;color:var(--muted);background:var(--bg3);padding:.7rem 1rem;border:1px solid var(--border);min-height:1.8rem;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">JavaScript &mdash; 修改元素的所有方式</div>
+        </div>
+        <pre><span class="s">const</span> el = document.<span class="fn">querySelector</span>(<span class="v">'.card'</span>);
+
+<span class="c">// ── 文字與 HTML ──</span>
+el.textContent = <span class="v">'純文字，HTML 標籤會被跳脫'</span>;
+el.innerHTML   = <span class="v">'&lt;strong&gt;粗體&lt;/strong&gt; 與 &lt;em&gt;斜體&lt;/em&gt;'</span>; <span class="c">// ⚠️ 勿放使用者輸入</span>
+el.innerText   = <span class="v">'類似 textContent，但考慮 CSS 顯示狀態'</span>;
+
+<span class="c">// ── classList API ──</span>
+el.classList.<span class="fn">add</span>(<span class="v">'active'</span>);           <span class="c">// 加入類別</span>
+el.classList.<span class="fn">remove</span>(<span class="v">'active'</span>);        <span class="c">// 移除類別</span>
+el.classList.<span class="fn">toggle</span>(<span class="v">'open'</span>);          <span class="c">// 有則移除，無則加入</span>
+el.classList.<span class="fn">toggle</span>(<span class="v">'dark'</span>, isDark);  <span class="c">// 依 isDark 布林值決定加/移</span>
+el.classList.<span class="fn">contains</span>(<span class="v">'active'</span>);     <span class="c">// 回傳 true/false</span>
+el.classList.<span class="fn">replace</span>(<span class="v">'old'</span>, <span class="v">'new'</span>);  <span class="c">// 替換類別</span>
+
+<span class="c">// ── 內聯樣式（style 屬性）──</span>
+el.style.color = <span class="v">'red'</span>;
+el.style.backgroundColor = <span class="v">'#f0f4ff'</span>; <span class="c">// CSS background-color → camelCase</span>
+el.style.display = <span class="v">'none'</span>;
+el.style.cssText = <span class="v">'color:red; font-size:1.2rem'</span>; <span class="c">// 一次設多個</span>
+<span class="c">// 讀取計算後樣式（含 CSS 規則）</span>
+<span class="fn">getComputedStyle</span>(el).color; <span class="c">// 真正的顏色，含繼承</span>
+
+<span class="c">// ── HTML 屬性 ──</span>
+el.<span class="fn">getAttribute</span>(<span class="v">'href'</span>);            <span class="c">// 讀取屬性</span>
+el.<span class="fn">setAttribute</span>(<span class="v">'href'</span>, <span class="v">'/about'</span>);  <span class="c">// 設定屬性</span>
+el.<span class="fn">removeAttribute</span>(<span class="v">'disabled'</span>);     <span class="c">// 移除屬性</span>
+el.<span class="fn">hasAttribute</span>(<span class="v">'required'</span>);        <span class="c">// 是否有該屬性</span>
+el.dataset.userId; <span class="c">// 讀取 data-user-id 屬性（camelCase）</span>
+el.dataset.userId = <span class="v">'42'</span>;             <span class="c">// 設定 data 屬性</span>
+
+<span class="c">// ── 尺寸與位置 ──</span>
+el.offsetWidth;   <span class="c">// 元素寬度（含 padding + border）</span>
+el.clientHeight;  <span class="c">// 元素可見高度（含 padding，不含 border）</span>
+el.<span class="fn">getBoundingClientRect</span>(); <span class="c">// { top, left, width, height, ... } 相對視窗</span></pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>屬性/方法</th><th>用途</th><th>注意事項</th></tr></thead>
+        <tbody>
+          <tr><td>textContent</td><td>讀寫純文字，自動跳脫 HTML</td><td>最安全，顯示使用者輸入首選</td></tr>
+          <tr><td>innerHTML</td><td>讀寫 HTML 字串，可含標籤</td><td>不可放未過濾的使用者輸入（XSS 風險）</td></tr>
+          <tr><td>classList.add/remove</td><td>動態管理 CSS 類別</td><td>比直接改 style 更好維護，搭配 CSS 做狀態切換</td></tr>
+          <tr><td>classList.toggle</td><td>切換類別（有則移除、無則加）</td><td>選單展開/收合的標準做法</td></tr>
+          <tr><td>style.property</td><td>設定內聯樣式</td><td>CSS 屬性名稱要轉 camelCase</td></tr>
+          <tr><td>setAttribute</td><td>設定 HTML 屬性</td><td>可設定任意屬性，含自訂 data-* 屬性</td></tr>
+          <tr><td>dataset</td><td>讀寫 data-* 自訂屬性</td><td>屬性名稱自動轉 camelCase</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 4: 事件監聽 -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">事件監聽</h2>
+      <p class="section-intro">事件讓頁面從「靜態展示」變成「動態互動」。每個使用者動作——點擊、輸入、滾動、按鍵——都是一個事件，你可以監聽它並執行對應的程式碼。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">04</div>
+          <div><div class="ctitle">addEventListener</div><div class="csub">元素.addEventListener(事件類型, 回調函式)</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>addEventListener(type, handler)</code> 是綁定事件的標準方式。<code>type</code> 是事件名稱（字串），<code>handler</code> 是事件觸發時要執行的函式。同一個元素可以綁定多個相同類型的事件，不會互相覆蓋。</p>
+          <p>回調函式會自動收到一個 <em>event 物件</em>（慣例命名為 <code>e</code> 或 <code>event</code>），包含事件的所有資訊：<code>e.target</code>（觸發事件的元素）、<code>e.type</code>（事件類型）、<code>e.key</code>（鍵盤事件的按鍵名稱）、<code>e.clientX/Y</code>（滑鼠位置）等。</p>
+          <p><strong>避免使用舊的 HTML 行內事件屬性</strong>（<code>onclick="..."</code>）——它難以維護，且只能綁定一個處理函式。<code>addEventListener</code> 是現代標準做法。</p>
+        </div>
+      </div>
+
+      <!-- Event Interactive Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>EVENT EXPLORER</strong><span>選擇事件類型，在下方區域互動</span></div>
+        <div class="demo-body">
+          <div class="event-btns" id="eventBtns">
+            <button class="e-btn active" data-event="click">click</button>
+            <button class="e-btn" data-event="mouseenter">mouseenter</button>
+            <button class="e-btn" data-event="mousemove">mousemove</button>
+            <button class="e-btn" data-event="keydown">keydown</button>
+            <button class="e-btn" data-event="input">input</button>
+            <button class="e-btn" data-event="focus">focus / blur</button>
+            <button class="e-btn" data-event="dblclick">dblclick</button>
+            <button class="e-btn" data-event="contextmenu">contextmenu</button>
+          </div>
+          <div id="eventZoneWrap">
+            <div class="event-zone" id="eventZone" tabindex="0">
+              點擊、移動滑鼠、或在這裡按下鍵盤...
+            </div>
+            <input id="eventInput" type="text" placeholder="在這裡輸入文字（測試 input / keydown / focus 事件）"
+              style="width:100%;margin-top:.6rem;padding:.6rem 1rem;font-family:var(--font-m);font-size:.8rem;border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;display:none;">
+          </div>
+          <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin:.8rem 0 .3rem;">EVENT LOG</div>
+          <div class="event-log" id="eventLog"><span style="color:#555;">— 尚無事件 —</span></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">JavaScript &mdash; addEventListener 完整參考</div>
+        </div>
+        <pre><span class="c">// ── 基本語法 ──</span>
+<span class="s">const</span> btn = document.<span class="fn">querySelector</span>(<span class="v">'#submit'</span>);
+btn.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  console.<span class="fn">log</span>(<span class="v">'點擊了！'</span>, e.target);
+});
+
+<span class="c">// ── event 物件常用屬性 ──</span>
+btn.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  e.target;          <span class="c">// 觸發事件的最深層元素</span>
+  e.currentTarget;   <span class="c">// 綁定監聽器的元素（等同 this）</span>
+  e.type;            <span class="c">// 事件名稱：'click'</span>
+  e.clientX;         <span class="c">// 滑鼠相對視窗的 X 座標</span>
+  e.clientY;         <span class="c">// 滑鼠相對視窗的 Y 座標</span>
+  e.<span class="fn">preventDefault</span>(); <span class="c">// 阻止預設行為（如表單提交、連結跳轉）</span>
+  e.<span class="fn">stopPropagation</span>(); <span class="c">// 停止事件冒泡（稍後會解釋）</span>
+});
+
+<span class="c">// ── 鍵盤事件 ──</span>
+document.<span class="fn">addEventListener</span>(<span class="v">'keydown'</span>, (e) => {
+  e.key;      <span class="c">// 按鍵名稱：'Enter', 'ArrowUp', 'a'...</span>
+  e.code;     <span class="c">// 實體鍵位：'KeyA', 'Space', 'Enter'</span>
+  e.ctrlKey;  <span class="c">// 是否同時按住 Ctrl（true/false）</span>
+  e.shiftKey; <span class="c">// 是否同時按住 Shift</span>
+  e.altKey;   <span class="c">// 是否同時按住 Alt/Option</span>
+  <span class="s">if</span> (e.key === <span class="v">'Escape'</span>) closeModal();
+  <span class="s">if</span> (e.ctrlKey && e.key === <span class="v">'s'</span>) { e.<span class="fn">preventDefault</span>(); <span class="fn">save</span>(); }
+});
+
+<span class="c">// ── input 事件：即時取得輸入值 ──</span>
+<span class="s">const</span> input = document.<span class="fn">querySelector</span>(<span class="v">'input'</span>);
+input.<span class="fn">addEventListener</span>(<span class="v">'input'</span>, (e) => {
+  console.<span class="fn">log</span>(e.target.value); <span class="c">// 當前輸入框的值</span>
+});
+
+<span class="c">// ── 表單 submit 阻止預設提交 ──</span>
+<span class="s">const</span> form = document.<span class="fn">querySelector</span>(<span class="v">'form'</span>);
+form.<span class="fn">addEventListener</span>(<span class="v">'submit'</span>, (e) => {
+  e.<span class="fn">preventDefault</span>(); <span class="c">// 阻止頁面跳轉</span>
+  <span class="s">const</span> data = <span class="s">new</span> FormData(form);
+  <span class="c">// 用 fetch 送出資料...</span>
+});
+
+<span class="c">// ── 移除事件監聽器 ──</span>
+<span class="s">function</span> <span class="fn">handleClick</span>(e) { <span class="c">/* ... */</span> }
+btn.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, handleClick);
+btn.<span class="fn">removeEventListener</span>(<span class="v">'click'</span>, handleClick); <span class="c">// 需要同一個函式引用</span>
+
+<span class="c">// 常用事件一覽</span>
+<span class="c">// 滑鼠：click dblclick mouseenter mouseleave mousemove mousedown mouseup</span>
+<span class="c">// 鍵盤：keydown keyup keypress（已棄用）</span>
+<span class="c">// 表單：input change submit focus blur</span>
+<span class="c">// 視窗：resize scroll load DOMContentLoaded</span>
+<span class="c">// 觸控：touchstart touchend touchmove</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: 事件冒泡 -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">事件冒泡與事件委派</h2>
+      <p class="section-intro">點擊頁面上的一個元素，這個事件會「向上冒泡」到所有父元素。理解這個機制，你就能用更少的監聽器處理更多元素，也能避免意外的行為。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">05</div>
+          <div><div class="ctitle">事件冒泡（Bubbling）</div><div class="csub">從觸發元素向上傳播到 document</div></div>
+        </div>
+        <div class="cbody">
+          <p>當你點擊一個元素，事件不只在那個元素上觸發——它會<strong>向上傳播（冒泡）</strong>到父元素、祖父元素，一路到 <code>document</code>。如果這些祖先元素也有相同事件的監聽器，它們也會觸發。</p>
+          <p><em>事件委派（Event Delegation）</em>是善用冒泡的設計模式：把事件監聽器綁在<strong>父元素</strong>而非每個子元素上，透過 <code>e.target</code> 判斷是哪個子元素觸發的。這特別適合動態新增的元素——因為父元素的監聽器對後來加入的子元素同樣有效。</p>
+          <div class="note warn">
+            <span class="note-label">stopPropagation 的陷阱</span>
+            <code>e.stopPropagation()</code> 停止事件繼續冒泡。但濫用它會讓程式碼難以追蹤——如果父元素的監聽器依賴冒泡機制，你的 stopPropagation 會悄悄破壞它。<strong>只在真正需要時才使用</strong>，大多數情況用 <code>e.target</code> 條件判斷更安全。
+          </div>
+        </div>
+      </div>
+
+      <!-- Bubbling Visualiser -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>EVENT BUBBLING VISUALISER</strong><span>點擊最內層按鈕，觀察事件如何向上傳播</span></div>
+        <div class="demo-body">
+          <div class="bubble-wrap">
+            <div class="bubble-outer" id="bubbleOuter">
+              <div class="bubble-mid" id="bubbleMid">
+                <div class="bubble-inner" id="bubbleInner">點我！</div>
+              </div>
+            </div>
+          </div>
+          <div class="bubble-log" id="bubbleLog"><span style="color:#555;">點擊後這裡會顯示冒泡順序...</span></div>
+          <div style="display:flex;gap:.5rem;margin-top:.8rem;">
+            <button class="m-btn" id="stopPropBtn" style="font-size:.7rem;">開啟 stopPropagation</button>
+            <button class="m-btn" id="bubbleReset">清除 Log</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">JavaScript &mdash; 事件委派與冒泡控制</div>
+        </div>
+        <pre><span class="c">// ── 問題：為每個 li 綁定監聽器（低效）──</span>
+document.<span class="fn">querySelectorAll</span>(<span class="v">'li'</span>).<span class="fn">forEach</span>(li => {
+  li.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, () => li.classList.<span class="fn">toggle</span>(<span class="v">'done'</span>));
+});
+<span class="c">// 問題：動態新增的 li 不會有監聽器！</span>
+
+<span class="c">// ── 解法：事件委派（Event Delegation）──</span>
+<span class="s">const</span> list = document.<span class="fn">querySelector</span>(<span class="v">'#todo-list'</span>);
+list.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  <span class="c">// e.target 是真正被點擊的元素</span>
+  <span class="s">if</span> (e.target.tagName === <span class="v">'LI'</span>) {
+    e.target.classList.<span class="fn">toggle</span>(<span class="v">'done'</span>);
+  }
+  <span class="c">// 更精準：使用 closest() 處理元素有子元素的情況</span>
+  <span class="s">const</span> li = e.target.<span class="fn">closest</span>(<span class="v">'li'</span>);
+  <span class="s">if</span> (li) li.classList.<span class="fn">toggle</span>(<span class="v">'done'</span>);
+});
+<span class="c">// 優點：後來動態加入的 li 也會響應點擊</span>
+
+<span class="c">// ── 阻止預設行為 vs 阻止冒泡 ──</span>
+document.<span class="fn">querySelector</span>(<span class="v">'a'</span>).<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  e.<span class="fn">preventDefault</span>();  <span class="c">// 阻止連結跳轉，不影響冒泡</span>
+  <span class="fn">handleNavigation</span>(e.target.href);
+});
+
+document.<span class="fn">querySelector</span>(<span class="v">'.modal'</span>).<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  e.<span class="fn">stopPropagation</span>(); <span class="c">// 點 modal 內部不要觸發外層的關閉事件</span>
+});
+
+<span class="c">// ── 常見模式：點擊外部關閉 ──</span>
+document.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  <span class="s">const</span> menu = document.<span class="fn">querySelector</span>(<span class="v">'.dropdown'</span>);
+  <span class="s">if</span> (!menu.<span class="fn">contains</span>(e.target)) {
+    menu.classList.<span class="fn">remove</span>(<span class="v">'open'</span>); <span class="c">// 點擊選單外部時關閉</span>
+  }
+});</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: 動態建立元素 -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">動態建立與插入元素</h2>
+      <p class="section-intro">不只是修改現有元素，你還可以從零建立新元素、插入到頁面任意位置，或移除不需要的元素——這是 Todo List、動態列表等互動功能的核心。</p>
+
+      <div class="cblock">
+        <div class="cblock-head">
+          <div class="cicon">06</div>
+          <div><div class="ctitle">createElement vs innerHTML</div><div class="csub">兩種建立方式的取捨</div></div>
+        </div>
+        <div class="cbody">
+          <p><code>document.createElement(tagName)</code> 建立一個新元素，再用 <code>append</code>、<code>prepend</code>、<code>insertBefore</code> 等方法插入到 DOM。這種方式<em>最安全</em>（沒有 XSS 風險），也能直接對新元素綁定事件，適合需要精細控制的場景。</p>
+          <p>用 <code>innerHTML</code> 插入 HTML 字串則更<em>簡潔快速</em>，適合一次性插入複雜的 HTML 結構，或用 template literal 拼接資料。缺點是插入後需要再次查詢元素才能綁定事件，且有安全風險。</p>
+          <div class="note tip">
+            <span class="note-label">現代推薦做法</span>
+            <code>el.insertAdjacentHTML('beforeend', html)</code> 比直接賦值給 <code>innerHTML</code> 更好——它<strong>不會清空現有內容</strong>，只是在指定位置插入。四個位置：<code>beforebegin</code>（元素之前）、<code>afterbegin</code>（子元素最前）、<code>beforeend</code>（子元素最後）、<code>afterend</code>（元素之後）。
+          </div>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr good">createElement 方式（安全，可直接綁事件）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="s">function</span> <span class="fn">addTodo</span>(text) {
+  <span class="s">const</span> li = document.<span class="fn">createElement</span>(<span class="v">'li'</span>);
+  li.textContent = text; <span class="c">// 安全：無 XSS</span>
+  li.classList.<span class="fn">add</span>(<span class="v">'todo-item'</span>);
+  li.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, () =>
+    li.classList.<span class="fn">toggle</span>(<span class="v">'done'</span>)
+  );
+  list.<span class="fn">append</span>(li); <span class="c">// 插入最後</span>
+}</pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">innerHTML 方式（簡潔，適合靜態模板）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="s">function</span> <span class="fn">renderCard</span>(item) {
+  <span class="c">// ⚠️ item.name 不能是使用者輸入</span>
+  list.insertAdjacentHTML(<span class="v">'beforeend'</span>, <span class="v">`
+    &lt;li class="todo-item"&gt;
+      &lt;span&gt;${item.name}&lt;/span&gt;
+      &lt;button class="del"&gt;✕&lt;/button&gt;
+    &lt;/li&gt;
+  `</span>);
+}
+<span class="c">// 需事件委派：</span>
+list.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, e => {
+  <span class="s">if</span>(e.target.matches(<span class="v">'.del'</span>))
+    e.target.<span class="fn">closest</span>(<span class="v">'li'</span>).<span class="fn">remove</span>();
+});</pre>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr">
+          <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+          <div class="code-lang">JavaScript &mdash; 建立、插入與移除元素</div>
+        </div>
+        <pre><span class="c">// ── 建立元素 ──</span>
+<span class="s">const</span> div = document.<span class="fn">createElement</span>(<span class="v">'div'</span>);
+div.className = <span class="v">'card'</span>;            <span class="c">// 等同 setAttribute('class', 'card')</span>
+div.id = <span class="v">'my-card'</span>;
+div.textContent = <span class="v">'卡片內容'</span>;
+div.<span class="fn">setAttribute</span>(<span class="v">'data-id'</span>, <span class="v">'42'</span>);
+
+<span class="c">// ── 插入位置 ──</span>
+parent.<span class="fn">append</span>(el);            <span class="c">// 插到最後（可傳多個或字串）</span>
+parent.<span class="fn">prepend</span>(el);           <span class="c">// 插到最前</span>
+parent.<span class="fn">insertBefore</span>(el, ref); <span class="c">// 插到 ref 元素之前</span>
+ref.<span class="fn">after</span>(el);                <span class="c">// 插到 ref 之後</span>
+ref.<span class="fn">before</span>(el);               <span class="c">// 插到 ref 之前</span>
+
+parent.insertAdjacentHTML(<span class="v">'beforeend'</span>, <span class="v">'&lt;li&gt;新項目&lt;/li&gt;'</span>);
+
+<span class="c">// ── 移除元素 ──</span>
+el.<span class="fn">remove</span>();                  <span class="c">// 現代做法，直接移除</span>
+el.parentElement.<span class="fn">removeChild</span>(el); <span class="c">// 舊做法</span>
+
+<span class="c">// ── 替換元素 ──</span>
+el.<span class="fn">replaceWith</span>(newEl);
+
+<span class="c">// ── 克隆元素 ──</span>
+<span class="s">const</span> clone = el.<span class="fn">cloneNode</span>(<span class="s">true</span>); <span class="c">// true = 深度複製（含子元素）</span>
+parent.<span class="fn">append</span>(clone);
+
+<span class="c">// ── 完整 Todo 範例（createElement + 事件委派）──</span>
+<span class="s">const</span> list = document.<span class="fn">querySelector</span>(<span class="v">'#list'</span>);
+
+<span class="s">function</span> <span class="fn">addItem</span>(text) {
+  <span class="s">const</span> li  = document.<span class="fn">createElement</span>(<span class="v">'li'</span>);
+  <span class="s">const</span> span = document.<span class="fn">createElement</span>(<span class="v">'span'</span>);
+  <span class="s">const</span> btn  = document.<span class="fn">createElement</span>(<span class="v">'button'</span>);
+  span.textContent = text;
+  btn.textContent  = <span class="v">'刪除'</span>;
+  btn.dataset.action = <span class="v">'delete'</span>;
+  li.<span class="fn">append</span>(span, btn);
+  list.<span class="fn">append</span>(li);
+}
+
+<span class="c">// 事件委派：一個監聽器處理所有項目</span>
+list.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, (e) => {
+  <span class="s">if</span> (e.target.dataset.action === <span class="v">'delete'</span>) {
+    e.target.<span class="fn">closest</span>(<span class="v">'li'</span>).<span class="fn">remove</span>();
+  } <span class="s">else if</span> (e.target.tagName === <span class="v">'SPAN'</span>) {
+    e.target.parentElement.classList.<span class="fn">toggle</span>(<span class="v">'done'</span>);
+  }
+});</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋本週 DOM 操作與事件的關鍵概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">你想安全地將使用者在輸入框中打的文字顯示到頁面上，應該用哪個屬性？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>element.innerHTML = userInput</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>element.textContent = userInput</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>element.insertAdjacentHTML('beforeend', userInput)</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>element.innerText = '&lt;script&gt;' + userInput</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>textContent</code> 會自動將所有特殊字元（包含 <code>&lt;</code>、<code>&gt;</code>、<code>&amp;</code>）轉義為 HTML 實體，即使使用者輸入了 <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>，也只會以純文字顯示，不會執行。這是顯示使用者輸入的安全標準做法。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>想想哪個屬性不解析 HTML 標籤，直接以純文字呈現？提示：使用者輸入了 <code>&lt;img onerror="steal_cookie()"&gt;</code> 時，哪個方式能安全顯示它？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q"><code>e.target</code> 和 <code>e.currentTarget</code> 有什麼差異？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>兩者完全相同，都是觸發事件的元素</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>e.target</code> 是父元素，<code>e.currentTarget</code> 是被點擊的子元素</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>e.target</code> 是實際觸發事件的最深層元素，<code>e.currentTarget</code> 是綁定事件監聽器的元素</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>e.target</code> 只在 click 事件中有效，<code>e.currentTarget</code> 在所有事件都有效</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>當你使用事件委派在父元素綁定監聽器時，<code>e.currentTarget</code> 永遠是那個父元素（監聽器所在之處），而 <code>e.target</code> 是使用者實際點擊到的最深層子元素。事件委派依賴的正是 <code>e.target</code> 來判斷「哪個子元素被觸發了」。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>想像你在一個 <code>&lt;ul&gt;</code> 上綁定了 click 事件，使用者點擊了其中一個 <code>&lt;li&gt;</code>——此時監聽器在哪？事件實際發生在哪？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">你有一個 Todo 列表，使用者可以動態新增項目。以下哪種做法讓新增的項目也能響應刪除點擊？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>每次新增後，重新用 <code>querySelectorAll</code> 選所有項目並重新綁定</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>在 HTML 中用 <code>onclick</code> 屬性直接寫事件處理程式碼</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>在每次 <code>createElement</code> 後立刻對新元素呼叫 <code>addEventListener</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>在父元素（<code>ul</code>）上用事件委派，透過 <code>e.target.closest()</code> 判斷點擊目標</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>事件委派是最優的做法。在父元素綁定一個監聽器，利用冒泡機制捕捉所有子元素的點擊，用 <code>e.target.closest('.delete-btn')</code> 判斷是否點到刪除按鈕。這樣無論什麼時候新增的項目，都自動被同一個監聽器覆蓋，效能最好。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>注意「動態新增的項目也能響應」這個條件。選項 C 雖然能讓當時新增的元素有監聽器，但也是可行的做法——只是事件委派更優雅。想想哪個方案一個監聽器就能搞定所有現在和未來的元素？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">執行 <code>document.querySelectorAll('.item')</code> 後，你想對每個結果用 <code>.map()</code> 方法轉換。但直接呼叫報錯，原因是什麼？</div>
+        <div class="quiz-options" data-answer="0">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>querySelectorAll 回傳的是 NodeList，不是 Array，需要先用 <code>Array.from()</code> 或 <code>[...nodeList]</code> 轉換</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>.map()</code> 方法不能用在 DOM 元素上</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>需要先呼叫 <code>.toArray()</code> 方法</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>querySelectorAll 只有在有結果時才能使用</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>NodeList 是類陣列物件（array-like），有 <code>length</code> 屬性和索引，也支援 <code>forEach</code>，但沒有 <code>map</code>、<code>filter</code>、<code>reduce</code> 等陣列方法。轉換方式：<code>Array.from(nodeList)</code> 或展開運算子 <code>[...nodeList]</code>，兩者都能建立一個真正的陣列。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>回想一下 querySelectorAll 的回傳型別——它不是 Array，而是一個特殊的「類陣列」物件。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：互動式測驗 App</h2>
+      <p class="section-intro">這週的專案要求你綜合運用 DOM 查詢、修改、事件監聽、動態建立元素，做出一個完整的多題測驗應用程式。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 05 PROJECT</div>
+        <div class="project-name">互動式<br>測驗 App</div>
+        <p class="project-desc">純 HTML/CSS/JS 實作，不使用任何框架。包含題目顯示、選項點擊、分數計算、結果頁面，以及重新開始功能。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:600;font-size:1.15rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立資料結構</div>
+            <div class="step-body">建立一個 JS 陣列儲存題目，每道題是一個物件，包含：<code>question</code>（題目文字）、<code>options</code>（選項陣列，4 個字串）、<code>answer</code>（正確選項的索引，0–3）。至少準備 5 道題。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">HTML 骨架與 CSS 樣式</div>
+            <div class="step-body">建立基本 HTML 結構：<code>#quiz-container</code>（主容器）、<code>#question-text</code>（題目區）、<code>#options-list</code>（選項容器）、<code>#progress</code>（進度）、<code>#result</code>（結果頁，初始隱藏）。先完成 CSS 樣式再寫 JS。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">渲染題目函式 renderQuestion(index)</div>
+            <div class="step-body">寫一個 <code>renderQuestion(index)</code> 函式，用 <code>textContent</code> 更新題目文字，清空並重新建立選項按鈕（<code>createElement</code>），設定 <code>data-index</code> 屬性記錄選項編號，加上點擊事件。更新進度顯示（如「第 2 題，共 5 題」）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">處理選項點擊</div>
+            <div class="step-body">在選項容器上使用事件委派，點擊選項時：判斷是否正確（<code>e.target.dataset.index == questions[current].answer</code>），用 <code>classList</code> 加上 <code>.correct</code> 或 <code>.wrong</code> 樣式，加分，<strong>短暫停用所有選項</strong>（避免重複點擊），1 秒後自動前進到下一題。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">進度條動畫</div>
+            <div class="step-body">加入進度條元素，每道題完成後更新 <code>style.width</code>（百分比 = 當前題數 / 總題數 × 100）。用 CSS <code>transition: width .4s ease</code> 讓進度條平滑增長。同時更新文字顯示「2 / 5」。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">結果頁面</div>
+            <div class="step-body">所有題目答完後，隱藏題目區（<code>classList.add('hidden')</code>），顯示結果區，用 <code>textContent</code> 顯示分數（如「答對 4 / 5 題」）。根據分數顯示不同的評語文字和表情。加入「重新開始」按鈕，點擊後重設所有狀態並呼叫 <code>renderQuestion(0)</code>。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分功能：題目隨機排序</div>
+            <div class="step-body">用 Fisher-Yates 洗牌演算法打亂題目順序：每次開始前對題目陣列呼叫 <code>sort(() => Math.random() - 0.5)</code>（簡易版）或完整實作洗牌。同時也對每道題的選項順序打亂，但要記得更新 <code>answer</code> 索引指向正確選項的新位置。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分功能：鍵盤支援</div>
+            <div class="step-body">用 <code>document.addEventListener('keydown')</code> 讓使用者可以按數字鍵 1–4 選擇選項，按 Enter 在結果頁重新開始。在選項按鈕上加 <code>tabindex="0"</code> 讓鍵盤可以 Tab 鍵導航並按 Space/Enter 選擇，提升無障礙體驗。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:600;font-size:1.15rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>題目資料用 JS 陣列儲存，HTML 中沒有硬編碼的題目內容</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>使用 <code>textContent</code>（非 innerHTML）更新題目文字，避免 XSS 風險</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>選項按鈕用 <code>createElement</code> 動態建立，選完後正確答案顯示綠色，錯誤顯示紅色</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>使用事件委派（在容器上綁定，用 e.target 判斷）而非在每個選項上個別綁定</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>進度條有 CSS transition 動畫，平滑更新</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>答完所有題目後顯示結果頁，含正確題數與評語</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>重新開始按鈕能正確重設所有狀態並重新渲染第一題</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）支援鍵盤按 1–4 選擇，Enter 重新開始</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">DOM 和事件的概念需要大量實作才能熟練，這些資源結合了文件、互動練習和影片說明。</p>
+      <div class="resource-grid">
+        <a href="https://javascript.info/document" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">完整教程</div>
+          <div class="resource-name">javascript.info &mdash; DOM 章節</div>
+          <div class="resource-desc">業界最好的 JavaScript 免費教程，DOM 部分涵蓋節點、查詢、修改、事件，每節都有互動練習題。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://developer.mozilla.org/zh-TW/docs/Web/API/Document_Object_Model" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件 / 中文</div>
+          <div class="resource-name">MDN &mdash; DOM API</div>
+          <div class="resource-desc">所有 DOM 方法和屬性的完整說明，有中文版，是開發時查詢 API 細節的最佳工具。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Building_blocks/Events" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方教程</div>
+          <div class="resource-name">MDN &mdash; 事件入門</div>
+          <div class="resource-desc">MDN 的事件教學，涵蓋事件模型、addEventListener、事件冒泡與捕捉，含互動範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://domevents.dev/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">視覺化工具</div>
+          <div class="resource-name">DOM Events Visualizer</div>
+          <div class="resource-desc">互動式視覺化工具，讓你看到事件從觸發到冒泡的完整傳播路徑，徹底理解事件冒泡和捕捉機制。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://javascript30.com/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">實作挑戰 / 免費</div>
+          <div class="resource-name">JavaScript 30</div>
+          <div class="resource-desc">Wes Bos 的 30 天 JS 挑戰，每天一個純 JS 小專案，大量 DOM 操作和事件實作練習，強烈推薦。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.frontendmentor.io/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">實作挑戰</div>
+          <div class="resource-name">Frontend Mentor</div>
+          <div class="resource-desc">提供設計稿的前端挑戰平台，有許多需要 DOM 操作的 JS 互動作品，適合練習後建立作品集。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week4.html" class="nav-btn">&larr; Week 04：JS 基礎</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week6.html" class="nav-btn">Week 06：Fetch API &rarr;</a>
+  </div>
+</main>
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progressBar').style.width = Math.min(p,100) + '%';
+});
+
+// ── Scroll Reveal ──
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.07 });
+document.querySelectorAll('.section').forEach(s => revealObs.observe(s));
+
+// ── TOC Active ──
+const secIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls = secIds.map(id => document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll', () => {
+  let cur = '';
+  secEls.forEach(el => { if(window.scrollY >= el.offsetTop - 130) cur = el.id; });
+  document.querySelectorAll('.toc-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + cur);
+  });
+});
+
+// ── DOM Tree Explorer ──
+document.querySelectorAll('.dom-node').forEach(node => {
+  node.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.dom-node').forEach(n => n.classList.remove('selected'));
+    node.classList.add('selected');
+    const d = node.dataset;
+    const box = document.getElementById('domInfoBox');
+    box.innerHTML = `
+      <span class="info-label">選取的節點資訊</span>
+      <div style="color:var(--accent);font-weight:600;">&lt;${d.tag}&gt;</div>
+      ${d.id ? `<div><span style="color:var(--faint);">id:</span> <span style="color:var(--accent2);">"${d.id}"</span></div>` : ''}
+      ${d.class ? `<div><span style="color:var(--faint);">class:</span> <span style="color:var(--accent2);">"${d.class}"</span></div>` : ''}
+      <div><span style="color:var(--faint);">parentNode:</span> &lt;${d.parent}&gt;</div>
+      <div><span style="color:var(--faint);">children:</span> ${d.children}</div>
+      <div style="margin-top:.5rem;color:var(--faint);font-size:.65rem;">
+        JS: document.querySelector('${d.id ? '#'+d.id : d.class ? '.'+d.class.split(' ')[0] : d.tag}')
+      </div>`;
+  });
+});
+
+// ── querySelector Playground ──
+function matchesSelector(el, selector) {
+  const tag = el.dataset.tag;
+  const cls = el.dataset.class ? el.dataset.class.split(' ') : [];
+  const id  = el.dataset.id;
+  const s = selector.trim();
+  if(!s) return false;
+  if(s === '*') return true;
+  if(s === tag) return true;
+  if(s.startsWith('#') && id === s.slice(1)) return true;
+  if(s.startsWith('.')) {
+    const parts = s.split('.').filter(Boolean);
+    return parts.every(p => cls.includes(p));
+  }
+  if(s.includes(':first-child')) {
+    const base = s.replace(':first-child','').trim();
+    return el.dataset.tag === base;
+  }
+  if(s.includes('[type=')) {
+    return false;
+  }
+  return false;
+}
+
+const qsInput = document.getElementById('qsInput');
+const qsArea = document.getElementById('qsArea');
+const qsResult = document.getElementById('qsResult');
+
+function clearQsHighlight() {
+  document.querySelectorAll('.qs-el').forEach(el => {
+    el.classList.remove('qs-hit','qs-hit2');
+  });
+}
+
+document.getElementById('qsBtn').addEventListener('click', () => {
+  clearQsHighlight();
+  const sel = qsInput.value.trim();
+  let found = 0;
+  const els = document.querySelectorAll('.qs-el');
+  for(let i = 0; i < els.length; i++) {
+    if(matchesSelector(els[i], sel)) {
+      els[i].classList.add('qs-hit');
+      found++;
+      break; // querySelector 只選第一個
+    }
+  }
+  qsResult.textContent = found
+    ? `querySelector('${sel}') → 找到 1 個元素（已標示橙色）`
+    : `querySelector('${sel}') → null（沒有符合的元素）`;
+  qsResult.style.color = found ? 'var(--accent)' : 'var(--red)';
+});
+
+document.getElementById('qsAllBtn').addEventListener('click', () => {
+  clearQsHighlight();
+  const sel = qsInput.value.trim();
+  let found = 0;
+  document.querySelectorAll('.qs-el').forEach(el => {
+    if(matchesSelector(el, sel)) {
+      el.classList.add('qs-hit2');
+      found++;
+    }
+  });
+  qsResult.textContent = found
+    ? `querySelectorAll('${sel}') → NodeList[${found}]（已全部標示）`
+    : `querySelectorAll('${sel}') → NodeList[0]（空列表）`;
+  qsResult.style.color = found ? 'var(--accent2)' : 'var(--red)';
+});
+
+qsInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('qsBtn').click();
+});
+
+// ── DOM Manipulation Lab ──
+const canvas = document.getElementById('manipCanvas');
+const codeDisp = document.getElementById('manipCode');
+
+function showCode(code) { codeDisp.textContent = code; }
+
+// Click to remove
+canvas.addEventListener('click', e => {
+  const item = e.target.closest('.m-item');
+  if(!item) return;
+  item.style.transition = 'opacity .3s, transform .3s';
+  item.style.opacity = '0';
+  item.style.transform = 'scale(0.8)';
+  setTimeout(() => item.remove(), 300);
+  showCode(`el.remove()  // 已移除: "${item.textContent.trim()}"`);
+});
+
+document.querySelectorAll('[data-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const action = btn.dataset.action;
+    const target = document.getElementById('manip-target');
+    const textEl = document.getElementById('manip-text');
+    const styleEl = document.getElementById('manip-style-el');
+
+    if(action === 'text' && textEl) {
+      textEl.textContent = '已修改！' + Date.now().toString().slice(-4);
+      showCode('el.textContent = "已修改！"');
+    } else if(action === 'html' && canvas) {
+      canvas.insertAdjacentHTML('beforeend','<div class="m-item" style="border-color:var(--accent3);color:var(--accent3)">✦ innerHTML 插入</div>');
+      showCode('parent.insertAdjacentHTML("beforeend", "<div>...</div>")');
+    } else if(action === 'addClass' && target) {
+      target.classList.add('highlighted');
+      showCode('el.classList.add("highlighted")');
+    } else if(action === 'toggle' && target) {
+      target.classList.toggle('styled');
+      showCode(`el.classList.toggle("styled")  // 現在: ${target.classList.contains('styled') ? '已加' : '已移'}`);
+    } else if(action === 'style' && styleEl) {
+      styleEl.style.cssText = `background:rgba(26,79,138,.12);border-color:var(--accent3);color:var(--accent3);transform:scale(1.08);transition:all .3s`;
+      showCode('el.style.cssText = "background:...; transform:scale(1.08)"');
+    } else if(action === 'attr' && target) {
+      const val = 'data-' + Math.floor(Math.random()*900+100);
+      target.setAttribute('data-id', val);
+      target.textContent = '[data-id="' + val + '"]';
+      showCode(`el.setAttribute("data-id", "${val}")`);
+    } else if(action === 'add') {
+      const newEl = document.createElement('div');
+      newEl.className = 'm-item';
+      newEl.textContent = '新建元素 #' + (canvas.children.length + 1);
+      newEl.style.borderColor = 'var(--accent)';
+      newEl.style.color = 'var(--accent)';
+      canvas.append(newEl);
+      showCode('const el = document.createElement("div")\nparent.append(el)');
+    } else if(action === 'reset') {
+      canvas.innerHTML = `
+        <div class="m-item" id="manip-target" data-original="點我可以移除">點我可以移除</div>
+        <div class="m-item" id="manip-text">文字節點</div>
+        <div class="m-item" id="manip-style-el">樣式元素</div>`;
+      codeDisp.textContent = '';
+    }
+  });
+});
+
+// ── Event Explorer ──
+const eventZone = document.getElementById('eventZone');
+const eventInput = document.getElementById('eventInput');
+const eventLog  = document.getElementById('eventLog');
+let currentEvents = ['click'];
+let logCount = 0;
+const MAX_LOG = 12;
+
+function addLog(type, detail) {
+  logCount++;
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const now = new Date();
+  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  entry.innerHTML = `<span class="log-time">${time}</span><span class="log-event">${type}</span><span class="log-detail">${detail}</span>`;
+  if(eventLog.children.length === 1 && eventLog.children[0].tagName === 'SPAN') {
+    eventLog.innerHTML = '';
+  }
+  eventLog.insertBefore(entry, eventLog.firstChild);
+  while(eventLog.children.length > MAX_LOG) eventLog.removeChild(eventLog.lastChild);
+}
+
+function clearHandlers(el) {
+  const newEl = el.cloneNode(true);
+  el.parentNode.replaceChild(newEl, el);
+  return newEl;
+}
+
+let zone = eventZone;
+let inp  = eventInput;
+
+document.getElementById('eventBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.e-btn');
+  if(!btn) return;
+
+  document.querySelectorAll('.e-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const evType = btn.dataset.event;
+
+  const newZone = clearHandlers(zone);
+  zone = document.getElementById('eventZone') || newZone;
+
+  const newInp = clearHandlers(inp);
+  inp = document.getElementById('eventInput') || newInp;
+
+  const useInput = ['keydown','input','focus'].includes(evType);
+  zone.style.display = useInput ? 'none' : 'flex';
+  inp.style.display  = useInput ? 'block' : 'none';
+
+  const target = useInput ? document.getElementById('eventInput') || inp : document.getElementById('eventZone') || zone;
+
+  if(evType === 'click') {
+    target.addEventListener('click', e => {
+      target.style.background = 'var(--accent-light)';
+      setTimeout(() => target.style.background = '', 300);
+      addLog('click', `clientX:${e.clientX} clientY:${e.clientY}`);
+    });
+  } else if(evType === 'dblclick') {
+    target.addEventListener('dblclick', e => {
+      addLog('dblclick', '雙擊！');
+    });
+  } else if(evType === 'mouseenter') {
+    target.addEventListener('mouseenter', () => { target.style.background='var(--accent-light)'; addLog('mouseenter','滑鼠進入'); });
+    target.addEventListener('mouseleave', () => { target.style.background=''; addLog('mouseleave','滑鼠離開'); });
+  } else if(evType === 'mousemove') {
+    target.addEventListener('mousemove', e => {
+      const rect = target.getBoundingClientRect();
+      addLog('mousemove', `x:${Math.round(e.clientX - rect.left)} y:${Math.round(e.clientY - rect.top)}`);
+    });
+  } else if(evType === 'keydown') {
+    target.addEventListener('keydown', e => {
+      addLog('keydown', `key:"${e.key}" code:"${e.code}" ${e.ctrlKey?'ctrl':''} ${e.shiftKey?'shift':''}`);
+    });
+  } else if(evType === 'input') {
+    target.addEventListener('input', e => {
+      addLog('input', `value:"${e.target.value}" length:${e.target.value.length}`);
+    });
+  } else if(evType === 'focus') {
+    target.addEventListener('focus', () => { target.style.outline='2px solid var(--accent)'; addLog('focus','獲取焦點'); });
+    target.addEventListener('blur',  () => { target.style.outline=''; addLog('blur','失去焦點'); });
+  } else if(evType === 'contextmenu') {
+    target.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      addLog('contextmenu', `阻止了右鍵選單 clientX:${e.clientX}`);
+    });
+  }
+});
+
+// ── Event Bubbling Visualiser ──
+let stopProp = false;
+const stopBtn = document.getElementById('stopPropBtn');
+const bubbleLog = document.getElementById('bubbleLog');
+
+stopBtn.addEventListener('click', () => {
+  stopProp = !stopProp;
+  stopBtn.textContent = stopProp ? '關閉 stopPropagation' : '開啟 stopPropagation';
+  stopBtn.style.borderColor = stopProp ? 'var(--red)' : '';
+  stopBtn.style.color = stopProp ? 'var(--red)' : '';
+});
+document.getElementById('bubbleReset').addEventListener('click', () => {
+  bubbleLog.innerHTML = '<span style="color:#555;">點擊後這裡會顯示冒泡順序...</span>';
+  document.getElementById('bubbleInner').classList.remove('lit');
+  document.getElementById('bubbleMid').classList.remove('lit');
+  document.getElementById('bubbleOuter').classList.remove('lit');
+});
+
+function flashEl(id, delay) {
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    el.classList.add('lit');
+    setTimeout(() => el.classList.remove('lit'), 500);
+  }, delay);
+}
+
+function appendBubbleLog(msg) {
+  if(bubbleLog.children.length && bubbleLog.firstChild.tagName === 'SPAN') {
+    bubbleLog.innerHTML = '';
+  }
+  const d = document.createElement('div');
+  d.innerHTML = msg;
+  bubbleLog.appendChild(d);
+}
+
+document.getElementById('bubbleInner').addEventListener('click', (e) => {
+  bubbleLog.innerHTML = '';
+  flashEl('bubbleInner', 0);
+  appendBubbleLog('<span style="color:var(--accent);">① button.inner</span> 觸發 click');
+  if(stopProp) {
+    e.stopPropagation();
+    appendBubbleLog('<span style="color:var(--red);">⛔ stopPropagation() — 停止冒泡</span>');
+    return;
+  }
+  setTimeout(() => {
+    flashEl('bubbleMid', 50);
+    appendBubbleLog('<span style="color:var(--accent2);">② div.container</span> 收到冒泡 click');
+  }, 150);
+  setTimeout(() => {
+    flashEl('bubbleOuter', 100);
+    appendBubbleLog('<span style="color:var(--accent3);">③ document</span> 收到冒泡 click');
+  }, 350);
+});
+document.getElementById('bubbleMid').addEventListener('click', e => { if(e.target === e.currentTarget) appendBubbleLog('直接點擊 div.container'); });
+document.getElementById('bubbleOuter').addEventListener('click', e => { if(e.target === e.currentTarget) appendBubbleLog('直接點擊 document 層'); });
+
+// ── Quiz ──
+document.querySelectorAll('.quiz-block').forEach(block => {
+  const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts = block.querySelectorAll('.quiz-opt');
+  const fbs  = block.querySelectorAll('.quiz-fb');
+  let done = false;
+  opts.forEach((opt, i) => {
+    opt.addEventListener('click', () => {
+      if(done) return;
+      done = true;
+      opts.forEach(o => o.style.pointerEvents = 'none');
+      if(i === correct) {
+        opt.classList.add('correct');
+        fbs[0] && fbs[0].classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        opts[correct].classList.add('correct');
+        fbs[1] && fbs[1].classList.add('show');
+        setTimeout(() => {
+          done = false;
+          opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+          fbs.forEach(f => f.classList.remove('show'));
+        }, 2800);
+      }
+    });
+  });
+});
+
+// ── Checklist ──
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 07 — ES6+ 語法與模組化概念</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090710;
+  --bg2:#0f0d18;
+  --bg3:#161422;
+  --surface:#1c1930;
+  --border:#2a2540;
+  --text:#e8e0ff;
+  --muted:#6a5f99;
+  --accent:#a78bfa;
+  --accent-g:linear-gradient(135deg,#a78bfa,#f472b6);
+  --accent2:#f472b6;
+  --accent3:#34d399;
+  --amber:#f59e0b;
+  --red:#f87171;
+  --glow:rgba(167,139,250,0.18);
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);opacity:0.1;}
+body::before{width:520px;height:520px;background:radial-gradient(circle,#a78bfa,transparent);top:-140px;right:-100px;}
+body::after{width:400px;height:400px;background:radial-gradient(circle,#f472b6,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(9,7,16,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.58rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:2px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(167,139,250,.08),transparent);pointer-events:none;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-weight:900;font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-deco{position:absolute;right:4rem;top:50%;transform:translateY(-50%);width:200px;height:200px;pointer-events:none;opacity:0;animation:fadeUp .5s .6s forwards;}
+.hero-deco-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent),var(--accent2)) border-box;animation:spin 8s linear infinite;}
+.hero-deco-ring:nth-child(2){inset:20px;animation-duration:5s;animation-direction:reverse;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent2),var(--accent3)) border-box;}
+.hero-deco-ring:nth-child(3){inset:40px;animation-duration:3s;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent3),var(--accent)) border-box;}
+.hero-deco-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.1em;}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);}
+.badge.hi{border-color:rgba(167,139,250,.5);color:var(--accent);background:rgba(167,139,250,.08);}
+.badge.hi2{border-color:rgba(244,114,182,.4);color:var(--accent2);background:rgba(244,114,182,.07);}
+.badge.hi3{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.07);}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{font-family:var(--font-d);font-size:1.95rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.2rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:30px;height:30px;background:var(--accent-g);color:var(--bg);font-family:var(--font-m);font-size:.65rem;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#b0a0d8;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+.note{border-left:2px solid var(--accent);background:rgba(167,139,250,.05);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#b0a0d8;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent3);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent3);}
+.note.info{border-left-color:var(--accent2);background:rgba(244,114,182,.06);color:#e8a8c8;}
+.note.info .note-label{color:var(--accent2);}
+.note.warn{border-left-color:var(--amber);background:rgba(245,158,11,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.06);color:#e8a0a0;}
+.note.danger .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);}
+.kw{color:#a78bfa;}
+.fn{color:#f472b6;}
+.str{color:#fde68a;}
+.num{color:#f0abfc;}
+.cmt{color:#2e2450;font-style:italic;}
+.op{color:#34d399;}
+.type{color:#f59e0b;}
+.prop{color:#a5f3fc;}
+.bool{color:#fb7185;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(42,37,64,.6);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent3);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+.cpanel-hdr.neutral{background:rgba(167,139,250,.07);color:var(--accent);border-bottom:1px solid rgba(167,139,250,.2);}
+
+/* FEATURE GRID */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.feat-card{background:var(--bg2);padding:1.3rem;transition:background .2s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-name{font-family:var(--font-m);font-size:.72rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.feat-syntax{font-family:var(--font-m);font-size:.68rem;color:var(--amber);margin-bottom:.5rem;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* MODULE DIAGRAM */
+.module-diagram{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.mod-row{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;}
+.mod-row:last-child{margin-bottom:0;}
+.mod-file{font-family:var(--font-m);font-size:.7rem;padding:.4rem .8rem;border:1px solid var(--border);min-width:130px;text-align:center;}
+.mod-file.main{border-color:rgba(167,139,250,.5);color:var(--accent);background:rgba(167,139,250,.08);}
+.mod-file.util{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.06);}
+.mod-file.data{border-color:rgba(244,114,182,.4);color:var(--accent2);background:rgba(244,114,182,.06);}
+.mod-arrow{color:var(--muted);font-size:.85rem;flex-shrink:0;}
+.mod-desc{font-size:.78rem;color:var(--muted);}
+
+/* REFACTOR DIFF */
+.diff-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.diff-hdr{padding:.6rem 1.2rem;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--font-m);font-size:.62rem;color:var(--muted);letter-spacing:.08em;}
+.diff-body{font-family:var(--font-m);font-size:.78rem;line-height:1.9;}
+.diff-line{padding:.1rem 1.2rem;display:flex;gap:1rem;}
+.diff-line.add{background:rgba(52,211,153,.06);color:#7dcfb8;}
+.diff-line.add::before{content:'+';color:var(--accent3);min-width:12px;}
+.diff-line.rem{background:rgba(248,113,113,.06);color:#e8a0a0;}
+.diff-line.rem::before{content:'-';color:var(--red);min-width:12px;}
+.diff-line.ctx{color:#4a4070;}
+.diff-line.ctx::before{content:' ';min-width:12px;}
+
+/* METHOD CARDS */
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.method-card{background:var(--bg2);padding:1.3rem 1.5rem;transition:background .2s;}
+.method-card:hover{background:var(--bg3);}
+.method-name{font-family:var(--font-m);font-size:.82rem;color:var(--accent);margin-bottom:.3rem;}
+.method-sig{font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.6rem;}
+.method-desc{font-size:.82rem;color:#b0a0d8;line-height:1.6;margin-bottom:.6rem;}
+.method-ex{font-family:var(--font-m);font-size:.72rem;color:var(--amber);background:var(--bg);padding:.4rem .7rem;border:1px solid var(--border);}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(167,139,250,.05);}
+.quiz-opt.correct{border-color:var(--accent3);background:rgba(52,211,153,.06);color:var(--accent3);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent3);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent3);border-color:var(--accent3);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* PROJECT */
+.project-hero{background:var(--bg2);border:1px solid var(--border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'ES6+';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:3.5rem;color:var(--accent);opacity:.05;line-height:1;pointer-events:none;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}.method-grid{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}.feat-grid{grid-template-columns:1fr 1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 07 / 18 &mdash; ES6+ 語法與模組化</div>
+  <nav class="header-nav">
+    <a href="week6.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week8.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#destructuring">解構賦值</a>
+  <a class="toc-item" href="#spread-rest">Spread / Rest</a>
+  <a class="toc-item" href="#modern-ops">新式運算子</a>
+  <a class="toc-item" href="#classes">Class 語法</a>
+  <a class="toc-item" href="#map-set">Map &amp; Set</a>
+  <a class="toc-item" href="#modules">模組化</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-deco">
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-center">ES6+</div>
+  </div>
+  <div class="hero-label">Phase 02 &mdash; Week 07 of 18</div>
+  <h1>ES6+<br><span class="hi">現代語法精要</span></h1>
+  <p class="hero-desc">
+    從解構賦值、展開運算子到 Class 與 ES Module，掌握現代 JavaScript 的核心語法。
+    本週將用這些工具重構前幾週的專案，讓程式碼更簡潔、可維護。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">解構賦值</span>
+    <span class="badge hi">Spread / Rest</span>
+    <span class="badge hi">Optional Chaining</span>
+    <span class="badge hi">Class</span>
+    <span class="badge hi2">Map &amp; Set</span>
+    <span class="badge hi2">ES Module</span>
+    <span class="badge hi3">重構專案</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">掌握現代 JS 的語法精華，並能用這些工具重構既有程式碼，讓可讀性與維護性大幅提升。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">熟練使用<strong>陣列與物件解構賦值</strong>，包含預設值、重新命名與巢狀解構</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">掌握 <code>...</code> 運算子的兩種身份：<strong>展開（Spread）</strong>與<strong>其餘（Rest）</strong>，並清楚其差異</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">靈活運用 <code>?.</code>、<code>??</code>、<code>??=</code>、<code>||=</code>、<code>&amp;&amp;=</code> 等新式運算子簡化條件邏輯</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">理解 ES6 <strong>Class 語法</strong>的本質，能撰寫建構子、方法、繼承、靜態成員與私有欄位</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">了解 <strong>Map</strong> 與 <strong>Set</strong> 的特性，知道何時應選用它們而非普通物件或陣列</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">掌握 <strong>ES Module</strong> 的 <code>import/export</code> 語法，理解具名匯出與預設匯出的差異，並完成專案重構</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ DESTRUCTURING -->
+<section class="section" id="destructuring">
+  <div class="eyebrow">02 &mdash; Destructuring</div>
+  <h2 class="section-title">解構賦值</h2>
+  <p class="section-intro">
+    解構賦值讓你能從陣列或物件中「拆解」出值，賦予有意義的變數名稱。
+    它幾乎出現在所有現代 JS 程式碼中——函式參數、API 回應處理、React props 無不依賴它。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">AD</div>
+      <div>
+        <div class="ctitle">陣列解構（Array Destructuring）</div>
+        <div class="csub">依照位置解構，名稱自訂</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        陣列解構依照<strong>索引位置</strong>取值。你可以自由命名變數、跳過不需要的元素、
+        設定預設值，以及用 <em>rest</em> 語法收集剩餘元素。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 陣列解構</span>
+    </div>
+    <pre><span class="kw">const</span> scores <span class="op">=</span> [<span class="num">98</span>, <span class="num">87</span>, <span class="num">73</span>, <span class="num">65</span>, <span class="num">50</span>]
+
+<span class="cmt">// 基本解構</span>
+<span class="kw">const</span> [first, second, third] <span class="op">=</span> scores
+<span class="cmt">// first=98, second=87, third=73</span>
+
+<span class="cmt">// 跳過元素（用逗號佔位）</span>
+<span class="kw">const</span> [top, , , fourth] <span class="op">=</span> scores
+<span class="cmt">// top=98, fourth=65</span>
+
+<span class="cmt">// 預設值（元素不存在時使用）</span>
+<span class="kw">const</span> [a, b, c, d, e, f <span class="op">=</span> <span class="num">0</span>] <span class="op">=</span> scores
+<span class="cmt">// f=0 （索引5不存在）</span>
+
+<span class="cmt">// Rest：收集剩餘元素</span>
+<span class="kw">const</span> [best, ...rest] <span class="op">=</span> scores
+<span class="cmt">// best=98, rest=[87, 73, 65, 50]</span>
+
+<span class="cmt">// 交換兩個變數（無需暫存）</span>
+<span class="kw">let</span> x <span class="op">=</span> <span class="num">1</span>, y <span class="op">=</span> <span class="num">2</span>
+;[x, y] <span class="op">=</span> [y, x]
+<span class="cmt">// x=2, y=1 ✓</span>
+
+<span class="cmt">// 搭配函式回傳值</span>
+<span class="kw">function</span> <span class="fn">getRange</span>() { <span class="kw">return</span> [<span class="num">0</span>, <span class="num">100</span>] }
+<span class="kw">const</span> [min, max] <span class="op">=</span> <span class="fn">getRange</span>()
+<span class="cmt">// min=0, max=100</span></pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">OD</div>
+      <div>
+        <div class="ctitle">物件解構（Object Destructuring）</div>
+        <div class="csub">依照屬性名稱解構，與順序無關</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        物件解構依照<strong>屬性名稱</strong>取值（與位置無關），是最常用的解構形式。
+        React 元件幾乎每個函式參數都用物件解構來取 <code>props</code>。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 物件解構（含進階用法）</span>
+    </div>
+    <pre><span class="kw">const</span> user <span class="op">=</span> {
+  name: <span class="str">"Eric"</span>,
+  age: <span class="num">25</span>,
+  role: <span class="str">"admin"</span>,
+  address: { city: <span class="str">"Taipei"</span>, zip: <span class="str">"100"</span> }
+}
+
+<span class="cmt">// 基本解構</span>
+<span class="kw">const</span> { name, age } <span class="op">=</span> user
+<span class="cmt">// name="Eric", age=25</span>
+
+<span class="cmt">// 重新命名（原名: 新名）</span>
+<span class="kw">const</span> { name: userName, role: userRole } <span class="op">=</span> user
+<span class="cmt">// userName="Eric", userRole="admin"</span>
+
+<span class="cmt">// 預設值（屬性不存在時使用）</span>
+<span class="kw">const</span> { name: n, score <span class="op">=</span> <span class="num">100</span> } <span class="op">=</span> user
+<span class="cmt">// score=100 （user 沒有 score 屬性）</span>
+
+<span class="cmt">// 巢狀解構</span>
+<span class="kw">const</span> { address: { city, zip } } <span class="op">=</span> user
+<span class="cmt">// city="Taipei", zip="100"</span>
+
+<span class="cmt">// Rest：收集剩餘屬性</span>
+<span class="kw">const</span> { name: uName, ...others } <span class="op">=</span> user
+<span class="cmt">// others = { age: 25, role: "admin", address: {...} }</span>
+
+<span class="cmt">// 函式參數解構（React props 常見寫法）</span>
+<span class="kw">function</span> <span class="fn">UserCard</span>({ name, age, role <span class="op">=</span> <span class="str">"user"</span> }) {
+  <span class="kw">return</span> <span class="str">`<span class="op">${</span>name<span class="op">}</span> (<span class="op">${</span>age<span class="op">}</span>) — <span class="op">${</span>role<span class="op">}</span>`</span>
+}
+<span class="fn">UserCard</span>(user) <span class="cmt">// "Eric (25) — admin"</span></pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">⚠ 巢狀解構的陷阱</span>
+    解構巢狀屬性時，若中間層不存在會拋出 TypeError。
+    例如 <code>const { a: { b } } = {}</code> 會報錯，因為 <code>a</code> 是 undefined。
+    可搭配 <code>?.</code> 或預設值保護：<code>const { a: { b } = {} } = obj</code>。
+  </div>
+</section>
+
+<!-- ════════════════ SPREAD / REST -->
+<section class="section" id="spread-rest">
+  <div class="eyebrow">03 &mdash; Spread &amp; Rest</div>
+  <h2 class="section-title">展開與其餘運算子</h2>
+  <p class="section-intro">
+    <code>...</code> 是 ES6 中最靈活的語法之一，同一個符號在不同情境有截然不同的語意：
+    在「製造」資料時是 <strong>Spread（展開）</strong>，在「收集」資料時是 <strong>Rest（其餘）</strong>。
+  </p>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Spread — 展開（建立新值）</div>
+      <pre><span class="cmt">// 展開陣列</span>
+<span class="kw">const</span> a <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]
+<span class="kw">const</span> b <span class="op">=</span> [<span class="num">4</span>, <span class="num">5</span>]
+<span class="kw">const</span> merged <span class="op">=</span> [...a, ...b]
+<span class="cmt">// [1, 2, 3, 4, 5]</span>
+
+<span class="cmt">// 複製陣列（淺拷貝）</span>
+<span class="kw">const</span> copy <span class="op">=</span> [...a]
+
+<span class="cmt">// 展開物件</span>
+<span class="kw">const</span> base <span class="op">=</span> { x: <span class="num">1</span>, y: <span class="num">2</span> }
+<span class="kw">const</span> updated <span class="op">=</span> { ...base, y: <span class="num">99</span>, z: <span class="num">3</span> }
+<span class="cmt">// { x: 1, y: 99, z: 3 }</span>
+
+<span class="cmt">// 傳入函式</span>
+<span class="kw">const</span> nums <span class="op">=</span> [<span class="num">3</span>, <span class="num">1</span>, <span class="num">4</span>, <span class="num">1</span>, <span class="num">5</span>]
+Math.<span class="fn">max</span>(...nums) <span class="cmt">// 5</span></pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">Rest — 其餘（收集剩餘值）</div>
+      <pre><span class="cmt">// 函式參數 rest</span>
+<span class="kw">function</span> <span class="fn">sum</span>(first, ...others) {
+  <span class="kw">return</span> first <span class="op">+</span> others.<span class="fn">reduce</span>((a,b)<span class="op">=&gt;</span>a<span class="op">+</span>b, <span class="num">0</span>)
+}
+<span class="fn">sum</span>(<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>) <span class="cmt">// 10</span>
+
+<span class="cmt">// 陣列解構 rest</span>
+<span class="kw">const</span> [head, ...tail] <span class="op">=</span> [<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>]
+<span class="cmt">// head=1, tail=[2,3,4]</span>
+
+<span class="cmt">// 物件解構 rest</span>
+<span class="kw">const</span> { id, ...data } <span class="op">=</span> record
+<span class="cmt">// 分離 id，其餘放進 data</span>
+
+<span class="cmt">// rest 永遠在最後一個</span>
+<span class="kw">function</span> <span class="fn">log</span>(level, ...msgs) {
+  msgs.<span class="fn">forEach</span>(m <span class="op">=&gt;</span> console.<span class="fn">log</span>(level, m))
+}</pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 實際應用場景</span>
+    </div>
+    <pre><span class="cmt">// ── 1. 不可變更新（React state 常見模式）──</span>
+<span class="kw">const</span> state <span class="op">=</span> { user: <span class="str">"Eric"</span>, count: <span class="num">0</span>, theme: <span class="str">"dark"</span> }
+
+<span class="cmt">// 更新單一欄位，不改變原物件</span>
+<span class="kw">const</span> newState <span class="op">=</span> { ...state, count: state.<span class="prop">count</span> <span class="op">+</span> <span class="num">1</span> }
+
+<span class="cmt">// ── 2. 陣列操作（不修改原陣列）──</span>
+<span class="kw">const</span> todos <span class="op">=</span> [{ id: <span class="num">1</span>, text: <span class="str">"Buy milk"</span> }]
+
+<span class="cmt">// 新增</span>
+<span class="kw">const</span> added <span class="op">=</span> [...todos, { id: <span class="num">2</span>, text: <span class="str">"Read book"</span> }]
+
+<span class="cmt">// 刪除（過濾掉 id=1）</span>
+<span class="kw">const</span> removed <span class="op">=</span> todos.<span class="fn">filter</span>(t <span class="op">=&gt;</span> t.<span class="prop">id</span> <span class="op">!==</span> <span class="num">1</span>)
+
+<span class="cmt">// 更新（map 替換特定項目）</span>
+<span class="kw">const</span> updated <span class="op">=</span> todos.<span class="fn">map</span>(t <span class="op">=&gt;</span>
+  t.<span class="prop">id</span> <span class="op">===</span> <span class="num">1</span> ? { ...t, done: <span class="bool">true</span> } : t
+)
+
+<span class="cmt">// ── 3. 合併多個物件 ──</span>
+<span class="kw">const</span> defaults <span class="op">=</span> { timeout: <span class="num">5000</span>, retries: <span class="num">3</span>, cache: <span class="bool">true</span> }
+<span class="kw">const</span> userOpts <span class="op">=</span> { timeout: <span class="num">10000</span> }
+<span class="kw">const</span> config <span class="op">=</span> { ...defaults, ...userOpts }
+<span class="cmt">// { timeout: 10000, retries: 3, cache: true }
+// 後面的屬性會覆蓋前面</span></pre>
+  </div>
+</section>
+
+<!-- ════════════════ MODERN OPERATORS -->
+<section class="section" id="modern-ops">
+  <div class="eyebrow">04 &mdash; Modern Operators</div>
+  <h2 class="section-title">新式運算子</h2>
+  <p class="section-intro">
+    ES2020 之後陸續引入多個運算子，大幅簡化了空值檢查與條件賦值的寫法。
+    掌握這些運算子能讓你的程式碼更簡潔、意圖更清晰。
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">Optional Chaining</div>
+      <div class="feat-syntax">obj?.prop?.nested</div>
+      <div class="feat-desc">安全存取深層屬性，任何一層為 null/undefined 時短路並回傳 undefined，不拋出 TypeError</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">Nullish Coalescing</div>
+      <div class="feat-syntax">value ?? fallback</div>
+      <div class="feat-desc">只有左側為 null 或 undefined 時才取右側值。不同於 ||，0、""、false 不會被替換</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">Logical Assignment</div>
+      <div class="feat-syntax">a ??= b / ||= / &amp;&amp;=</div>
+      <div class="feat-desc">結合邏輯運算子與賦值，只有在滿足條件時才賦值，避免不必要的覆蓋</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — Optional Chaining (?.) 完整用法</span>
+    </div>
+    <pre><span class="kw">const</span> user <span class="op">=</span> {
+  profile: {
+    avatar: <span class="str">"eric.jpg"</span>,
+    social: { twitter: <span class="str">"@eric"</span> }
+  }
+}
+
+<span class="cmt">// 存取深層屬性</span>
+user?.profile?.social?.twitter  <span class="cmt">// "@eric"</span>
+user?.settings?.theme           <span class="cmt">// undefined（不拋錯）</span>
+
+<span class="cmt">// 呼叫可能不存在的方法</span>
+user?.profile?.getFullName?.()  <span class="cmt">// undefined（方法不存在）</span>
+
+<span class="cmt">// 存取動態屬性</span>
+<span class="kw">const</span> key <span class="op">=</span> <span class="str">"twitter"</span>
+user?.profile?.social?.[key]    <span class="cmt">// "@eric"</span>
+
+<span class="cmt">// 陣列元素存取</span>
+<span class="kw">const</span> items <span class="op">=</span> <span class="bool">null</span>
+items?.[<span class="num">0</span>]?.name  <span class="cmt">// undefined（不拋錯）</span>
+
+<span class="cmt">// 搭配解構</span>
+<span class="kw">const</span> { profile: { social: { twitter } <span class="op">=</span> {} } <span class="op">=</span> {} } <span class="op">=</span> user</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — ?? vs || 的關鍵差異</span>
+    </div>
+    <pre><span class="cmt">// || 遇到任何 falsy 值都觸發</span>
+<span class="kw">const</span> count1 <span class="op">=</span> <span class="num">0</span> <span class="op">||</span> <span class="num">10</span>      <span class="cmt">// 10  ← 0 是 falsy！</span>
+<span class="kw">const</span> label1 <span class="op">=</span> <span class="str">""</span> <span class="op">||</span> <span class="str">"預設"</span>  <span class="cmt">// "預設" ← 空字串是 falsy！</span>
+<span class="kw">const</span> show1  <span class="op">=</span> <span class="bool">false</span> <span class="op">||</span> <span class="bool">true</span>  <span class="cmt">// true ← false 是 falsy！</span>
+
+<span class="cmt">// ?? 只有 null / undefined 才觸發</span>
+<span class="kw">const</span> count2 <span class="op">=</span> <span class="num">0</span> <span class="op">??</span> <span class="num">10</span>      <span class="cmt">// 0   ✓ 保留 0</span>
+<span class="kw">const</span> label2 <span class="op">=</span> <span class="str">""</span> <span class="op">??</span> <span class="str">"預設"</span>  <span class="cmt">// ""  ✓ 保留空字串</span>
+<span class="kw">const</span> show2  <span class="op">=</span> <span class="bool">false</span> <span class="op">??</span> <span class="bool">true</span>  <span class="cmt">// false ✓ 保留 false</span>
+<span class="kw">const</span> name   <span class="op">=</span> <span class="bool">null</span> <span class="op">??</span> <span class="str">"匿名"</span>  <span class="cmt">// "匿名" ← null 觸發</span>
+
+<span class="cmt">// Logical Assignment</span>
+<span class="kw">let</span> config <span class="op">=</span> {}
+config.<span class="prop">timeout</span> <span class="op">??=</span> <span class="num">5000</span>   <span class="cmt">// 若 timeout 是 null/undefined，設為 5000</span>
+config.<span class="prop">name</span> <span class="op">||=</span> <span class="str">"default"</span> <span class="cmt">// 若 name 是 falsy，設為 "default"</span>
+config.<span class="prop">debug</span> <span class="op">&amp;&amp;=</span> <span class="bool">false</span>   <span class="cmt">// 若 debug 是 truthy，設為 false</span></pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">✅ 使用原則</span>
+    當你想「有值才用那個值，沒值才用預設」，若值可能是 <code>0</code>、<code>""</code>、<code>false</code> 且你想保留，
+    請用 <code>??</code>；若這些 falsy 值也應被替換，再用 <code>||</code>。
+    大多數情況下 <code>??</code> 更安全、意圖更精確。
+  </div>
+</section>
+
+<!-- ════════════════ CLASSES -->
+<section class="section" id="classes">
+  <div class="eyebrow">05 &mdash; ES6 Classes</div>
+  <h2 class="section-title">Class 語法</h2>
+  <p class="section-intro">
+    ES6 Class 是 JavaScript 原型鏈繼承的語法糖，讓物件導向的寫法更直觀。
+    理解它的本質是原型，才能避免常見的誤解與陷阱。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — Class 完整語法</span>
+    </div>
+    <pre><span class="kw">class</span> <span class="type">Animal</span> {
+  <span class="cmt">// 私有欄位（ES2022，需要 # 前綴）</span>
+  #energy <span class="op">=</span> <span class="num">100</span>
+
+  <span class="cmt">// 靜態屬性</span>
+  <span class="kw">static</span> count <span class="op">=</span> <span class="num">0</span>
+
+  <span class="cmt">// 建構子</span>
+  <span class="fn">constructor</span>(name, species) {
+    <span class="kw">this</span>.<span class="prop">name</span> <span class="op">=</span> name
+    <span class="kw">this</span>.<span class="prop">species</span> <span class="op">=</span> species
+    <span class="type">Animal</span>.<span class="prop">count</span><span class="op">++</span>
+  }
+
+  <span class="cmt">// 實例方法</span>
+  <span class="fn">speak</span>() {
+    <span class="kw">return</span> <span class="str">`<span class="op">${</span><span class="kw">this</span>.<span class="prop">name</span><span class="op">}</span> makes a sound`</span>
+  }
+
+  <span class="cmt">// Getter / Setter</span>
+  <span class="kw">get</span> <span class="fn">status</span>() {
+    <span class="kw">return</span> <span class="kw">this</span>.#energy <span class="op">&gt;</span> <span class="num">50</span> ? <span class="str">"active"</span> : <span class="str">"tired"</span>
+  }
+  <span class="kw">set</span> <span class="fn">energy</span>(val) {
+    <span class="kw">this</span>.#energy <span class="op">=</span> Math.<span class="fn">max</span>(<span class="num">0</span>, Math.<span class="fn">min</span>(<span class="num">100</span>, val))
+  }
+
+  <span class="cmt">// 靜態方法</span>
+  <span class="kw">static</span> <span class="fn">getCount</span>() { <span class="kw">return</span> <span class="type">Animal</span>.<span class="prop">count</span> }
+}
+
+<span class="cmt">// ── 繼承（extends + super）──</span>
+<span class="kw">class</span> <span class="type">Dog</span> <span class="kw">extends</span> <span class="type">Animal</span> {
+  <span class="fn">constructor</span>(name, breed) {
+    <span class="kw">super</span>(name, <span class="str">"Canis lupus"</span>)  <span class="cmt">// 必須先呼叫 super()</span>
+    <span class="kw">this</span>.<span class="prop">breed</span> <span class="op">=</span> breed
+  }
+
+  <span class="cmt">// 覆寫父類別方法</span>
+  <span class="fn">speak</span>() {
+    <span class="kw">return</span> <span class="str">`<span class="op">${</span><span class="kw">this</span>.<span class="prop">name</span><span class="op">}</span> barks!`</span>
+  }
+
+  <span class="cmt">// 呼叫父類別方法</span>
+  <span class="fn">introduce</span>() {
+    <span class="kw">return</span> <span class="str">`<span class="op">${</span><span class="kw">super</span>.<span class="fn">speak</span>()<span class="op">}</span> — I'm a <span class="op">${</span><span class="kw">this</span>.<span class="prop">breed</span><span class="op">}</span>`</span>
+  }
+}
+
+<span class="kw">const</span> dog <span class="op">=</span> <span class="kw">new</span> <span class="type">Dog</span>(<span class="str">"Rex"</span>, <span class="str">"Labrador"</span>)
+dog.<span class="fn">speak</span>()       <span class="cmt">// "Rex barks!"</span>
+dog.<span class="prop">status</span>        <span class="cmt">// "active" (getter)</span>
+dog.<span class="prop">energy</span> <span class="op">=</span> <span class="num">150</span>  <span class="cmt">// setter 限制到 100</span>
+dog <span class="kw">instanceof</span> <span class="type">Animal</span>  <span class="cmt">// true</span>
+<span class="type">Animal</span>.<span class="fn">getCount</span>()       <span class="cmt">// 1</span></pre>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">💡 Class 的本質</span>
+    ES6 Class 只是原型繼承的語法糖。<code>typeof Dog</code> 是 <code>"function"</code>，
+    方法存在 <code>Dog.prototype</code> 上。理解這一點讓你能解釋 <code>instanceof</code> 的原理，
+    以及為何需要將 <code>this</code> 綁定到事件處理器。
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 實戰：用 Class 封裝 API 請求</span>
+    </div>
+    <pre><span class="kw">class</span> <span class="type">ApiClient</span> {
+  #baseUrl
+  #headers
+
+  <span class="fn">constructor</span>(baseUrl, token) {
+    <span class="kw">this</span>.#baseUrl <span class="op">=</span> baseUrl
+    <span class="kw">this</span>.#headers <span class="op">=</span> {
+      <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+      <span class="str">"Authorization"</span>: <span class="str">`Bearer <span class="op">${</span>token<span class="op">}</span>`</span>
+    }
+  }
+
+  <span class="kw">async</span> #<span class="fn">request</span>(method, path, body) {
+    <span class="kw">const</span> res <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`<span class="op">${</span><span class="kw">this</span>.#baseUrl<span class="op">}</span><span class="op">${</span>path<span class="op">}</span>`</span>, {
+      method, headers: <span class="kw">this</span>.#headers,
+      body: body ? <span class="type">JSON</span>.<span class="fn">stringify</span>(body) : <span class="bool">undefined</span>
+    })
+    <span class="kw">if</span> (!res.<span class="prop">ok</span>) <span class="kw">throw</span> <span class="kw">new</span> <span class="type">Error</span>(<span class="str">`HTTP <span class="op">${</span>res.<span class="prop">status</span><span class="op">}</span>`</span>)
+    <span class="kw">return</span> res.<span class="fn">json</span>()
+  }
+
+  <span class="kw">get</span>(<span class="prop">path</span>)        { <span class="kw">return</span> <span class="kw">this</span>.#<span class="fn">request</span>(<span class="str">"GET"</span>,    path) }
+  <span class="kw">post</span>(<span class="prop">path</span>, body) { <span class="kw">return</span> <span class="kw">this</span>.#<span class="fn">request</span>(<span class="str">"POST"</span>,   path, body) }
+  <span class="kw">put</span>(<span class="prop">path</span>, body)  { <span class="kw">return</span> <span class="kw">this</span>.#<span class="fn">request</span>(<span class="str">"PUT"</span>,    path, body) }
+  <span class="kw">delete</span>(<span class="prop">path</span>)     { <span class="kw">return</span> <span class="kw">this</span>.#<span class="fn">request</span>(<span class="str">"DELETE"</span>, path) }
+}
+
+<span class="kw">const</span> api <span class="op">=</span> <span class="kw">new</span> <span class="type">ApiClient</span>(<span class="str">"https://api.example.com"</span>, token)
+<span class="kw">const</span> users <span class="op">=</span> <span class="kw">await</span> api.<span class="fn">get</span>(<span class="str">"/users"</span>)
+<span class="kw">const</span> post  <span class="op">=</span> <span class="kw">await</span> api.<span class="fn">post</span>(<span class="str">"/posts"</span>, { title: <span class="str">"Hello"</span> })</pre>
+  </div>
+</section>
+
+<!-- ════════════════ MAP & SET -->
+<section class="section" id="map-set">
+  <div class="eyebrow">06 &mdash; Map &amp; Set</div>
+  <h2 class="section-title">Map 與 Set</h2>
+  <p class="section-intro">
+    ES6 引入了 <code>Map</code> 和 <code>Set</code> 兩種新的集合型別。
+    它們在特定場景下比普通物件和陣列更高效、語意更清晰。
+  </p>
+
+  <table class="ptable">
+    <thead>
+      <tr><th>比較</th><th>Object / Array</th><th>Map / Set</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>鍵的型別</td>
+        <td>只能是字串或 Symbol</td>
+        <td>任意型別（物件、函式、數字…）</td>
+      </tr>
+      <tr>
+        <td>順序保證</td>
+        <td>物件不保證（整數鍵除外）</td>
+        <td>保證插入順序</td>
+      </tr>
+      <tr>
+        <td>取得大小</td>
+        <td><code>Object.keys(o).length</code></td>
+        <td><code>map.size</code>（O(1)）</td>
+      </tr>
+      <tr>
+        <td>迭代</td>
+        <td>需要 Object.entries 轉換</td>
+        <td>直接 for...of 迭代</td>
+      </tr>
+      <tr>
+        <td>唯一值集合</td>
+        <td>需自行過濾</td>
+        <td>Set 天生保證唯一</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Map — 任意鍵值對</div>
+      <pre><span class="kw">const</span> map <span class="op">=</span> <span class="kw">new</span> <span class="type">Map</span>()
+
+<span class="cmt">// 任意型別都可以當 key</span>
+<span class="kw">const</span> objKey <span class="op">=</span> { id: <span class="num">1</span> }
+map.<span class="fn">set</span>(objKey, <span class="str">"user data"</span>)
+map.<span class="fn">set</span>(<span class="num">42</span>, <span class="str">"number key"</span>)
+map.<span class="fn">set</span>(<span class="bool">true</span>, <span class="str">"boolean key"</span>)
+
+map.<span class="fn">get</span>(objKey)   <span class="cmt">// "user data"</span>
+map.<span class="fn">has</span>(<span class="num">42</span>)       <span class="cmt">// true</span>
+map.<span class="prop">size</span>         <span class="cmt">// 3</span>
+
+<span class="cmt">// 用陣列初始化</span>
+<span class="kw">const</span> cache <span class="op">=</span> <span class="kw">new</span> <span class="type">Map</span>([
+  [<span class="str">"user:1"</span>, { name: <span class="str">"Eric"</span> }],
+  [<span class="str">"user:2"</span>, { name: <span class="str">"Alex"</span> }],
+])
+
+<span class="cmt">// 迭代</span>
+<span class="kw">for</span> (<span class="kw">const</span> [key, val] <span class="kw">of</span> cache) {
+  console.<span class="fn">log</span>(key, val)
+}</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Set — 唯一值集合</div>
+      <pre><span class="kw">const</span> set <span class="op">=</span> <span class="kw">new</span> <span class="type">Set</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">2</span>, <span class="num">1</span>])
+<span class="cmt">// Set { 1, 2, 3 } — 自動去重</span>
+
+set.<span class="fn">add</span>(<span class="num">4</span>)
+set.<span class="fn">has</span>(<span class="num">2</span>)     <span class="cmt">// true</span>
+set.<span class="fn">delete</span>(<span class="num">1</span>)
+set.<span class="prop">size</span>       <span class="cmt">// 3</span>
+
+<span class="cmt">// 陣列去重（最常用）</span>
+<span class="kw">const</span> arr <span class="op">=</span> [<span class="num">1</span>,<span class="num">2</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">3</span>,<span class="num">3</span>]
+<span class="kw">const</span> unique <span class="op">=</span> [...<span class="kw">new</span> <span class="type">Set</span>(arr)]
+<span class="cmt">// [1, 2, 3]</span>
+
+<span class="cmt">// 字串去重</span>
+<span class="kw">const</span> tags <span class="op">=</span> <span class="kw">new</span> <span class="type">Set</span>([<span class="str">"js"</span>, <span class="str">"ts"</span>, <span class="str">"js"</span>])
+<span class="cmt">// Set { "js", "ts" }</span>
+
+<span class="cmt">// 集合運算</span>
+<span class="kw">const</span> a <span class="op">=</span> <span class="kw">new</span> <span class="type">Set</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>])
+<span class="kw">const</span> b <span class="op">=</span> <span class="kw">new</span> <span class="type">Set</span>([<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>])
+<span class="cmt">// 交集</span>
+<span class="kw">const</span> inter <span class="op">=</span> [...a].<span class="fn">filter</span>(x <span class="op">=&gt;</span> b.<span class="fn">has</span>(x))
+<span class="cmt">// 聯集</span>
+<span class="kw">const</span> union <span class="op">=</span> <span class="kw">new</span> <span class="type">Set</span>([...a, ...b])</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ MODULES -->
+<section class="section" id="modules">
+  <div class="eyebrow">07 &mdash; ES Modules</div>
+  <h2 class="section-title">模組化：import / export</h2>
+  <p class="section-intro">
+    ES Module 是 JavaScript 官方的模組系統（ES2015），讓你把程式碼拆分成多個檔案，
+    每個檔案有自己的作用域，透過 <code>export</code> 公開介面、<code>import</code> 引用依賴。
+  </p>
+
+  <div class="module-diagram">
+    <div class="mod-row">
+      <div class="mod-file util">utils/api.js</div>
+      <div class="mod-arrow">→ export</div>
+      <div class="mod-desc">fetchWeather, fetchMovies, ApiClient</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-file data">utils/storage.js</div>
+      <div class="mod-arrow">→ export</div>
+      <div class="mod-desc">saveToStorage, loadFromStorage, clearStorage</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-file util">utils/format.js</div>
+      <div class="mod-arrow">→ export</div>
+      <div class="mod-desc">formatDate, formatTemp, formatWind</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-file main">main.js</div>
+      <div class="mod-arrow">← import</div>
+      <div class="mod-desc">引用以上所有工具函式，組合成應用程式</div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">具名匯出（Named Export）</div>
+      <pre><span class="cmt">// utils/math.js</span>
+<span class="kw">export const</span> PI <span class="op">=</span> <span class="num">3.14159</span>
+
+<span class="kw">export function</span> <span class="fn">add</span>(a, b) {
+  <span class="kw">return</span> a <span class="op">+</span> b
+}
+
+<span class="kw">export function</span> <span class="fn">multiply</span>(a, b) {
+  <span class="kw">return</span> a <span class="op">*</span> b
+}
+
+<span class="cmt">// 或集中匯出</span>
+<span class="kw">export</span> { PI, add, multiply }
+
+<span class="cmt">// 引用（名稱必須對應）</span>
+<span class="kw">import</span> { add, multiply } <span class="kw">from</span> <span class="str">"./utils/math.js"</span>
+<span class="kw">import</span> { add <span class="kw">as</span> sum } <span class="kw">from</span> <span class="str">"./utils/math.js"</span>
+<span class="kw">import</span> * <span class="kw">as</span> Math2 <span class="kw">from</span> <span class="str">"./utils/math.js"</span></pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">預設匯出（Default Export）</div>
+      <pre><span class="cmt">// utils/api.js</span>
+<span class="kw">class</span> <span class="type">ApiClient</span> {
+  <span class="fn">constructor</span>(baseUrl) {
+    <span class="kw">this</span>.<span class="prop">baseUrl</span> <span class="op">=</span> baseUrl
+  }
+  <span class="kw">async</span> <span class="fn">get</span>(path) { <span class="cmt">/* ... */</span> }
+}
+
+<span class="cmt">// 每個檔案只能有一個 default</span>
+<span class="kw">export default</span> ApiClient
+
+<span class="cmt">// 引用（名稱可自訂）</span>
+<span class="kw">import</span> ApiClient <span class="kw">from</span> <span class="str">"./utils/api.js"</span>
+<span class="kw">import</span> Client    <span class="kw">from</span> <span class="str">"./utils/api.js"</span>
+
+<span class="cmt">// 混用</span>
+<span class="kw">import</span> ApiClient, { BASE_URL } <span class="kw">from</span> <span class="str">"./utils/api.js"</span></pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JavaScript — 動態 import() 與進階用法</span>
+    </div>
+    <pre><span class="cmt">// ── 動態 import（按需載入）──</span>
+<span class="kw">async function</span> <span class="fn">loadChart</span>() {
+  <span class="cmt">// 只有在需要時才載入，減少初始 bundle 大小</span>
+  <span class="kw">const</span> { Chart } <span class="op">=</span> <span class="kw">await</span> <span class="kw">import</span>(<span class="str">"./chart.js"</span>)
+  <span class="kw">new</span> <span class="type">Chart</span>(<span class="str">"#canvas"</span>, data)
+}
+
+<span class="cmt">// ── Re-export（模組聚合）──</span>
+<span class="cmt">// utils/index.js — 統一出口，外部只需引一個檔案</span>
+<span class="kw">export</span> { add, multiply } <span class="kw">from</span> <span class="str">"./math.js"</span>
+<span class="kw">export</span> { <span class="kw">default as</span> ApiClient } <span class="kw">from</span> <span class="str">"./api.js"</span>
+<span class="kw">export</span> * <span class="kw">from</span> <span class="str">"./format.js"</span>
+
+<span class="cmt">// 外部引用</span>
+<span class="kw">import</span> { add, ApiClient, formatDate } <span class="kw">from</span> <span class="str">"./utils/index.js"</span>
+
+<span class="cmt">// ── HTML 中使用 ES Module ──</span>
+<span class="cmt">// &lt;script type="module" src="main.js"&gt;&lt;/script&gt;</span>
+<span class="cmt">// type="module" 讓瀏覽器以模組模式解析</span>
+<span class="cmt">// 自動啟用嚴格模式，頂層作用域不是全域</span></pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">⚠ 模組的注意事項</span>
+    ES Module 使用 <strong>靜態分析</strong>，<code>import</code> 必須在檔案頂層，不能在條件判斷或迴圈內。
+    模組在瀏覽器中有 CORS 限制，本地直接開啟 HTML 檔案（<code>file://</code>）會報錯，需要透過 HTTP server 提供服務。
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">08 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+  <p class="section-intro">用以下題目確認你對 ES6+ 語法的掌握程度。</p>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">以下程式碼執行後，<code>x</code> 和 <code>y</code> 的值是多少？<br><code>const [x, , y = 10] = [1, 2]</code></div>
+    <div class="quiz-options" id="q1">
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">A</span>x = 1, y = 2</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',true)"><span class="quiz-key">B</span>x = 1, y = 10</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">C</span>x = 1, y = undefined</div>
+      <div class="quiz-opt" onclick="answer(this,'q1',false)"><span class="quiz-key">D</span>語法錯誤</div>
+    </div>
+    <div class="quiz-fb" id="q1-fb">
+      正確！<code>[x, , y = 10]</code> 中第二個元素（2）被跳過，<code>y</code> 對應索引2，但陣列只有兩個元素，故使用預設值 10。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q"><code>0 ?? "default"</code> 與 <code>0 || "default"</code> 的結果分別是什麼？</div>
+    <div class="quiz-options" id="q2">
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">A</span>兩者都回傳 "default"</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">B</span>兩者都回傳 0</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',true)"><span class="quiz-key">C</span>?? 回傳 0，|| 回傳 "default"</div>
+      <div class="quiz-opt" onclick="answer(this,'q2',false)"><span class="quiz-key">D</span>?? 回傳 "default"，|| 回傳 0</div>
+    </div>
+    <div class="quiz-fb" id="q2-fb">
+      正確！<code>??</code> 只有 null/undefined 才觸發，0 不是 null/undefined，所以回傳 0。<code>||</code> 遇到所有 falsy 值都觸發，0 是 falsy，所以回傳 "default"。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">以下哪一行會正確地將陣列 <code>[1,2,2,3,3,3]</code> 去除重複值，得到 <code>[1,2,3]</code>？</div>
+    <div class="quiz-options" id="q3">
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">A</span><code>new Set([1,2,2,3,3,3])</code></div>
+      <div class="quiz-opt" onclick="answer(this,'q3',true)"><span class="quiz-key">B</span><code>[...new Set([1,2,2,3,3,3])]</code></div>
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">C</span><code>Array.from([1,2,2,3,3,3])</code></div>
+      <div class="quiz-opt" onclick="answer(this,'q3',false)"><span class="quiz-key">D</span><code>[1,2,2,3,3,3].unique()</code></div>
+    </div>
+    <div class="quiz-fb" id="q3-fb">
+      正確！<code>new Set()</code> 建立的是 Set 物件，需要用 Spread 或 <code>Array.from()</code> 轉回陣列。<code>Array.from([1,2,2,3,3,3])</code> 只是淺拷貝，不去重。陣列沒有 .unique() 方法。
+    </div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">關於 ES Module，下列哪個敘述<strong>正確</strong>？</div>
+    <div class="quiz-options" id="q4">
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">A</span>每個檔案可以有多個 <code>export default</code></div>
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">B</span><code>import</code> 可以寫在函式內部或條件判斷中</div>
+      <div class="quiz-opt" onclick="answer(this,'q4',true)"><span class="quiz-key">C</span>具名匯出（named export）引用時名稱必須與匯出時相符，或用 <code>as</code> 重新命名</div>
+      <div class="quiz-opt" onclick="answer(this,'q4',false)"><span class="quiz-key">D</span>ES Module 不支援在瀏覽器中使用，需要 bundler 轉換</div>
+    </div>
+    <div class="quiz-fb" id="q4-fb">
+      正確！具名匯出的引用必須使用相同名稱，或透過 <code>import { foo as bar }</code> 重新命名。每個檔案只能有一個 default export，import 必須在頂層，現代瀏覽器原生支援 ES Module（需 type="module"）。
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">09 &mdash; Weekly Project</div>
+  <h2 class="section-title">本週專案</h2>
+
+  <div class="project-hero">
+    <div class="project-eyebrow">WEEK 07 PROJECT</div>
+    <div class="project-name">重構：Todo List + 天氣 App</div>
+    <div class="project-desc">
+      用本週學習的 ES6+ 語法，全面重構第 4 週的 Todo List 與第 6 週的天氣查詢 App。
+      目標是讓程式碼更簡潔、模組化且易維護，同時不改變任何功能。
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:0 0 1rem;">重構目標對照</h3>
+
+  <div class="diff-block">
+    <div class="diff-hdr">todo.js — 用解構與展開簡化陣列操作</div>
+    <div class="diff-body">
+      <div class="diff-line rem">function addTodo(todos, text) { const newTodo = {}; newTodo.id = Date.now(); newTodo.text = text; newTodo.done = false; return todos.concat([newTodo]); }</div>
+      <div class="diff-line add">const addTodo = (todos, text) => [...todos, { id: Date.now(), text, done: false }]</div>
+      <div class="diff-line ctx"></div>
+      <div class="diff-line rem">function toggleTodo(todos, id) { return todos.map(function(t) { if (t.id === id) { return { id: t.id, text: t.text, done: !t.done }; } return t; }); }</div>
+      <div class="diff-line add">const toggleTodo = (todos, id) => todos.map(t => t.id === id ? { ...t, done: !t.done } : t)</div>
+      <div class="diff-line ctx"></div>
+      <div class="diff-line rem">function removeTodo(todos, id) { return todos.filter(function(t) { return t.id !== id; }); }</div>
+      <div class="diff-line add">const removeTodo = (todos, id) => todos.filter(t => t.id !== id)</div>
+    </div>
+  </div>
+
+  <div class="diff-block">
+    <div class="diff-hdr">weather.js — 用 Class 封裝 API，用 ?? 簡化預設值</div>
+    <div class="diff-body">
+      <div class="diff-line rem">function getWindDesc(speed) { var desc; if (speed === undefined || speed === null) { desc = "未知"; } else { desc = speed + " m/s"; } return desc; }</div>
+      <div class="diff-line add">const getWindDesc = (speed) => speed != null ? `${speed} m/s` : "未知"</div>
+      <div class="diff-line ctx"></div>
+      <div class="diff-line rem">var history = []; function addHistory(city) { if (history.indexOf(city) === -1) { history.push(city); } }</div>
+      <div class="diff-line add">const history = new Set()  // 自動去重，無需 indexOf 檢查</div>
+      <div class="diff-line add">const addHistory = (city) => history.add(city)</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">拆分檔案結構</div>
+        <div class="step-body">建立 <code>js/todo.js</code>、<code>js/storage.js</code>、<code>js/ui.js</code>、<code>js/main.js</code> 四個模組，在 HTML 中以 <code>&lt;script type="module"&gt;</code> 載入。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">重構資料操作函式</div>
+        <div class="step-body">用 Spread 與 <code>.map/.filter</code> 改寫所有陣列操作，確保函式為<strong>純函式（不修改原陣列）</strong>，並用具名匯出公開。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">用 Class 封裝狀態管理</div>
+        <div class="step-body">建立 <code>TodoStore</code> class，將 todos 陣列設為私有欄位，所有操作透過方法進行，搭配 localStorage 持久化儲存。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">重構天氣 App</div>
+        <div class="step-body">用 <code>Set</code> 取代陣列管理搜尋歷史（自動去重），用 <code>??</code> 取代 <code>||</code> 處理可能為 0 的數值（如風速 0），用物件解構取 API 回應欄位。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">撰寫 utils/index.js 聚合出口</div>
+        <div class="step-body">建立統一的 re-export 出口，讓 main.js 只需 <code>import { ... } from "./utils/index.js"</code> 即可取用所有工具函式。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:700;margin:0 0 1rem;">完成清單</h3>
+  <div class="checklist">
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>所有函式參數改用解構賦值</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>陣列操作函式全面改用 Spread（不修改原始陣列）</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>搜尋歷史改用 <code>Set</code> 儲存</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>用 <code>??</code> 取代處理 null/undefined 的 <code>||</code></span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>成功使用 <code>import/export</code> 拆分為多個模組</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>【進階】實作 <code>TodoStore</code> class，含私有欄位與 getter</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done');this.querySelector('.check-box').textContent=this.classList.contains('done')?'✓':''">
+      <div class="check-box"></div>
+      <span>【進階】用動態 <code>import()</code> 按需載入圖表或非核心功能</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">10 &mdash; Resources</div>
+  <h2 class="section-title">延伸閱讀資源</h2>
+  <p class="section-intro">精選資源，深入掌握 ES6+ 每個特性的細節。</p>
+  <div class="resource-grid">
+    <div class="resource-card">
+      <div class="resource-type">互動教學</div>
+      <div class="resource-name">ES6+ 特性總覽</div>
+      <div class="resource-desc">es6-features.org — 以對照方式展示 ES5 vs ES6+ 的語法差異，一頁看完所有新特性</div>
+      <div class="resource-arrow">→ es6-features.org</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">MDN 文件</div>
+      <div class="resource-name">Destructuring Assignment</div>
+      <div class="resource-desc">MDN 解構賦值完整文件，含所有邊界情況與進階模式說明</div>
+      <div class="resource-arrow">→ developer.mozilla.org</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">深度閱讀</div>
+      <div class="resource-name">JavaScript.info — Classes</div>
+      <div class="resource-desc">從原型鏈到 Class 語法的完整解說，理解 Class 的底層實現原理</div>
+      <div class="resource-arrow">→ javascript.info/classes</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">MDN 文件</div>
+      <div class="resource-name">ES Modules — import/export</div>
+      <div class="resource-desc">JavaScript 模組系統完整指南，包含靜態與動態 import、模組作用域說明</div>
+      <div class="resource-arrow">→ developer.mozilla.org</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">工具</div>
+      <div class="resource-name">Babel REPL</div>
+      <div class="resource-desc">線上查看 ES6+ 語法如何被轉譯成 ES5，加深對語法糖本質的理解</div>
+      <div class="resource-arrow">→ babeljs.io/repl</div>
+    </div>
+    <div class="resource-card">
+      <div class="resource-type">練習</div>
+      <div class="resource-name">Exercism — JavaScript Track</div>
+      <div class="resource-desc">提供 ES6+ 相關的程式練習題，含 Mentor 代碼審查，是鞏固語法的好方法</div>
+      <div class="resource-arrow">→ exercism.org/tracks/javascript</div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /.content -->
+
+<div class="bottom-nav">
+  <a href="week6.html" class="nav-btn">&larr; Week 06 — Fetch API &amp; 非同步</a>
+  <a href="index.html" class="home-link">課程總覽</a>
+  <a href="week8.html" class="nav-btn">Week 08 — React 基礎 &rarr;</a>
+</div>
+</main>
+
+<script>
+// Progress bar
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('progressBar')
+  const h = document.documentElement.scrollHeight - window.innerHeight
+  el.style.width = (window.scrollY / h * 100) + '%'
+})
+
+// TOC active
+const sections = document.querySelectorAll('.section[id]')
+const tocItems = document.querySelectorAll('.toc-item')
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      tocItems.forEach(t => t.classList.remove('active'))
+      const a = document.querySelector(`.toc-item[href="#${e.target.id}"]`)
+      if (a) a.classList.add('active')
+    }
+  })
+}, { rootMargin: '-30% 0px -60% 0px' })
+sections.forEach(s => obs.observe(s))
+
+// Section reveal
+const revObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+sections.forEach(s => revObs.observe(s))
+
+// Quiz
+function answer(el, qId, isCorrect) {
+  const container = document.getElementById(qId)
+  if (container.querySelector('.correct, .wrong')) return
+  el.classList.add(isCorrect ? 'correct' : 'wrong')
+  if (!isCorrect) container.querySelectorAll('.quiz-opt').forEach(o => {
+    if (o !== el) o.style.opacity = '0.4'
+  })
+  const fb = document.getElementById(qId + '-fb')
+  if (fb) fb.classList.add('show')
+}
+</script>
+</body>
+</html>
