@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 08 — React 基礎：元件、props、state</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,300&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06111e;--bg2:#091929;--bg3:#0c2035;--surface:#0f2840;
+  --border:#1a3a58;--border2:#224870;
+  --text:#e8f4fd;--muted:#6a9fc0;--faint:#3d6f8f;
+  --accent:#f97316;--accent-g:linear-gradient(135deg,#f97316,#fb923c);
+  --accent-dim:rgba(249,115,22,.12);--accent-border:rgba(249,115,22,.35);
+  --blue:#38bdf8;--blue-dim:rgba(56,189,248,.1);
+  --green:#4ade80;--green-dim:rgba(74,222,128,.1);
+  --purple:#c084fc;--purple-dim:rgba(192,132,252,.1);
+  --red:#f87171;--red-dim:rgba(248,113,113,.1);
+  --code-bg:#030d15;
+  --font-d:'Bebas Neue',sans-serif;
+  --font-b:'Nunito',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-b);font-weight:300;line-height:1.75;
+  overflow-x:hidden;
+}
+/* blueprint grid */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(56,189,248,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,189,248,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(56,189,248,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,189,248,.02) 1px,transparent 1px);
+  background-size:8px 8px;
+}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 2.5rem;
+  background:rgba(6,17,30,.88);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;font-weight:600;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.57rem;color:var(--faint);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:all .2s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:1px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:440px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-ring{position:absolute;right:3rem;top:50%;transform:translateY(-50%);width:220px;height:220px;pointer-events:none;opacity:0;animation:fadeUp .5s .7s forwards;}
+.hero-ring-el{position:absolute;border-radius:4px;border:1px solid;}
+.hero-ring-el:nth-child(1){inset:0;border-color:var(--accent);transform:rotate(0deg);animation:rotRing 12s linear infinite;}
+.hero-ring-el:nth-child(2){inset:20px;border-color:var(--blue);transform:rotate(15deg);animation:rotRing 8s linear infinite reverse;}
+.hero-ring-el:nth-child(3){inset:40px;border-color:var(--purple);animation:rotRing 5s linear infinite;}
+.hero-ring-el:nth-child(4){inset:60px;border-color:var(--accent);border-radius:50%;animation:rotRing 3s linear infinite reverse;}
+.hero-ring-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.08em;text-align:center;line-height:1.6;}
+@keyframes rotRing{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-size:clamp(3.5rem,7vw,6.5rem);line-height:.95;letter-spacing:.03em;margin-bottom:1.5rem;max-width:700px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{color:var(--accent);}
+.hero h1 .hi2{color:var(--blue);}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-meta{display:flex;gap:0;border:1px solid var(--border);width:fit-content;opacity:0;animation:fadeUp .5s .5s forwards;}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--text);font-weight:600;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);}
+.section-title{font-family:var(--font-d);font-size:2.4rem;letter-spacing:.04em;color:var(--text);margin-bottom:1.8rem;line-height:1.1;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);font-weight:600;background:var(--accent-dim);border:1px solid var(--accent-border);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.1rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:28px;height:28px;background:var(--accent-g);color:#fff;font-family:var(--font-m);font-size:.65rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-b);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#9ab8d0;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:700;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:700;}
+
+.note{border-left:2px solid var(--accent);background:var(--accent-dim);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#d4a880;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--green);background:var(--green-dim);color:#88c8a0;}
+.note.tip .note-label{color:var(--green);}
+.note.info{border-left-color:var(--blue);background:var(--blue-dim);color:#88c0d8;}
+.note.info .note-label{color:var(--blue);}
+.note.warn{border-left-color:var(--red);background:var(--red-dim);color:#d4a0a0;}
+.note.warn .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:#020a14;border-bottom:1px solid #0d1f2f;}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:#3a6070;letter-spacing:.1em;}
+pre{background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:#c8dce8;}
+.t{color:#7dd3fc;}  /* tag/component */
+.p{color:#86efac;}  /* prop/attr */
+.v{color:#fde68a;}  /* value/string */
+.c{color:#2a4a5a;font-style:italic;} /* comment */
+.s{color:#f0abfc;}  /* keyword */
+.fn{color:#c4a6f0;} /* function */
+.kw{color:#fb7185;} /* jsx keyword */
+.str{color:#fde68a;} /* string */
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border2);}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(26,58,88,.5);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* DEMO INFRASTRUCTURE */
+.demo-wrap{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+.demo-bar strong{color:var(--accent);}
+.demo-body{padding:1.8rem;background:var(--bg);}
+
+/* COMPONENT VISUALISER */
+.comp-tree{display:flex;flex-direction:column;gap:.5rem;}
+.comp-node{border:1px solid;padding:.5rem 1rem;font-family:var(--font-m);font-size:.75rem;cursor:pointer;transition:all .2s;position:relative;}
+.comp-node.selected{box-shadow:0 0 0 2px var(--accent);}
+.comp-node-tag{font-weight:600;}
+.comp-node-props{font-size:.65rem;opacity:.7;margin-top:.2rem;}
+.comp-children{margin-left:1.5rem;padding-left:.8rem;border-left:1px dashed;margin-top:.5rem;display:flex;flex-direction:column;gap:.4rem;}
+/* component type colours */
+.cn-app{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.cn-app .comp-children{border-color:var(--accent);}
+.cn-header{border-color:var(--blue);color:var(--blue);background:var(--blue-dim);}
+.cn-card{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.cn-button{border-color:var(--purple);color:var(--purple);background:var(--purple-dim);}
+.cn-text{border-color:var(--muted);color:var(--muted);background:rgba(106,159,192,.08);}
+.comp-info-panel{background:var(--bg3);border:1px solid var(--border);padding:1rem 1.2rem;font-family:var(--font-m);font-size:.72rem;line-height:1.9;margin-top:1rem;}
+.comp-info-label{color:var(--faint);font-size:.6rem;letter-spacing:.1em;display:block;margin-bottom:.4rem;}
+
+/* JSX LIVE PREVIEW */
+.jsx-split{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.jsx-editor{background:var(--code-bg);padding:0;}
+.jsx-editor textarea{width:100%;height:200px;background:transparent;color:#c8dce8;border:none;outline:none;padding:1.2rem 1.5rem;font-family:var(--font-m);font-size:.78rem;line-height:1.7;resize:none;}
+.jsx-preview{background:var(--bg2);padding:1.5rem;display:flex;align-items:center;justify-content:center;min-height:200px;}
+.jsx-preview-label{font-family:var(--font-m);font-size:.55rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;}
+.jsx-render{font-size:.9rem;color:var(--text);}
+
+/* PROPS PLAYGROUND */
+.props-controls{display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.2rem;}
+.prop-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.prop-label{font-family:var(--font-m);font-size:.68rem;color:var(--muted);width:110px;flex-shrink:0;}
+.prop-input{font-family:var(--font-m);font-size:.78rem;padding:.35rem .8rem;border:1px solid var(--border2);background:var(--bg);color:var(--text);outline:none;flex:1;min-width:120px;}
+.prop-input:focus{border-color:var(--accent);}
+.prop-select{font-family:var(--font-m);font-size:.78rem;padding:.35rem .8rem;border:1px solid var(--border2);background:var(--bg);color:var(--text);outline:none;}
+.card-preview{border:1px solid var(--border);padding:1.5rem;background:var(--bg2);transition:all .3s;}
+.card-preview-title{font-weight:700;font-size:1rem;margin-bottom:.5rem;}
+.card-preview-body{font-size:.85rem;color:var(--muted);margin-bottom:1rem;}
+.card-preview-btn{font-family:var(--font-m);font-size:.7rem;padding:.4rem 1rem;border:none;cursor:pointer;transition:opacity .2s;}
+.card-preview-btn:hover{opacity:.85;}
+.props-code-display{background:var(--code-bg);padding:.8rem 1.2rem;font-family:var(--font-m);font-size:.72rem;color:#c8dce8;border:1px solid var(--border);margin-top:.8rem;line-height:1.7;}
+
+/* STATE COUNTER DEMO */
+.state-demo{display:flex;flex-direction:column;align-items:center;gap:1.2rem;padding:1rem;}
+.state-counter{font-family:var(--font-d);font-size:5rem;color:var(--accent);line-height:1;letter-spacing:.05em;transition:transform .15s,color .15s;}
+.state-counter.bump{transform:scale(1.15);}
+.state-btns{display:flex;gap:.8rem;}
+.s-btn{font-family:var(--font-m);font-size:.75rem;padding:.6rem 1.4rem;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;transition:all .15s;letter-spacing:.06em;}
+.s-btn:hover{border-color:var(--accent);color:var(--accent);}
+.s-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.state-log{background:var(--code-bg);padding:.6rem 1rem;font-family:var(--font-m);font-size:.7rem;color:#4a8a5a;line-height:1.8;width:100%;max-height:120px;overflow-y:auto;border:1px solid var(--border);}
+.state-re-label{font-family:var(--font-m);font-size:.62rem;color:var(--faint);letter-spacing:.1em;}
+
+/* RERENDER VISUALISER */
+.rerender-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.8rem 0;}
+.rr-comp{border:1px solid var(--border);padding:.8rem;font-family:var(--font-m);font-size:.65rem;color:var(--muted);text-align:center;transition:all .3s;position:relative;}
+.rr-comp.flashing{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.rr-comp.stable{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.rr-badge{position:absolute;top:-1px;right:-1px;font-size:.55rem;background:var(--accent);color:#fff;padding:.1rem .3rem;}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.15rem;letter-spacing:.02em;margin-bottom:1.2rem;color:var(--text);line-height:1.3;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:var(--accent-dim);}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-dim);color:var(--red);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:var(--green-dim);border-color:rgba(74,222,128,.3);}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+.project-hero{background:var(--bg2);border:1px solid var(--border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'<Component />';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:3rem;color:var(--blue);opacity:.07;pointer-events:none;white-space:nowrap;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:2.2rem;letter-spacing:.04em;color:var(--text);margin-bottom:.8rem;line-height:1.15;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:700;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-b);font-size:.88rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:var(--green-dim);color:var(--green);border-bottom:1px solid rgba(74,222,128,.2);}
+.cpanel-hdr.bad{background:var(--red-dim);color:var(--red);border-bottom:1px solid rgba(248,113,113,.2);}
+.cpanel-hdr.info{background:var(--blue-dim);color:var(--blue);border-bottom:1px solid rgba(56,189,248,.2);}
+
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-ring{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .jsx-split{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .rerender-grid{grid-template-columns:1fr 1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 08 / 18 &mdash; REACT BASICS</div>
+  <nav class="header-nav">
+    <a href="week7.html">&larr; Week 07</a>
+    <a href="index.html">總覽</a>
+    <a href="week9.html">Week 09 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">React 思維模型</a>
+  <a class="toc-item" href="#concept-2">JSX 語法</a>
+  <a class="toc-item" href="#concept-3">元件與 Props</a>
+  <a class="toc-item" href="#concept-4">State 與 useState</a>
+  <a class="toc-item" href="#concept-5">條件渲染與列表</a>
+  <a class="toc-item" href="#concept-6">事件處理</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-ring">
+      <div class="hero-ring-el"></div>
+      <div class="hero-ring-el"></div>
+      <div class="hero-ring-el"></div>
+      <div class="hero-ring-el"></div>
+      <div class="hero-ring-center">&lt;App /&gt;<br>元件化<br>思維</div>
+    </div>
+    <div class="hero-label">PHASE 03 &mdash; 現代框架 / WEEK 08</div>
+    <h1>REACT<br><span class="hi">元件</span><br><span class="hi2">PROPS STATE</span></h1>
+    <p class="hero-desc">從「操控 DOM」到「描述 UI 狀態」。這週你將徹底改變寫介面的方式——用元件化思維把頁面拆解成可重用的積木，讓 React 幫你管理畫面更新。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 03 — 現代框架</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">12–15 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">本週專案</div><div class="meta-cell-value">計數器 + Todo List</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">Week 07 ES6+</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個核心能力，帶你從 Vanilla JS 進入 React 的思維體系。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">解釋 React 的<strong>宣告式思維</strong>（Declarative）與 DOM 操作的<strong>命令式思維</strong>（Imperative）有何本質差異</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">讀懂並撰寫 JSX 語法，了解它與 HTML 的差異（className、camelCase 屬性、單一根元素、自閉合標籤）</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">建立函式元件（Function Component），透過 <code>props</code> 傳遞資料，並設定 <code>PropTypes</code> 或 TypeScript 型別驗證</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">使用 <code>useState</code> Hook 管理元件狀態，理解狀態更新是<strong>非同步的</strong>，並知道為什麼不能直接修改狀態物件</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">使用三元運算子和 <code>&amp;&amp;</code> 短路語法實作條件渲染，用 <code>Array.map()</code> 渲染列表並正確設定 <code>key</code> prop</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">在 JSX 中正確綁定事件處理函式，理解為什麼要傳函式引用而非呼叫，以及如何在事件中傳遞額外參數</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: React 思維模型 -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">React 的思維模型</h2>
+      <p class="section-intro">學 React 最大的挑戰不是語法，是<strong>思維方式的轉變</strong>。在開始寫程式之前，先理解 React 為什麼存在，它解決了什麼問題。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">命令式 vs 宣告式</div><div class="csub">Imperative vs Declarative</div></div></div>
+        <div class="cbody">
+          <p>用原生 DOM 操作（Week 05）的方式叫做<em>命令式（Imperative）</em>：你明確告訴瀏覽器「找到這個元素、修改它的文字、加上這個類別、移除那個元素」——你描述的是<strong>步驟</strong>。</p>
+          <p>React 採用<em>宣告式（Declarative）</em>：你描述「在這個狀態下，UI 應該長什麼樣子」，然後讓 React 找出需要做哪些 DOM 更新。你描述的是<strong>結果</strong>，而非過程。</p>
+          <p>這就像你可以告訴計程車司機「左轉、直走 200 公尺、右轉」（命令式），也可以直接說「帶我去台北車站」（宣告式）。React 就是那位知道最佳路線的司機。</p>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr bad">命令式（原生 DOM）— 描述步驟</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">// 切換喜愛狀態，需要手動操作 DOM</span>
+<span class="s">let</span> liked = <span class="s">false</span>;
+<span class="s">const</span> btn = document.<span class="fn">querySelector</span>(<span class="v">'#like-btn'</span>);
+
+btn.<span class="fn">addEventListener</span>(<span class="v">'click'</span>, () => {
+  liked = !liked;
+  <span class="s">if</span> (liked) {
+    btn.textContent = <span class="v">'❤️ 已喜愛'</span>;
+    btn.classList.<span class="fn">add</span>(<span class="v">'liked'</span>);
+    btn.style.color = <span class="v">'red'</span>;
+  } <span class="s">else</span> {
+    btn.textContent = <span class="v">'🤍 喜愛'</span>;
+    btn.classList.<span class="fn">remove</span>(<span class="v">'liked'</span>);
+    btn.style.color = <span class="v">''</span>;
+  }
+  <span class="c">// 還要更新計數器...</span>
+  document.<span class="fn">querySelector</span>(<span class="v">'#count'</span>)
+    .textContent = liked ? <span class="v">'1 個喜愛'</span> : <span class="v">'0 個喜愛'</span>;
+});</pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">宣告式（React）— 描述結果</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">// 描述「在此狀態下 UI 長什麼樣」</span>
+<span class="s">function</span> <span class="fn">LikeButton</span>() {
+  <span class="s">const</span> [liked, setLiked] = <span class="fn">useState</span>(<span class="s">false</span>);
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>() => <span class="fn">setLiked</span>(!liked)<span class="kw">}</span>
+              <span class="p">style</span>=<span class="kw">{{</span><span class="p">color</span>: liked ? <span class="v">'red'</span> : <span class="v">'inherit'</span><span class="kw">}}</span><span class="t">&gt;</span>
+        <span class="kw">{</span>liked ? <span class="v">'❤️ 已喜愛'</span> : <span class="v">'🤍 喜愛'</span><span class="kw">}</span>
+      <span class="t">&lt;/button&gt;</span>
+      <span class="t">&lt;span&gt;</span><span class="kw">{</span>liked ? <span class="v">'1'</span> : <span class="v">'0'</span><span class="kw">}</span> 個喜愛<span class="t">&lt;/span&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+<span class="c">// React 自動計算 DOM 差異並更新</span></pre>
+        </div>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">Virtual DOM 與 Reconciliation</div><div class="csub">為什麼 React 這麼快</div></div></div>
+        <div class="cbody">
+          <p>React 在記憶體中維護一份<em>虛擬 DOM（Virtual DOM）</em>——一個描述 UI 的 JavaScript 物件樹。當狀態改變，React 重新計算虛擬 DOM，然後透過<strong>協調演算法（Reconciliation）</strong>比較新舊兩份虛擬 DOM 的差異（Diffing），只把真正有變化的部分更新到真實 DOM。</p>
+          <p>這樣做的好處：直接操作 DOM 很慢，但比較 JS 物件很快。React 只在必要時才動真實 DOM，避免無謂的重繪（Repaint）和重排（Reflow），讓介面更新更有效率。</p>
+          <div class="note info">
+            <span class="note-label">React 18 的 Concurrent Mode</span>
+            React 18 引入了並發模式，讓 React 可以中斷、暫停、恢復渲染工作，優先處理使用者互動，讓即使在複雜計算期間介面也保持響應。這個機制在你學完基礎後值得深入探索。
+          </div>
+        </div>
+      </div>
+
+      <!-- Component Tree Visualiser -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>元件樹視覺化</strong><span>點擊元件節點查看說明</span></div>
+        <div class="demo-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div>
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">COMPONENT TREE</div>
+            <div class="comp-tree">
+              <div class="comp-node cn-app" data-info='{"name":"App","type":"Root","desc":"應用程式根元件，管理全域狀態，包含所有其他元件。","props":"（無 props，是最頂層）","state":"todos: Todo[], filter: string"}' >
+                <div class="comp-node-tag">&lt;App /&gt;</div>
+                <div class="comp-node-props">根元件 · 管理全域狀態</div>
+                <div class="comp-children">
+                  <div class="comp-node cn-header" data-info='{"name":"Header","type":"Presentational","desc":"純展示元件，顯示應用標題與說明，不管理任何狀態。","props":"title: string, count: number","state":"（無）"}'>
+                    <div class="comp-node-tag">&lt;Header /&gt;</div>
+                    <div class="comp-node-props">props: title, count</div>
+                  </div>
+                  <div class="comp-node cn-card" data-info='{"name":"TodoForm","type":"Container","desc":"包含輸入框和新增按鈕，管理輸入值的本地狀態，完成時呼叫父元件傳入的 onAdd 函式。","props":"onAdd: (text: string) => void","state":"inputValue: string"}'>
+                    <div class="comp-node-tag">&lt;TodoForm /&gt;</div>
+                    <div class="comp-node-props">props: onAdd(fn)</div>
+                    <div class="comp-children">
+                      <div class="comp-node cn-button" data-info='{"name":"Button","type":"Reusable","desc":"通用按鈕元件，透過 props 接受文字、顏色、點擊事件，可在整個應用重複使用。","props":"label, color, onClick, disabled","state":"（無）"}'>
+                        <div class="comp-node-tag">&lt;Button /&gt;</div>
+                        <div class="comp-node-props">props: label, color, onClick</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comp-node cn-card" data-info='{"name":"TodoList","type":"Container","desc":"接收 todos 陣列，用 .map() 渲染每個 TodoItem，並傳遞 onToggle、onDelete 回呼函式。","props":"todos: Todo[], onToggle, onDelete","state":"（無，資料從 App 傳入）"}'>
+                    <div class="comp-node-tag">&lt;TodoList /&gt;</div>
+                    <div class="comp-node-props">props: todos[], onToggle, onDelete</div>
+                    <div class="comp-children">
+                      <div class="comp-node cn-text" data-info='{"name":"TodoItem","type":"Presentational","desc":"渲染單一待辦事項，接受 todo 物件與操作回呼函式，點擊文字切換完成狀態，點擊刪除按鈕移除。","props":"todo: {id, text, done}, onToggle, onDelete","state":"（無）"}'>
+                        <div class="comp-node-tag">&lt;TodoItem /&gt;</div>
+                        <div class="comp-node-props">props: todo, onToggle, onDelete</div>
+                      </div>
+                      <div class="comp-node cn-text" data-info='{"name":"TodoItem","type":"Presentational","desc":"同上，由 .map() 重複渲染多個實例，每個有不同的 key prop。","props":"todo: {id, text, done}, onToggle, onDelete","state":"（無）"}'>
+                        <div class="comp-node-tag">&lt;TodoItem /&gt;</div>
+                        <div class="comp-node-props">props: todo, onToggle, onDelete</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">節點說明</div>
+            <div class="comp-info-panel" id="compInfoPanel">
+              <span class="comp-info-label">點擊左側元件節點查看詳情</span>
+              <div style="color:var(--faint);font-size:.72rem;">— 尚未選取 —</div>
+            </div>
+            <div style="margin-top:1rem;font-family:var(--font-m);font-size:.7rem;color:var(--muted);line-height:2;">
+              <div><span style="color:var(--accent);">&#9632;</span> App — 根元件（橙色）</div>
+              <div><span style="color:var(--blue);">&#9632;</span> Header — 展示元件（藍色）</div>
+              <div><span style="color:var(--green);">&#9632;</span> Container — 有邏輯（綠色）</div>
+              <div><span style="color:var(--purple);">&#9632;</span> Button — 可重用元件（紫色）</div>
+              <div><span style="color:var(--muted);">&#9632;</span> Presentational — 純展示（灰色）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: JSX -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">JSX 語法</h2>
+      <p class="section-intro">JSX 看起來像 HTML，但它是 JavaScript 的語法擴充。每個 JSX 標籤都會被 Babel 轉譯成 <code>React.createElement()</code> 呼叫。理解它的規則，你就能自信地寫 JSX。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">JSX 與 HTML 的差異</div><div class="csub">六個必須知道的規則</div></div></div>
+        <div class="cbody">
+          <p><strong>1. className 取代 class</strong>：因為 <code>class</code> 是 JS 保留字，JSX 中用 <code>className</code>。</p>
+          <p><strong>2. camelCase 屬性</strong>：HTML 屬性在 JSX 中全部改為 camelCase：<code>onclick</code> → <code>onClick</code>、<code>tabindex</code> → <code>tabIndex</code>、<code>for</code>（label）→ <code>htmlFor</code>。</p>
+          <p><strong>3. 單一根元素</strong>：每個元件只能回傳一個根元素。若不想多包一層 <code>div</code>，可用 <em>Fragment</em>：<code>&lt;&gt;...&lt;/&gt;</code> 或 <code>&lt;React.Fragment&gt;</code>。</p>
+          <p><strong>4. 自閉合標籤必須閉合</strong>：HTML 中 <code>&lt;br&gt;</code> 合法，但 JSX 中必須寫 <code>&lt;br /&gt;</code>，所有標籤都要關閉。</p>
+          <p><strong>5. 用 <code>{}</code> 插入 JS 表達式</strong>：大括號裡可以放任何 JS 表達式（變數、運算、函式呼叫），但不能放語句（if/for）。</p>
+          <p><strong>6. style 是物件</strong>：<code>style</code> 接受 JS 物件而非字串：<code>style=&#123;&#123;color: 'red', fontSize: '16px'&#125;&#125;</code>（雙大括號：外層是 JSX 表達式，內層是物件字面值）。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 語法規則完整範例</div></div>
+        <pre><span class="c">// ── JSX 被 Babel 轉譯的樣子 ──</span>
+<span class="c">// JSX:</span>   <span class="t">&lt;h1</span> <span class="p">className</span>=<span class="v">"title"</span><span class="t">&gt;</span>Hello<span class="t">&lt;/h1&gt;</span>
+<span class="c">// 轉譯: React.createElement('h1', {className:'title'}, 'Hello')</span>
+
+<span class="s">function</span> <span class="fn">MyComponent</span>() {
+  <span class="s">const</span> name  = <span class="v">'React'</span>;
+  <span class="s">const</span> count = <span class="str">42</span>;
+  <span class="s">const</span> isAdmin = <span class="s">true</span>;
+  <span class="s">const</span> items = [<span class="v">'A'</span>, <span class="v">'B'</span>, <span class="v">'C'</span>];
+
+  <span class="s">return</span> (
+    <span class="c">{/* Fragment 避免多餘的 div */}</span>
+    <span class="t">&lt;&gt;</span>
+      <span class="c">{/* className 不是 class */}</span>
+      <span class="t">&lt;h1</span> <span class="p">className</span>=<span class="v">"title"</span><span class="t">&gt;</span>Hello, <span class="kw">{</span>name<span class="kw">}</span>!<span class="t">&lt;/h1&gt;</span>
+
+      <span class="c">{/* 大括號內可放任何 JS 表達式 */}</span>
+      <span class="t">&lt;p&gt;</span>計算結果：<span class="kw">{</span>count * <span class="str">2</span><span class="kw">}</span><span class="t">&lt;/p&gt;</span>
+      <span class="t">&lt;p&gt;</span>現在時間：<span class="kw">{</span><span class="s">new</span> Date().<span class="fn">toLocaleTimeString</span>()<span class="kw">}</span><span class="t">&lt;/p&gt;</span>
+
+      <span class="c">{/* style 是物件（雙大括號）*/}</span>
+      <span class="t">&lt;div</span> <span class="p">style</span>=<span class="kw">{{</span>
+        <span class="p">color</span>: isAdmin ? <span class="v">'gold'</span> : <span class="v">'gray'</span>,
+        <span class="p">fontSize</span>: <span class="v">'1.2rem'</span>,         <span class="c">// camelCase！</span>
+        <span class="p">backgroundColor</span>: <span class="v">'#1a1a2e'</span>  <span class="c">// 不是 background-color</span>
+      <span class="kw">}}</span><span class="t">&gt;</span>
+        管理員模式
+      <span class="t">&lt;/div&gt;</span>
+
+      <span class="c">{/* htmlFor 取代 for */}</span>
+      <span class="t">&lt;label</span> <span class="p">htmlFor</span>=<span class="v">"email"</span><span class="t">&gt;</span>信箱<span class="t">&lt;/label&gt;</span>
+      <span class="t">&lt;input</span> <span class="p">id</span>=<span class="v">"email"</span> <span class="p">type</span>=<span class="v">"email"</span> <span class="t">/&gt;</span>  <span class="c">{/* 自閉合要有 / */}</span>
+      <span class="t">&lt;br</span> <span class="t">/&gt;</span>
+      <span class="t">&lt;img</span> <span class="p">src</span>=<span class="v">"./logo.png"</span> <span class="p">alt</span>=<span class="v">"Logo"</span> <span class="t">/&gt;</span>
+
+      <span class="c">{/* 大括號不能放 if/for，用表達式替代 */}</span>
+      <span class="t">&lt;span&gt;</span><span class="kw">{</span>isAdmin ? <span class="v">'管理員'</span> : <span class="v">'一般用戶'</span><span class="kw">}</span><span class="t">&lt;/span&gt;</span>
+      <span class="kw">{</span>isAdmin &amp;&amp; <span class="t">&lt;button&gt;</span>刪除<span class="t">&lt;/button&gt;</span><span class="kw">}</span>  <span class="c">{/* 短路渲染 */}</span>
+
+      <span class="c">{/* 列表渲染 */}</span>
+      <span class="t">&lt;ul&gt;</span>
+        <span class="kw">{</span>items.<span class="fn">map</span>((item, i) => (
+          <span class="t">&lt;li</span> <span class="p">key</span>=<span class="kw">{</span>i<span class="kw">}</span><span class="t">&gt;</span><span class="kw">{</span>item<span class="kw">}</span><span class="t">&lt;/li&gt;</span>  <span class="c">// key 是必要的</span>
+        ))<span class="kw">}</span>
+      <span class="t">&lt;/ul&gt;</span>
+    <span class="t">&lt;/&gt;</span>
+  );
+}</pre>
+      </div>
+
+      <div class="note warn">
+        <span class="note-label">常見 JSX 錯誤</span>
+        JSX 中的注釋不能用 <code>//</code> 或 <code>/* */</code> 直接放在標籤層級，需要用 <code>&#123;/* 注釋 */&#125;</code>（大括號包裹）。另外，<code>false</code>、<code>null</code>、<code>undefined</code>、<code>0</code>... 其中 <strong>0 會被渲染成文字「0」</strong>！用 <code>count &amp;&amp; &lt;Comp /&gt;</code> 時，如果 count 是 0，畫面會顯示 0 而非不渲染。改用 <code>count &gt; 0 &amp;&amp; &lt;Comp /&gt;</code> 或三元運算子更安全。
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: Components & Props -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">元件與 Props</h2>
+      <p class="section-intro">元件是 React 的核心積木。Props 是父元件向子元件傳遞資料的唯一方式。理解這個單向資料流，是掌握 React 架構的關鍵。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">函式元件</div><div class="csub">Function Component</div></div></div>
+        <div class="cbody">
+          <p>現代 React 只使用<em>函式元件</em>（Function Component）。它就是一個普通的 JS 函式：接受 <code>props</code> 物件作為參數，回傳描述 UI 的 JSX。命名規則：<strong>首字母必須大寫</strong>（React 用這個判斷是元件還是 HTML 標籤）。</p>
+          <p><code>props</code>（properties 縮寫）是父元件傳入的資料，在子元件內是<strong>唯讀的</strong>——絕對不能在子元件中修改 props，這是 React 最重要的規則之一（單向資料流）。如果子元件需要改變這個值，應該呼叫父元件傳入的回呼函式。</p>
+          <p>特殊 prop：<em>children</em>——當你在元件標籤之間放內容時，這些內容會透過 <code>props.children</code> 傳入，讓你可以建立像 <code>Card</code>、<code>Modal</code>、<code>Layout</code> 這類包裝元件。</p>
+        </div>
+      </div>
+
+      <!-- Props Playground -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>PROPS PLAYGROUND</strong><span>修改下方設定即時預覽元件變化</span></div>
+        <div class="demo-body">
+          <div class="props-controls">
+            <div class="prop-row">
+              <div class="prop-label">title:</div>
+              <input class="prop-input" id="propTitle" type="text" value="React 學習日記">
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">description:</div>
+              <input class="prop-input" id="propDesc" type="text" value="記錄每週的學習心得與收穫">
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">buttonLabel:</div>
+              <input class="prop-input" id="propBtnLabel" type="text" value="繼續閱讀">
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">accentColor:</div>
+              <input class="prop-input" id="propColor" type="color" value="#f97316" style="width:60px;height:32px;padding:2px;cursor:pointer;">
+              <input class="prop-input" id="propColorHex" type="text" value="#f97316" style="max-width:100px;">
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">variant:</div>
+              <select class="prop-select" id="propVariant">
+                <option value="default">default</option>
+                <option value="featured">featured</option>
+                <option value="minimal">minimal</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;">
+            <div>
+              <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.6rem;">PREVIEW</div>
+              <div class="card-preview" id="cardPreview">
+                <div class="card-preview-title" id="previewTitle">React 學習日記</div>
+                <div class="card-preview-body" id="previewDesc">記錄每週的學習心得與收穫</div>
+                <button class="card-preview-btn" id="previewBtn" style="background:#f97316;color:#fff;">繼續閱讀</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.6rem;">JSX 使用端</div>
+              <div class="props-code-display" id="propsCodeDisplay"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 元件定義與 Props 傳遞</div></div>
+        <pre><span class="c">// ── 定義元件（接受 props）──</span>
+<span class="s">function</span> <span class="fn">Card</span>({ title, description, buttonLabel, accentColor, variant = <span class="v">'default'</span> }) {
+  <span class="c">// 解構賦值從 props 取出各個屬性，variant 有預設值</span>
+
+  <span class="s">const</span> styles = {
+    default:  { border: <span class="v">`1px solid ${accentColor}`</span> },
+    featured: { border: <span class="v">`2px solid ${accentColor}`</span>, boxShadow: <span class="v">`0 0 20px ${accentColor}40`</span> },
+    minimal:  { border: <span class="v">'1px solid #333'</span> },
+  };
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">{`card card--${variant}`}</span> <span class="p">style</span>=<span class="kw">{</span>styles[variant]<span class="kw">}</span><span class="t">&gt;</span>
+      <span class="t">&lt;h3</span> <span class="p">style</span>=<span class="kw">{{</span><span class="p">color</span>: accentColor<span class="kw">}}</span><span class="t">&gt;</span><span class="kw">{</span>title<span class="kw">}</span><span class="t">&lt;/h3&gt;</span>
+      <span class="t">&lt;p&gt;</span><span class="kw">{</span>description<span class="kw">}</span><span class="t">&lt;/p&gt;</span>
+      <span class="t">&lt;button</span> <span class="p">style</span>=<span class="kw">{{</span><span class="p">background</span>: accentColor<span class="kw">}}</span><span class="t">&gt;</span>
+        <span class="kw">{</span>buttonLabel<span class="kw">}</span>
+      <span class="t">&lt;/button&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── 使用元件（傳入 props）──</span>
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;Card</span>
+        <span class="p">title</span>=<span class="v">"React 學習日記"</span>
+        <span class="p">description</span>=<span class="v">"記錄每週的學習心得"</span>
+        <span class="p">buttonLabel</span>=<span class="v">"繼續閱讀"</span>
+        <span class="p">accentColor</span>=<span class="v">"#f97316"</span>
+        <span class="p">variant</span>=<span class="v">"featured"</span>
+      <span class="t">/&gt;</span>
+      <span class="c">{/* 同一個元件，不同 props → 不同外觀 */}</span>
+      <span class="t">&lt;Card</span>
+        <span class="p">title</span>=<span class="v">"進階主題"</span>
+        <span class="p">description</span>=<span class="v">"useEffect 與資料取得"</span>
+        <span class="p">buttonLabel</span>=<span class="v">"開始學習"</span>
+        <span class="p">accentColor</span>=<span class="v">"#38bdf8"</span>
+      <span class="t">/&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── children prop ──</span>
+<span class="s">function</span> <span class="fn">Panel</span>({ title, children }) {
+  <span class="s">return</span> (
+    <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"panel"</span><span class="t">&gt;</span>
+      <span class="t">&lt;h2&gt;</span><span class="kw">{</span>title<span class="kw">}</span><span class="t">&lt;/h2&gt;</span>
+      <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"panel-body"</span><span class="t">&gt;</span><span class="kw">{</span>children<span class="kw">}</span><span class="t">&lt;/div&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// 使用時在標籤之間放內容，自動成為 children</span>
+<span class="t">&lt;Panel</span> <span class="p">title</span>=<span class="v">"設定"</span><span class="t">&gt;</span>
+  <span class="t">&lt;p&gt;</span>任何內容都可以放在這裡<span class="t">&lt;/p&gt;</span>
+  <span class="t">&lt;Button /&gt;</span>
+<span class="t">&lt;/Panel&gt;</span></pre>
+      </div>
+
+      <div class="note tip">
+        <span class="note-label">Props 最佳實踐</span>
+        使用<strong>解構賦值</strong>取出 props（<code>function Card(&#123; title, desc &#125;)</code>）比 <code>props.title</code> 更簡潔。給 props 設定<strong>預設值</strong>（<code>variant = 'default'</code>）讓元件更健壯。傳遞函式作為 props 時，慣例以 <code>on</code> 開頭命名（<code>onSubmit</code>、<code>onChange</code>、<code>onDelete</code>），清楚表明它是事件回呼。
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: State & useState -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">State 與 useState</h2>
+      <p class="section-intro">State 是讓元件「有記憶」的機制——記住按鈕被點幾次、輸入框裡有什麼文字、側欄是否展開。每次 state 改變，React 重新渲染元件。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">useState Hook</div><div class="csub">const [value, setValue] = useState(initialValue)</div></div></div>
+        <div class="cbody">
+          <p><code>useState</code> 回傳一個陣列：<em>第一個元素</em>是當前狀態值，<em>第二個元素</em>是更新函式。用解構賦值命名：<code>const [count, setCount] = useState(0)</code>。</p>
+          <p>呼叫 <code>setCount(newValue)</code> 後，React 會重新渲染這個元件（及其子元件），用新值重新計算 JSX 並更新 DOM。<strong>狀態更新不是立即的</strong>——呼叫 set 函式後，<code>count</code> 的值在這次渲染中仍是舊值，要到下次渲染才會是新值。</p>
+          <p><em>黃金規則：不能直接修改 state</em>。對物件和陣列型別的 state，必須建立新的物件/陣列，不能用 push、splice 等方法直接修改。React 用<strong>參考比對</strong>判斷是否需要重新渲染，直接修改不會觸發重新渲染。</p>
+          <div class="note warn">
+            <span class="note-label">State 不是普通變數</span>
+            普通變數的改變不會觸發重新渲染，也不會在重新渲染之間保留值。只有用 <code>useState</code> 管理的值，React 才會在重新渲染時記住並正確更新。如果你發現「改了值但畫面沒更新」，通常就是忘了用 state。
+          </div>
+        </div>
+      </div>
+
+      <!-- State Counter Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>INTERACTIVE STATE DEMO</strong><span>計數器即時展示 useState 行為</span></div>
+        <div class="demo-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div class="state-demo">
+              <div class="state-re-label">count = <span id="stateCountDisplay">0</span></div>
+              <div class="state-counter" id="stateCounter">0</div>
+              <div class="state-btns">
+                <button class="s-btn" id="stateDecBtn">&minus; 減一</button>
+                <button class="s-btn" id="stateIncBtn">＋ 加一</button>
+                <button class="s-btn danger" id="stateResetBtn">重設</button>
+              </div>
+              <div class="state-log" id="stateLog"><span style="color:#2a5a3a;">// state 更新日誌</span></div>
+            </div>
+            <div>
+              <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">RE-RENDER 視覺化</div>
+              <div style="font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.6rem;">橙色閃爍 = 重新渲染，綠色 = 未改變</div>
+              <div class="rerender-grid" id="rerenderGrid">
+                <div class="rr-comp" id="rr-app">App</div>
+                <div class="rr-comp" id="rr-header">Header</div>
+                <div class="rr-comp" id="rr-counter">Counter ⬅️</div>
+                <div class="rr-comp" id="rr-display">Display</div>
+                <div class="rr-comp" id="rr-btns">Buttons</div>
+                <div class="rr-comp" id="rr-log">Log</div>
+              </div>
+              <div style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);margin-top:.8rem;line-height:1.8;">
+                <div>state 在 Counter 元件 → Counter 及其子元件重新渲染</div>
+                <div>Header 不包含此 state → 不重新渲染</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — useState 完整參考</div></div>
+        <pre><span class="s">import</span> { useState } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="c">// ── 基本使用 ──</span>
+<span class="s">function</span> <span class="fn">Counter</span>() {
+  <span class="s">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="str">0</span>); <span class="c">// 初始值 0</span>
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;p&gt;</span>計數：<span class="kw">{</span>count<span class="kw">}</span><span class="t">&lt;/p&gt;</span>
+      <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>() => <span class="fn">setCount</span>(count + <span class="str">1</span>)<span class="kw">}</span><span class="t">&gt;</span>+1<span class="t">&lt;/button&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── 函式形式更新（依賴前一個值時必用）──</span>
+<span class="fn">setCount</span>(prev => prev + <span class="str">1</span>); <span class="c">// prev 保證是最新值</span>
+
+<span class="c">// ── 物件 state：必須展開，不能直接修改 ──</span>
+<span class="s">const</span> [user, setUser] = <span class="fn">useState</span>({ name: <span class="v">'Alice'</span>, age: <span class="str">25</span> });
+
+<span class="c">// ❌ 錯誤：直接修改，不會觸發重新渲染</span>
+user.name = <span class="v">'Bob'</span>;
+<span class="fn">setUser</span>(user); <span class="c">// 參考沒變，React 不會重新渲染</span>
+
+<span class="c">// ✅ 正確：建立新物件</span>
+<span class="fn">setUser</span>({ ...user, name: <span class="v">'Bob'</span> }); <span class="c">// 展開舊物件，覆寫 name</span>
+
+<span class="c">// ── 陣列 state：必須建立新陣列 ──</span>
+<span class="s">const</span> [todos, setTodos] = <span class="fn">useState</span>([]);
+
+<span class="c">// ❌ 錯誤</span>
+todos.<span class="fn">push</span>({ id: <span class="str">1</span>, text: <span class="v">'買咖啡'</span> }); <span class="fn">setTodos</span>(todos);
+
+<span class="c">// ✅ 新增</span>
+<span class="fn">setTodos</span>([...todos, { id: Date.<span class="fn">now</span>(), text: <span class="v">'買咖啡'</span>, done: <span class="s">false</span> }]);
+
+<span class="c">// ✅ 刪除（filter 建立新陣列）</span>
+<span class="fn">setTodos</span>(todos.<span class="fn">filter</span>(todo => todo.id !== targetId));
+
+<span class="c">// ✅ 更新某一項（map 建立新陣列）</span>
+<span class="fn">setTodos</span>(todos.<span class="fn">map</span>(todo =>
+  todo.id === targetId ? { ...todo, done: !todo.done } : todo
+));
+
+<span class="c">// ── 布林值切換 ──</span>
+<span class="s">const</span> [isOpen, setIsOpen] = <span class="fn">useState</span>(<span class="s">false</span>);
+<span class="fn">setIsOpen</span>(prev => !prev); <span class="c">// 切換</span>
+
+<span class="c">// ── 字串 state（受控輸入）──</span>
+<span class="s">const</span> [input, setInput] = <span class="fn">useState</span>(<span class="v">''</span>);
+<span class="t">&lt;input</span>
+  <span class="p">value</span>=<span class="kw">{</span>input<span class="kw">}</span>
+  <span class="p">onChange</span>=<span class="kw">{</span>e => <span class="fn">setInput</span>(e.target.value)<span class="kw">}</span>
+<span class="t">/&gt;</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: Conditional Rendering & Lists -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">條件渲染與列表</h2>
+      <p class="section-intro">根據狀態決定顯示什麼、把資料陣列變成 UI 元素——這兩個技巧在每個 React 應用中無處不在。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">條件渲染的三種寫法</div><div class="csub">三元 / 短路 / 提前回傳</div></div></div>
+        <div class="cbody">
+          <p><em>三元運算子（? :）</em>：最常用，適合在 JSX 中選擇渲染兩種不同的內容。<code>&#123;isLoggedIn ? &lt;Dashboard /&gt; : &lt;Login /&gt;&#125;</code></p>
+          <p><em>&amp;&amp; 短路語法</em>：只有 true 時才渲染，false 時不渲染任何東西（注意 0 的陷阱）。適合可選的 UI 元素：<code>&#123;hasError &amp;&amp; &lt;ErrorMessage /&gt;&#125;</code></p>
+          <p><em>提前回傳（Early Return）</em>：在函式最開頭判斷，直接 return null 或另一個 JSX。適合整個元件的可見性切換，讓主要渲染邏輯保持簡潔。</p>
+        </div>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">列表渲染與 key prop</div><div class="csub">Array.map() + key</div></div></div>
+        <div class="cbody">
+          <p>在 React 中，把陣列渲染成 UI 元素的標準做法是 <code>array.map()</code>，回傳 JSX 陣列。每個元素<strong>必須有唯一的 key prop</strong>，讓 React 在更新時識別哪個元素是哪個，避免不必要的重新渲染或狀態錯誤。</p>
+          <p><em>key 應該是穩定、唯一的識別符</em>——用資料的 ID 是最佳選擇。不應該用陣列索引（<code>index</code>）作為 key，因為當列表重新排序或刪除中間項目時，索引會對應到不同的資料，導致 React 的 Diffing 出錯，可能造成 UI 狀態異常。</p>
+          <div class="note warn">
+            <span class="note-label">key 不是 prop</span>
+            <code>key</code> 是 React 的特殊屬性，<strong>不會被傳入元件的 props</strong>。如果你需要在元件內使用元素的 ID，必須另外傳一個獨立的 prop（如 <code>id={item.id}</code>）。
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 條件渲染與列表</div></div>
+        <pre><span class="c">// ── 條件渲染：三元運算子 ──</span>
+<span class="s">function</span> <span class="fn">UserPanel</span>({ isLoggedIn, user }) {
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="kw">{</span>isLoggedIn ? (
+        <span class="t">&lt;div&gt;</span>
+          <span class="t">&lt;p&gt;</span>歡迎，<span class="kw">{</span>user.name<span class="kw">}</span>！<span class="t">&lt;/p&gt;</span>
+          <span class="t">&lt;button&gt;</span>登出<span class="t">&lt;/button&gt;</span>
+        <span class="t">&lt;/div&gt;</span>
+      ) : (
+        <span class="t">&lt;button&gt;</span>登入<span class="t">&lt;/button&gt;</span>
+      )<span class="kw">}</span>
+
+      <span class="c">{/* && 短路：只有 true 才渲染 */}</span>
+      <span class="kw">{</span>user.isAdmin &amp;&amp; <span class="t">&lt;AdminBadge</span> <span class="t">/&gt;</span><span class="kw">}</span>
+
+      <span class="c">{/* ⚠️ 避免用數字做短路（0 會渲染）*/}</span>
+      <span class="kw">{</span>notifications.length &gt; <span class="str">0</span> &amp;&amp; <span class="t">&lt;Badge</span> <span class="p">count</span>=<span class="kw">{</span>notifications.length<span class="kw">}</span> <span class="t">/&gt;</span><span class="kw">}</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── 提前回傳（早期 return）──</span>
+<span class="s">function</span> <span class="fn">Profile</span>({ user }) {
+  <span class="s">if</span> (!user) <span class="s">return</span> <span class="s">null</span>;           <span class="c">// 無資料時不渲染</span>
+  <span class="s">if</span> (user.banned) <span class="s">return</span> <span class="t">&lt;BannedMessage</span> <span class="t">/&gt;</span>;
+  <span class="s">return</span> <span class="t">&lt;div&gt;</span><span class="kw">{</span>user.name<span class="kw">}</span><span class="t">&lt;/div&gt;</span>;    <span class="c">// 主要渲染</span>
+}
+
+<span class="c">// ── 列表渲染：用 .map() ──</span>
+<span class="s">const</span> todos = [
+  { id: <span class="str">1</span>, text: <span class="v">'學 React'</span>,   done: <span class="s">true</span>  },
+  { id: <span class="str">2</span>, text: <span class="v">'做作業'</span>,    done: <span class="s">false</span> },
+  { id: <span class="str">3</span>, text: <span class="v">'寫部落格'</span>,  done: <span class="s">false</span> },
+];
+
+<span class="s">function</span> <span class="fn">TodoList</span>({ todos }) {
+  <span class="s">return</span> (
+    <span class="t">&lt;ul&gt;</span>
+      <span class="kw">{</span>todos.<span class="fn">map</span>(todo => (
+        <span class="t">&lt;li</span>
+          <span class="p">key</span>=<span class="kw">{</span>todo.id<span class="kw">}</span>            <span class="c">// ✅ 用 id 而非 index</span>
+          <span class="p">style</span>=<span class="kw">{{</span><span class="p">textDecoration</span>: todo.done ? <span class="v">'line-through'</span> : <span class="v">'none'</span><span class="kw">}}</span>
+        <span class="t">&gt;</span>
+          <span class="kw">{</span>todo.text<span class="kw">}</span>
+        <span class="t">&lt;/li&gt;</span>
+      ))<span class="kw">}</span>
+    <span class="t">&lt;/ul&gt;</span>
+  );
+}
+
+<span class="c">// ── 過濾後渲染 ──</span>
+<span class="s">function</span> <span class="fn">FilteredList</span>({ items, query }) {
+  <span class="s">const</span> filtered = items.<span class="fn">filter</span>(item =>
+    item.name.<span class="fn">toLowerCase</span>().<span class="fn">includes</span>(query.<span class="fn">toLowerCase</span>())
+  );
+
+  <span class="s">if</span> (filtered.length === <span class="str">0</span>) {
+    <span class="s">return</span> <span class="t">&lt;p</span> <span class="p">className</span>=<span class="v">"empty"</span><span class="t">&gt;</span>找不到符合的結果<span class="t">&lt;/p&gt;</span>;
+  }
+
+  <span class="s">return</span> (
+    <span class="t">&lt;ul&gt;</span>
+      <span class="kw">{</span>filtered.<span class="fn">map</span>(item => (
+        <span class="t">&lt;li</span> <span class="p">key</span>=<span class="kw">{</span>item.id<span class="kw">}</span><span class="t">&gt;</span><span class="kw">{</span>item.name<span class="kw">}</span><span class="t">&lt;/li&gt;</span>
+      ))<span class="kw">}</span>
+    <span class="t">&lt;/ul&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: Event Handling -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">React 中的事件處理</h2>
+      <p class="section-intro">React 事件和原生 DOM 事件很相似，但有幾個關鍵差異需要理解，尤其是「傳函式引用」vs「呼叫函式」這個常見誤解。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">SyntheticEvent 與事件處理模式</div><div class="csub">React 的事件系統</div></div></div>
+        <div class="cbody">
+          <p>React 的事件處理器（如 <code>onClick</code>）使用<em>合成事件（SyntheticEvent）</em>——它包裝了瀏覽器原生事件，提供跨瀏覽器一致的介面。你可以用 <code>e.preventDefault()</code>、<code>e.stopPropagation()</code> 等方法，行為和原生事件相同。</p>
+          <p>最重要的規則：<strong>傳入函式引用，不要呼叫函式</strong>。<code>onClick=&#123;handleClick&#125;</code> 正確（傳函式，點擊時才執行）；<code>onClick=&#123;handleClick()&#125;</code> 錯誤（立刻執行，渲染時就觸發）。</p>
+          <p>當需要傳遞額外參數時，用箭頭函式包裹：<code>onClick=&#123;() =&gt; handleDelete(item.id)&#125;</code>。這樣點擊時才會呼叫 <code>handleDelete</code>，並傳入 <code>item.id</code>。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 事件處理完整模式</div></div>
+        <pre><span class="c">// ── 基本事件綁定 ──</span>
+<span class="s">function</span> <span class="fn">MyForm</span>() {
+  <span class="s">const</span> [value, setValue] = <span class="fn">useState</span>(<span class="v">''</span>);
+
+  <span class="c">// 事件處理函式（接受 event 物件）</span>
+  <span class="s">function</span> <span class="fn">handleChange</span>(e) {
+    <span class="fn">setValue</span>(e.target.value);
+  }
+
+  <span class="s">function</span> <span class="fn">handleSubmit</span>(e) {
+    e.<span class="fn">preventDefault</span>(); <span class="c">// 阻止表單預設提交</span>
+    console.<span class="fn">log</span>(<span class="v">'送出：'</span>, value);
+  }
+
+  <span class="s">return</span> (
+    <span class="t">&lt;form</span> <span class="p">onSubmit</span>=<span class="kw">{</span>handleSubmit<span class="kw">}</span><span class="t">&gt;</span>  <span class="c">{/* 傳引用，不是呼叫 */}</span>
+      <span class="t">&lt;input</span>
+        <span class="p">value</span>=<span class="kw">{</span>value<span class="kw">}</span>
+        <span class="p">onChange</span>=<span class="kw">{</span>handleChange<span class="kw">}</span>    <span class="c">{/* ✅ 正確 */}</span>
+        <span class="c">{/* onChange={handleChange()} ❌ 錯誤，立刻執行 */}</span>
+      <span class="t">/&gt;</span>
+      <span class="t">&lt;button</span> <span class="p">type</span>=<span class="v">"submit"</span><span class="t">&gt;</span>送出<span class="t">&lt;/button&gt;</span>
+    <span class="t">&lt;/form&gt;</span>
+  );
+}
+
+<span class="c">// ── 傳遞額外參數 ──</span>
+<span class="s">function</span> <span class="fn">TodoList</span>({ todos, onDelete, onToggle }) {
+  <span class="s">return</span> (
+    <span class="t">&lt;ul&gt;</span>
+      <span class="kw">{</span>todos.<span class="fn">map</span>(todo => (
+        <span class="t">&lt;li</span> <span class="p">key</span>=<span class="kw">{</span>todo.id<span class="kw">}</span><span class="t">&gt;</span>
+          <span class="c">{/* 箭頭函式包裹，傳入額外參數 */}</span>
+          <span class="t">&lt;span</span> <span class="p">onClick</span>=<span class="kw">{</span>() => <span class="fn">onToggle</span>(todo.id)<span class="kw">}</span><span class="t">&gt;</span>
+            <span class="kw">{</span>todo.text<span class="kw">}</span>
+          <span class="t">&lt;/span&gt;</span>
+          <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>() => <span class="fn">onDelete</span>(todo.id)<span class="kw">}</span><span class="t">&gt;</span>
+            刪除
+          <span class="t">&lt;/button&gt;</span>
+        <span class="t">&lt;/li&gt;</span>
+      ))<span class="kw">}</span>
+    <span class="t">&lt;/ul&gt;</span>
+  );
+}
+
+<span class="c">// ── 常用事件 ──</span>
+<span class="t">&lt;button</span>   <span class="p">onClick</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">&gt;</span>              <span class="c">{/* 點擊 */}</span>
+<span class="t">&lt;input</span>    <span class="p">onChange</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">/&gt;</span>           <span class="c">{/* 輸入值改變 */}</span>
+<span class="t">&lt;form</span>     <span class="p">onSubmit</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">&gt;</span>           <span class="c">{/* 表單提交 */}</span>
+<span class="t">&lt;input</span>    <span class="p">onKeyDown</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">/&gt;</span>          <span class="c">{/* 按下按鍵 */}</span>
+<span class="t">&lt;div</span>      <span class="p">onMouseEnter</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">&gt;</span>       <span class="c">{/* 滑鼠進入 */}</span>
+<span class="t">&lt;input</span>    <span class="p">onFocus</span>=<span class="kw">{</span>fn<span class="kw">}</span> <span class="p">onBlur</span>=<span class="kw">{</span>fn<span class="kw">}</span> <span class="t">/&gt;</span> <span class="c">{/* 焦點 */}</span>
+<span class="t">&lt;div</span>      <span class="p">onScroll</span>=<span class="kw">{</span>fn<span class="kw">}</span><span class="t">&gt;</span>           <span class="c">{/* 滾動 */}</span>
+
+<span class="c">// ── 使用者按 Enter 送出 ──</span>
+<span class="t">&lt;input</span>
+  <span class="p">onKeyDown</span>=<span class="kw">{</span>(e) => {
+    <span class="s">if</span> (e.key === <span class="v">'Enter'</span> &amp;&amp; !e.shiftKey) {
+      e.<span class="fn">preventDefault</span>();
+      <span class="fn">handleSubmit</span>();
+    }
+  }<span class="kw">}</span>
+<span class="t">/&gt;</span></pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>常見錯誤</th><th>原因</th><th>正確做法</th></tr></thead>
+        <tbody>
+          <tr><td>onClick={handleClick()}</td><td>渲染時就立刻執行，回傳值作為 handler</td><td>onClick={handleClick} — 傳引用</td></tr>
+          <tr><td>setTodos([...todos, newItem])<br>console.log(todos)</td><td>state 更新非同步，log 的還是舊值</td><td>在下次渲染後才能看到新值</td></tr>
+          <tr><td>todos.push(item); setTodos(todos)</td><td>直接修改，React 偵測不到變化</td><td>setTodos([...todos, item])</td></tr>
+          <tr><td>key={index}</td><td>列表重排/刪除時 key 對應資料錯誤</td><td>key={item.id} — 用穩定唯一 ID</td></tr>
+          <tr><td>{0 &amp;&amp; &lt;Comp /&gt;}</td><td>0 會被渲染成文字「0」</td><td>{count &gt; 0 &amp;&amp; &lt;Comp /&gt;}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋本週 React 核心概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">以下哪段程式碼「正確地」更新一個物件 state？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>user.name = 'Bob'; setUser(user);</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>setUser(Object.assign(user, { name: 'Bob' }));</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>setUser({ ...user, name: 'Bob' });</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>setUser(prev => { prev.name = 'Bob'; return prev; });</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>展開運算子 <code>&#123;...user, name: 'Bob'&#125;</code> 建立一個新物件，包含 user 的所有屬性，再覆寫 name。React 偵測到新的物件參考，觸發重新渲染。選項 A 和 B 直接修改原物件，D 在回呼函式中修改 prev——這些都沒有建立新物件，React 不會觸發重新渲染。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>React 用「參考相等性」判斷 state 是否改變。只有傳入一個全新的物件，React 才會重新渲染。哪個選項建立了新物件？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">渲染以下 JSX 時，畫面會顯示什麼？<br><code style="font-size:.85rem;">&#123;0 &amp;&amp; &lt;span&gt;有訊息&lt;/span&gt;&#125;</code></div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>什麼都不顯示（因為 0 是 falsy）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>顯示數字 <strong>0</strong></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>顯示「有訊息」</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>拋出錯誤</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>這是 React 著名的陷阱！<code>false</code>、<code>null</code>、<code>undefined</code> 不會渲染任何東西，但<strong>數字 0 會被渲染成文字「0」</strong>。因為短路求值的結果是 <code>0</code>（一個數字），而 React 會把數字渲染出來。安全做法：<code>&#123;count &gt; 0 &amp;&amp; ...&#125;</code> 或 <code>&#123;!!count &amp;&amp; ...&#125;</code>。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>注意 React 對「falsy 值」的渲染規則——<code>false</code>、<code>null</code>、<code>undefined</code> 和數字 <code>0</code> 的處理方式不完全一樣。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">在 React 列表渲染中，為什麼不建議用陣列索引（index）作為 key？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>因為 React 不支援數字類型的 key，只接受字串</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>因為 index 不能保證唯一性</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>因為使用 index 會讓效能變差</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>因為刪除或重排列表時，index 與資料的對應關係會改變，導致 React 的 Diffing 出錯，可能造成元件狀態異常</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>假設列表有 [A(0), B(1), C(2)]，刪掉 A 後變成 [B(0), C(1)]。React 看到「key=0 的內容從 A 變成 B」，會認為是更新而非刪除，可能保留 A 的元件狀態（如輸入框的值）給 B 使用。只有在列表不會重排、也不會刪除中間元素時，才可以用 index。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Key 的作用是讓 React 識別「這個 DOM 節點對應的是哪筆資料」。當列表發生變化時，如果 key 的對應關係改變了，會發生什麼？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">以下哪個寫法在點擊按鈕時「不會」執行 handleDelete(item.id)？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>&lt;button onClick={() =&gt; handleDelete(item.id)}&gt;</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>&lt;button onClick={handleDelete.bind(null, item.id)}&gt;</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>&lt;button onClick={handleDelete(item.id)}&gt;</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>const del = () =&gt; handleDelete(item.id); &lt;button onClick={del}&gt;</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>選項 C <code>onClick=&#123;handleDelete(item.id)&#125;</code> 在 JSX 渲染時就立刻呼叫了 <code>handleDelete(item.id)</code>，把<strong>回傳值</strong>（通常是 undefined）設定為 onClick 的 handler，所以點擊時什麼都不發生。其他選項都正確地傳入一個函式，點擊時才執行。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>區分「傳入函式」和「呼叫函式並傳入回傳值」。onClick 需要接受一個函式，點擊時才呼叫它。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：計數器 + Todo List</h2>
+      <p class="section-intro">用 Vite 建立真實的 React 專案，從計數器開始，逐步擴展到完整的 Todo List，體驗元件化開發的完整流程。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 08 PROJECT</div>
+        <div class="project-name">React Todo App<br>計數器 + 待辦清單</div>
+        <p class="project-desc">用 Vite + React 建立真實專案，實作元件拆分、props 傳遞、useState 管理，打造一個完整的互動待辦清單應用程式。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">用 Vite 建立 React 專案</div>
+            <div class="step-body">在終端機執行 <code>npm create vite@latest my-todo-app -- --template react</code>，進入資料夾後執行 <code>npm install</code>，再 <code>npm run dev</code> 啟動開發伺服器。刪除 <code>src/App.css</code> 內容和 <code>src/index.css</code> 的預設樣式，從空白開始。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">Part 1：實作計數器元件</div>
+            <div class="step-body">建立 <code>src/components/Counter.jsx</code>，使用 <code>useState(0)</code> 管理計數。實作「加一」「減一」「重設」三個按鈕，加上讓計數值不能低於 0 的限制（<code>Math.max(0, count - 1)</code>）。在 App.jsx 中引入並使用此元件。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">拆分元件結構</div>
+            <div class="step-body">建立以下元件檔案：<code>Header.jsx</code>（顯示標題和待辦數量）、<code>TodoForm.jsx</code>（輸入框和新增按鈕）、<code>TodoList.jsx</code>（渲染列表）、<code>TodoItem.jsx</code>（單一項目）。先把 App.jsx 中的 state 和函式設計好，再決定哪些 props 需要往下傳。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">在 App.jsx 實作核心邏輯</div>
+            <div class="step-body">在 <code>App.jsx</code> 中用 <code>useState([])  </code> 管理 todos 陣列。實作三個函式：<code>addTodo(text)</code>（新增，每個 todo 需要唯一 id，可用 <code>Date.now()</code>）、<code>toggleTodo(id)</code>（切換完成狀態，用 map 建立新陣列）、<code>deleteTodo(id)</code>（刪除，用 filter 建立新陣列）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">實作 TodoForm（受控輸入）</div>
+            <div class="step-body">在 TodoForm 中用 <code>useState('')</code> 管理輸入值，input 的 <code>value</code> 綁定 state，<code>onChange</code> 更新 state（受控元件模式）。送出時（按鈕 onClick 或 form onSubmit）驗證輸入非空，呼叫 <code>props.onAdd(inputValue)</code>，然後清空輸入框。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">實作 TodoList 與 TodoItem</div>
+            <div class="step-body">TodoList 接受 todos 陣列和 onToggle、onDelete 函式，用 <code>todos.map()</code> 渲染 TodoItem，記得傳入 <code>key={todo.id}</code>。TodoItem 顯示文字（完成時加刪除線樣式）、完成切換按鈕、刪除按鈕，點擊時呼叫對應的 props 函式並傳入 <code>todo.id</code>。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：篩選功能</div>
+            <div class="step-body">在 App.jsx 加入 <code>filter</code> state（'all' | 'active' | 'done'）。渲染前根據 filter 篩選 todos：<code>const filtered = todos.filter(t => filter === 'all' ? true : filter === 'done' ? t.done : !t.done)</code>。建立三個篩選按鈕，active 狀態用 className 標示。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：LocalStorage 持久化</div>
+            <div class="step-body">在初始化時從 localStorage 讀取：<code>useState(() =&gt; JSON.parse(localStorage.getItem('todos') ?? '[]'))</code>（lazy initializer）。每次 todos 改變時儲存，這需要 <code>useEffect</code>（下週主題，先嘗試了解）：<code>useEffect(() =&gt; localStorage.setItem('todos', JSON.stringify(todos)), [todos])</code>。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>用 Vite 建立真實 React 專案，成功在瀏覽器看到執行結果</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>計數器元件用 <code>useState</code> 管理，三個按鈕（加一、減一、重設）正常運作，不低於 0</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>應用程式拆分成至少 4 個獨立元件，每個檔案只有一個預設匯出的元件</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>todos state 在 App.jsx 管理，透過 props 傳遞給子元件，沒有在子元件直接修改</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>新增 todo：輸入框是受控元件，送出後清空，驗證非空字串才能新增</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>切換完成：點擊後文字有刪除線樣式，state 用 map 建立新陣列更新</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>刪除 todo：用 filter 從 state 移除，key prop 使用 todo.id 而非 index</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）實作 all/active/done 篩選，或 localStorage 持久化</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">React 官方文件是目前最好的學習資源，互動式教學設計精良。這些工具和資源幫助你更快建立 React 開發直覺。</p>
+      <div class="resource-grid">
+        <a href="https://react.dev/learn" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件 / 互動式</div>
+          <div class="resource-name">React 官方教學</div>
+          <div class="resource-desc">2023 年全新改版，從井字棋遊戲教你 React 基礎，每個概念都有在線可編輯的沙盒，是學習 React 的最佳起點。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://react.dev/learn/tutorial-tic-tac-toe" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方互動教學</div>
+          <div class="resource-name">React 官方 — 井字棋教學</div>
+          <div class="resource-desc">30–60 分鐘完成的互動教學，建立一個完整的井字棋遊戲，涵蓋元件、state、props 等核心概念，強烈推薦做完。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://react.dev/reference/react/useState" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">API 參考</div>
+          <div class="resource-name">useState API 文件</div>
+          <div class="resource-desc">useState 的完整說明，包含常見陷阱（如為什麼不能直接修改物件/陣列 state）和解決方案，含大量程式碼範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://codesandbox.io/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">線上沙盒</div>
+          <div class="resource-name">CodeSandbox</div>
+          <div class="resource-desc">在瀏覽器中建立完整的 React 專案，不需要本地環境設定，適合快速實驗概念和分享程式碼。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://react.dev/learn/thinking-in-react" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">思維指南</div>
+          <div class="resource-name">Thinking in React</div>
+          <div class="resource-desc">React 官方的設計思維指南，教你如何把一個 UI 設計稿拆解成元件樹，決定 state 放在哪個元件，是理解 React 架構的必讀文章。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">開發工具</div>
+          <div class="resource-name">React DevTools</div>
+          <div class="resource-desc">Chrome 擴充功能，讓你在 DevTools 中看到元件樹結構、即時查看和修改 props 與 state，是 React 開發的必裝工具。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week7.html" class="nav-btn">&larr; Week 07：ES6+ 模組化</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week9.html" class="nav-btn">Week 09：React Hooks &rarr;</a>
+  </div>
+</main>
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progressBar').style.width = Math.min(p,100) + '%';
+});
+
+// ── Scroll Reveal ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.07 });
+document.querySelectorAll('.section').forEach(s => obs.observe(s));
+
+// ── TOC ──
+const secIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls = secIds.map(id => document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll', () => {
+  let cur = '';
+  secEls.forEach(el => { if(window.scrollY >= el.offsetTop - 130) cur = el.id; });
+  document.querySelectorAll('.toc-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + cur);
+  });
+});
+
+// ── Component Tree Explorer ──
+document.querySelectorAll('.comp-node').forEach(node => {
+  node.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.comp-node').forEach(n => n.classList.remove('selected'));
+    node.classList.add('selected');
+    const raw = node.dataset.info;
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    const panel = document.getElementById('compInfoPanel');
+    panel.innerHTML = `
+      <span class="comp-info-label">元件詳情</span>
+      <div style="font-weight:700;font-size:.85rem;color:var(--accent);margin-bottom:.3rem;">&lt;${d.name} /&gt;</div>
+      <div style="color:var(--blue);font-size:.72rem;margin-bottom:.6rem;">${d.type}</div>
+      <div style="color:var(--muted);font-size:.72rem;margin-bottom:.4rem;">${d.desc}</div>
+      <div style="margin-top:.6rem;"><span style="color:var(--faint);">Props: </span><span style="color:var(--text);font-size:.72rem;">${d.props}</span></div>
+      <div><span style="color:var(--faint);">State: </span><span style="color:var(--green);font-size:.72rem;">${d.state}</span></div>
+    `;
+  });
+});
+
+// ── Props Playground ──
+function updateCardPreview() {
+  const title   = document.getElementById('propTitle').value;
+  const desc    = document.getElementById('propDesc').value;
+  const btnLbl  = document.getElementById('propBtnLabel').value;
+  const color   = document.getElementById('propColor').value;
+  const variant = document.getElementById('propVariant').value;
+
+  document.getElementById('propColorHex').value = color;
+
+  const preview = document.getElementById('cardPreview');
+  document.getElementById('previewTitle').textContent = title;
+  document.getElementById('previewTitle').style.color = color;
+  document.getElementById('previewDesc').textContent = desc;
+  document.getElementById('previewBtn').textContent = btnLbl;
+  document.getElementById('previewBtn').style.background = color;
+  document.getElementById('previewBtn').style.color = '#fff';
+
+  if(variant === 'featured') {
+    preview.style.border = `2px solid ${color}`;
+    preview.style.boxShadow = `0 0 20px ${color}40`;
+  } else if(variant === 'minimal') {
+    preview.style.border = '1px solid var(--border)';
+    preview.style.boxShadow = 'none';
+  } else {
+    preview.style.border = `1px solid ${color}`;
+    preview.style.boxShadow = 'none';
+  }
+
+  document.getElementById('propsCodeDisplay').innerHTML =
+    `<span style="color:var(--muted);">&lt;Card</span>\n` +
+    `  <span style="color:var(--blue);">title</span>=<span style="color:var(--v,#fde68a);">"${title.replace(/"/g,'&quot;')}"</span>\n` +
+    `  <span style="color:var(--blue);">description</span>=<span style="color:#fde68a;">"${desc.slice(0,22).replace(/"/g,'&quot;')}..."</span>\n` +
+    `  <span style="color:var(--blue);">buttonLabel</span>=<span style="color:#fde68a;">"${btnLbl.replace(/"/g,'&quot;')}"</span>\n` +
+    `  <span style="color:var(--blue);">accentColor</span>=<span style="color:#fde68a;">"${color}"</span>\n` +
+    `  <span style="color:var(--blue);">variant</span>=<span style="color:#fde68a;">"${variant}"</span>\n` +
+    `<span style="color:var(--muted);">/&gt;</span>`;
+}
+['propTitle','propDesc','propBtnLabel','propColor','propColorHex','propVariant'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', e => {
+    if(id === 'propColorHex') document.getElementById('propColor').value = e.target.value;
+    if(id === 'propColor') document.getElementById('propColorHex').value = e.target.value;
+    updateCardPreview();
+  });
+});
+updateCardPreview();
+
+// ── State Counter + Re-render Visualiser ──
+let stateCount = 0;
+let renderSeq = 0;
+const counterEl  = document.getElementById('stateCounter');
+const displayEl  = document.getElementById('stateCountDisplay');
+const logEl      = document.getElementById('stateLog');
+const rrComps    = ['rr-display','rr-btns','rr-log','rr-counter'];
+const stableComp = ['rr-app','rr-header'];
+
+function flashRender(affectedIds) {
+  renderSeq++;
+  const seq = renderSeq;
+
+  // flash affected
+  affectedIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('stable','flashing');
+    void el.offsetWidth;
+    el.classList.add('flashing');
+    el.innerHTML = el.innerHTML.replace(/<span.*?<\/span>/,'');
+    const badge = document.createElement('span');
+    badge.className = 'rr-badge';
+    badge.textContent = '↺';
+    el.appendChild(badge);
+  });
+
+  // mark stable
+  stableComp.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove('flashing');
+    el.classList.add('stable');
+  });
+
+  setTimeout(() => {
+    if(renderSeq !== seq) return;
+    affectedIds.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) { el.classList.remove('flashing'); const b = el.querySelector('.rr-badge'); if(b) b.remove(); }
+    });
+    stableComp.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.classList.remove('stable');
+    });
+  }, 700);
+}
+
+function addLog(msg) {
+  const entry = document.createElement('div');
+  entry.textContent = msg;
+  entry.style.color = '#4ade80';
+  if(logEl.firstChild && logEl.firstChild.textContent && logEl.firstChild.textContent.startsWith('//')) {
+    logEl.innerHTML = '';
+  }
+  logEl.insertBefore(entry, logEl.firstChild);
+  while(logEl.children.length > 8) logEl.removeChild(logEl.lastChild);
+}
+
+function updateCounter(newVal) {
+  stateCount = newVal;
+  counterEl.textContent = newVal;
+  displayEl.textContent = newVal;
+  counterEl.classList.remove('bump');
+  void counterEl.offsetWidth;
+  counterEl.classList.add('bump');
+  flashRender(rrComps);
+  addLog(`setCount(${newVal}) → 重新渲染 Counter 及子元件`);
+}
+
+document.getElementById('stateIncBtn').addEventListener('click', () => updateCounter(stateCount + 1));
+document.getElementById('stateDecBtn').addEventListener('click', () => updateCounter(stateCount - 1));
+document.getElementById('stateResetBtn').addEventListener('click', () => updateCounter(0));
+
+// ── Quiz ──
+document.querySelectorAll('.quiz-block').forEach(block => {
+  const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts = block.querySelectorAll('.quiz-opt');
+  const fbs  = block.querySelectorAll('.quiz-fb');
+  let done = false;
+  opts.forEach((opt, i) => {
+    opt.addEventListener('click', () => {
+      if(done) return;
+      done = true;
+      opts.forEach(o => o.style.pointerEvents = 'none');
+      if(i === correct) {
+        opt.classList.add('correct');
+        fbs[0] && fbs[0].classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        opts[correct].classList.add('correct');
+        fbs[1] && fbs[1].classList.add('show');
+        setTimeout(() => {
+          done = false;
+          opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+          fbs.forEach(f => f.classList.remove('show'));
+        }, 2800);
+      }
+    });
+  });
+});
+
+// ── Checklist ──
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+}
+</script>
+</body>
+</html>

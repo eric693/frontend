@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 09 — React Hooks：useEffect、useContext</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080f10;
+  --bg2:#0d161a;
+  --bg3:#141f24;
+  --surface:#1a2830;
+  --border:#243040;
+  --text:#dff0f4;
+  --muted:#5a8090;
+  --accent:#38bdf8;
+  --accent-g:linear-gradient(135deg,#38bdf8,#34d399);
+  --accent2:#34d399;
+  --accent3:#f472b6;
+  --amber:#fbbf24;
+  --red:#f87171;
+  --glow:rgba(56,189,248,0.15);
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);opacity:0.09;}
+body::before{width:520px;height:520px;background:radial-gradient(circle,#38bdf8,transparent);top:-140px;right:-100px;}
+body::after{width:400px;height:400px;background:radial-gradient(circle,#34d399,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(8,15,16,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.58rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:2px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(56,189,248,.07),transparent);pointer-events:none;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-weight:900;font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-deco{position:absolute;right:4rem;top:50%;transform:translateY(-50%);width:220px;height:220px;pointer-events:none;opacity:0;animation:fadeUp .5s .6s forwards;}
+.hero-deco-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent),var(--accent2)) border-box;animation:spin 8s linear infinite;}
+.hero-deco-ring:nth-child(2){inset:20px;animation-duration:5s;animation-direction:reverse;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent2),var(--accent3)) border-box;}
+.hero-deco-ring:nth-child(3){inset:42px;animation-duration:3s;background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,var(--accent3),var(--accent)) border-box;}
+.hero-deco-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.1em;text-align:center;line-height:1.6;}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);}
+.badge.hi{border-color:rgba(56,189,248,.45);color:var(--accent);background:rgba(56,189,248,.07);}
+.badge.hi2{border-color:rgba(52,211,153,.4);color:var(--accent2);background:rgba(52,211,153,.07);}
+.badge.hi3{border-color:rgba(244,114,182,.4);color:var(--accent3);background:rgba(244,114,182,.07);}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{font-family:var(--font-d);font-size:1.95rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.2rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:30px;height:30px;background:var(--accent-g);color:var(--bg);font-family:var(--font-m);font-size:.65rem;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#90b8c8;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+.note{border-left:2px solid var(--accent);background:rgba(56,189,248,.05);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#90b8c8;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent2);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent2);}
+.note.info{border-left-color:var(--accent3);background:rgba(244,114,182,.06);color:#e8a8c8;}
+.note.info .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--amber);background:rgba(251,191,36,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.06);color:#e8a0a0;}
+.note.danger .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);}
+.kw{color:#38bdf8;}
+.fn{color:#34d399;}
+.str{color:#fde68a;}
+.num{color:#f0abfc;}
+.cmt{color:#1e3a45;font-style:italic;}
+.op{color:#f472b6;}
+.type{color:#fbbf24;}
+.prop{color:#a5f3fc;}
+.bool{color:#fb7185;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(36,48,64,.7);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent2);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+.cpanel-hdr.neutral{background:rgba(56,189,248,.07);color:var(--accent);border-bottom:1px solid rgba(56,189,248,.2);}
+
+/* LIFECYCLE DIAGRAM */
+.lifecycle{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.lc-phases{display:flex;gap:0;align-items:stretch;}
+.lc-phase{flex:1;border:1px solid var(--border);padding:1.2rem;position:relative;}
+.lc-phase+.lc-phase{border-left:none;}
+.lc-phase-title{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;color:var(--muted);margin-bottom:.8rem;text-transform:uppercase;}
+.lc-phase.mount .lc-phase-title{color:var(--accent2);}
+.lc-phase.update .lc-phase-title{color:var(--accent);}
+.lc-phase.unmount .lc-phase-title{color:var(--accent3);}
+.lc-item{font-size:.78rem;color:var(--muted);padding:.3rem 0;display:flex;align-items:center;gap:.5rem;}
+.lc-item::before{content:'';width:6px;height:6px;border-radius:1px;flex-shrink:0;}
+.lc-phase.mount .lc-item::before{background:var(--accent2);}
+.lc-phase.update .lc-item::before{background:var(--accent);}
+.lc-phase.unmount .lc-item::before{background:var(--accent3);}
+.lc-arrow{align-self:center;font-size:1.2rem;color:var(--border);padding:0 .5rem;flex-shrink:0;}
+
+/* FEAT GRID */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.feat-card{background:var(--bg2);padding:1.3rem;transition:background .2s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-name{font-family:var(--font-m);font-size:.72rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.feat-syntax{font-family:var(--font-m);font-size:.68rem;color:var(--amber);margin-bottom:.5rem;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* CONTEXT FLOW DIAGRAM */
+.ctx-diagram{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.ctx-tree{display:flex;flex-direction:column;gap:0;align-items:center;}
+.ctx-node{font-family:var(--font-m);font-size:.7rem;padding:.5rem 1.2rem;border:1px solid var(--border);display:inline-flex;align-items:center;gap:.5rem;white-space:nowrap;}
+.ctx-node.provider{border-color:rgba(56,189,248,.5);color:var(--accent);background:rgba(56,189,248,.07);}
+.ctx-node.consumer{border-color:rgba(52,211,153,.4);color:var(--accent2);background:rgba(52,211,153,.06);}
+.ctx-node.deep{border-color:rgba(244,114,182,.4);color:var(--accent3);background:rgba(244,114,182,.06);}
+.ctx-node.skipped{border-color:var(--border);color:var(--muted);background:var(--bg2);opacity:.55;}
+.ctx-line{width:1px;height:28px;background:var(--border);margin:0 auto;}
+.ctx-children{display:flex;gap:2rem;justify-content:center;width:100%;}
+.ctx-child{display:flex;flex-direction:column;align-items:center;gap:0;}
+.ctx-label{font-family:var(--font-m);font-size:.58rem;color:var(--muted);margin-bottom:.5rem;letter-spacing:.1em;}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(56,189,248,.05);}
+.quiz-opt.correct{border-color:var(--accent2);background:rgba(52,211,153,.06);color:var(--accent2);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent2);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+.quiz-fb.wrong-fb{border-left-color:var(--red);background:rgba(248,113,113,.05);color:#f87171;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent2);border-color:var(--accent2);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* PROJECT */
+.project-hero{background:var(--bg2);border:1px solid var(--border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'🎬';position:absolute;right:1.5rem;bottom:-.5rem;font-size:5rem;opacity:.07;line-height:1;pointer-events:none;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}.feat-grid{grid-template-columns:1fr 1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  .lc-phases{flex-direction:column;}.lc-arrow{transform:rotate(90deg);}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 09 / 18 &mdash; React Hooks 深入</div>
+  <nav class="header-nav">
+    <a href="week8.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week10.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#useeffect">useEffect</a>
+  <a class="toc-item" href="#lifecycle">生命週期對照</a>
+  <a class="toc-item" href="#deps">依賴陣列</a>
+  <a class="toc-item" href="#cleanup">清除副作用</a>
+  <a class="toc-item" href="#custom-hooks">自訂 Hook</a>
+  <a class="toc-item" href="#usecontext">useContext</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-deco">
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-ring"></div>
+    <div class="hero-deco-center">use<br>Effect<br>use<br>Context</div>
+  </div>
+  <div class="hero-label">Phase 03 &mdash; Week 09 of 18</div>
+  <h1>React Hooks<br><span class="hi">副作用與全域狀態</span></h1>
+  <p class="hero-desc">
+    深入 <code>useEffect</code> 的執行時機、依賴陣列與清除機制，
+    再用 <code>useContext</code> 建立跨元件的主題切換系統。
+    最後整合這兩個 Hook，完成一個串接 TMDB API 的電影搜尋頁。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">useEffect</span>
+    <span class="badge hi">依賴陣列</span>
+    <span class="badge hi">清除副作用</span>
+    <span class="badge hi2">自訂 Hook</span>
+    <span class="badge hi2">useContext</span>
+    <span class="badge hi3">串接 API</span>
+    <span class="badge hi3">電影搜尋頁</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">理解 React 的副作用管理機制，並掌握跨元件資料共享的標準做法。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">理解什麼是<strong>副作用（Side Effect）</strong>，以及為什麼需要 <code>useEffect</code> 來管理它</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">掌握<strong>依賴陣列（dependency array）</strong>的三種寫法，能精準控制 effect 的執行時機</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">實作 <code>useEffect</code> 的<strong>清除函式（cleanup）</strong>，避免記憶體洩漏與計時器殘留</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">能封裝 <strong>custom Hook</strong>（如 <code>useFetch</code>、<code>useDebounce</code>），提高邏輯可重用性</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">理解 <code>useContext</code> 解決的 <strong>props drilling</strong> 問題，以及 Context 的 Provider / Consumer 模式</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">整合所有 Hook 技術，完成<strong>電影搜尋 App</strong>：搜尋、載入狀態、錯誤處理、主題切換</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ useEffect -->
+<section class="section" id="useeffect">
+  <div class="eyebrow">02 &mdash; useEffect</div>
+  <h2 class="section-title">什麼是副作用？</h2>
+  <p class="section-intro">
+    React 元件的核心工作是「根據 state/props 渲染畫面」。
+    但程式中有許多操作不屬於這個純粹的渲染過程——它們會影響元件外部的世界，這類操作統稱為<strong>副作用（Side Effects）</strong>。
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">資料請求</div>
+      <div class="feat-syntax">fetch / axios</div>
+      <div class="feat-desc">向 API 拿資料、讀取資料庫，結果會改變 state 進而觸發重繪</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">訂閱 / 事件監聽</div>
+      <div class="feat-syntax">addEventListener</div>
+      <div class="feat-desc">監聽 WebSocket、scroll、resize 事件，需要在元件消失時移除</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">計時器</div>
+      <div class="feat-syntax">setTimeout / setInterval</div>
+      <div class="feat-desc">定期更新時間、輪詢資料；忘記清除會造成記憶體洩漏</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">直接操作 DOM</div>
+      <div class="feat-syntax">document.title / focus()</div>
+      <div class="feat-desc">改變頁面標題、讓輸入框自動聚焦、整合第三方 JS 套件</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">Local Storage</div>
+      <div class="feat-syntax">localStorage.setItem()</div>
+      <div class="feat-desc">持久化使用者設定（主題、語言偏好），同步至瀏覽器儲存</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">Log / 分析</div>
+      <div class="feat-syntax">console / 追蹤事件</div>
+      <div class="feat-desc">頁面瀏覽記錄、GA 事件追蹤，在元件掛載或路由變更時觸發</div>
+    </div>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">UE</div>
+      <div>
+        <div class="ctitle">useEffect 基本語法</div>
+        <div class="csub">effect 函式 + 依賴陣列</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <code>useEffect(effect, deps)</code> 接受兩個參數：
+        <strong>effect 函式</strong>（要執行的副作用邏輯）與<strong>依賴陣列</strong>（決定何時重新執行）。
+        React 會在 DOM 更新完成、畫面繪製後才執行 effect，確保不阻塞渲染。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — useEffect 基本結構</span>
+    </div>
+    <pre><span class="kw">import</span> { useState, useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">function</span> <span class="fn">MovieDetail</span>({ movieId }) {
+  <span class="kw">const</span> [movie, setMovie] <span class="op">=</span> <span class="fn">useState</span>(<span class="kw">null</span>)
+  <span class="kw">const</span> [loading, setLoading] <span class="op">=</span> <span class="fn">useState</span>(<span class="bool">true</span>)
+
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    <span class="cmt">// ① effect 函式：這裡寫副作用邏輯</span>
+    <span class="fn">setLoading</span>(<span class="bool">true</span>)
+
+    <span class="fn">fetch</span>(<span class="str">`https://api.example.com/movies/<span class="op">${</span>movieId<span class="op">}</span>`</span>)
+      .<span class="fn">then</span>(res <span class="op">=&gt;</span> res.<span class="fn">json</span>())
+      .<span class="fn">then</span>(data <span class="op">=&gt;</span> {
+        <span class="fn">setMovie</span>(data)
+        <span class="fn">setLoading</span>(<span class="bool">false</span>)
+      })
+
+    <span class="cmt">// ② 依賴陣列：movieId 改變時重新執行 effect</span>
+  }, [movieId])
+
+  <span class="kw">if</span> (loading) <span class="kw">return</span> <span class="op">&lt;</span><span class="type">p</span><span class="op">&gt;</span>載入中...<span class="op">&lt;/</span><span class="type">p</span><span class="op">&gt;</span>
+  <span class="kw">return</span> <span class="op">&lt;</span><span class="type">h2</span><span class="op">&gt;</span>{movie?.title}<span class="op">&lt;/</span><span class="type">h2</span><span class="op">&gt;</span>
+}</pre>
+  </div>
+
+  <div class="note">
+    <span class="note-label">NOTE</span>
+    useEffect 是在<strong>畫面繪製後</strong>非同步執行的，不會阻塞瀏覽器渲染。
+    這和 class 元件的 <code>componentDidMount</code> 略有不同（後者在 commit 階段同步執行）。
+    若需要在 DOM 更新後立即同步讀取尺寸，應使用 <code>useLayoutEffect</code>。
+  </div>
+</section>
+
+<!-- ════════════════ LIFECYCLE -->
+<section class="section" id="lifecycle">
+  <div class="eyebrow">03 &mdash; Lifecycle</div>
+  <h2 class="section-title">生命週期與 useEffect 對照</h2>
+  <p class="section-intro">
+    React 16.8 前，副作用要分散在 class 元件的三個生命週期方法中。
+    useEffect 統一了這些邏輯，讓「相關的程式碼住在一起」。
+  </p>
+
+  <div class="lifecycle">
+    <div class="lc-phases">
+      <div class="lc-phase mount">
+        <div class="lc-phase-title">Mount（掛載）</div>
+        <div class="lc-item">元件首次渲染到 DOM</div>
+        <div class="lc-item">class: componentDidMount</div>
+        <div class="lc-item">hook: useEffect(() =&gt; {}, [])</div>
+      </div>
+      <div class="lc-arrow">→</div>
+      <div class="lc-phase update">
+        <div class="lc-phase-title">Update（更新）</div>
+        <div class="lc-item">props / state 發生變化</div>
+        <div class="lc-item">class: componentDidUpdate</div>
+        <div class="lc-item">hook: useEffect(() =&gt; {}, [dep])</div>
+      </div>
+      <div class="lc-arrow">→</div>
+      <div class="lc-phase unmount">
+        <div class="lc-phase-title">Unmount（卸載）</div>
+        <div class="lc-item">元件從 DOM 移除</div>
+        <div class="lc-item">class: componentWillUnmount</div>
+        <div class="lc-item">hook: useEffect 回傳清除函式</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="ptable">
+    <thead>
+      <tr>
+        <th>useEffect deps 寫法</th>
+        <th>執行時機</th>
+        <th>對應 class 生命週期</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>無第二參數</td>
+        <td>每次重新渲染後都執行</td>
+        <td>componentDidUpdate（每次）</td>
+      </tr>
+      <tr>
+        <td><code>[]</code>（空陣列）</td>
+        <td>只在掛載後執行一次</td>
+        <td>componentDidMount</td>
+      </tr>
+      <tr>
+        <td><code>[dep1, dep2]</code></td>
+        <td>掛載後 + dep 有變化時</td>
+        <td>componentDidMount + componentDidUpdate（帶條件）</td>
+      </tr>
+      <tr>
+        <td>回傳清除函式</td>
+        <td>下次 effect 執行前 + 卸載時</td>
+        <td>componentWillUnmount</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ════════════════ DEPS -->
+<section class="section" id="deps">
+  <div class="eyebrow">04 &mdash; Dependency Array</div>
+  <h2 class="section-title">依賴陣列深入解析</h2>
+  <p class="section-intro">
+    依賴陣列是 <code>useEffect</code> 最容易出錯的地方。
+    遺漏依賴會導致 effect 拿到過期的值（stale closure），過度依賴則造成無限迴圈。
+  </p>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr bad">無限迴圈陷阱</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="cmt">// ❌ 錯誤：在 effect 內更新 count</span>
+<span class="cmt">// 且把 count 列為依賴 → 無限迴圈</span>
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="fn">setCount</span>(count <span class="op">+</span> <span class="num">1</span>)
+}, [count])</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">正確做法</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="cmt">// ✅ 使用 updater function</span>
+<span class="cmt">// 不需把 count 列為依賴</span>
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="fn">setCount</span>(prev <span class="op">=&gt;</span> prev <span class="op">+</span> <span class="num">1</span>)
+}, [])</pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 依賴陣列完整範例</span>
+    </div>
+    <pre><span class="kw">function</span> <span class="fn">SearchResults</span>({ query, pageSize }) {
+  <span class="kw">const</span> [results, setResults] <span class="op">=</span> <span class="fn">useState</span>([])
+  <span class="kw">const</span> [page, setPage] <span class="op">=</span> <span class="fn">useState</span>(<span class="num">1</span>)
+
+  <span class="cmt">// ✅ query 或 pageSize 改變 → 重新搜尋並重設頁碼</span>
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    <span class="fn">setPage</span>(<span class="num">1</span>)           <span class="cmt">// 重設到第 1 頁</span>
+    <span class="fn">fetchResults</span>(query, pageSize, <span class="num">1</span>).<span class="fn">then</span>(setResults)
+  }, [query, pageSize]) <span class="cmt">// ← 列出所有用到的外部值</span>
+
+  <span class="cmt">// ✅ page 改變 → 只重新抓該頁資料</span>
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (page <span class="op">===</span> <span class="num">1</span>) <span class="kw">return</span>  <span class="cmt">// 避免初始化時重複執行</span>
+    <span class="fn">fetchResults</span>(query, pageSize, page).<span class="fn">then</span>(setResults)
+  }, [page])             <span class="cmt">// ← query/pageSize 已在上面的 effect 處理</span>
+
+  <span class="cmt">// ⚠️ ESLint 的 exhaustive-deps 規則會提示遺漏的依賴</span>
+  <span class="cmt">// 請安裝 eslint-plugin-react-hooks 來避免這類錯誤</span>
+}</pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">COMMON MISTAKE</span>
+    <strong>物件和函式每次渲染都會產生新的參考值</strong>，將它們直接放進依賴陣列會導致 effect 每次都重新執行。
+    解決方案：用 <code>useMemo</code> 穩定物件，用 <code>useCallback</code> 穩定函式，或重新設計資料流。
+  </div>
+</section>
+
+<!-- ════════════════ CLEANUP -->
+<section class="section" id="cleanup">
+  <div class="eyebrow">05 &mdash; Cleanup</div>
+  <h2 class="section-title">清除副作用（Cleanup）</h2>
+  <p class="section-intro">
+    如果 effect 建立了訂閱、計時器或事件監聽，就必須在 effect 函式中
+    <strong>回傳一個清除函式</strong>。React 會在下次執行 effect 之前，以及元件卸載時，呼叫這個清除函式。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">CL</div>
+      <div>
+        <div class="ctitle">使用 AbortController 取消 fetch</div>
+        <div class="csub">React 18 嚴格模式下 effect 執行兩次的標準解法</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        在 React 18 的 StrictMode 開發環境下，effect 會<strong>執行兩次</strong>（mount → unmount → mount），
+        用來幫助你發現遺漏的 cleanup。正確的 fetch 寫法必須搭配 <em>AbortController</em> 來取消上一次未完成的請求。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — AbortController cleanup</span>
+    </div>
+    <pre><span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="kw">const</span> controller <span class="op">=</span> <span class="kw">new</span> <span class="type">AbortController</span>()
+
+  <span class="kw">async function</span> <span class="fn">loadMovie</span>() {
+    <span class="kw">try</span> {
+      <span class="kw">const</span> res <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(
+        <span class="str">`/api/movies/<span class="op">${</span>movieId<span class="op">}</span>`</span>,
+        { signal: controller.signal }   <span class="cmt">// 傳入 signal</span>
+      )
+      <span class="kw">const</span> data <span class="op">=</span> <span class="kw">await</span> res.<span class="fn">json</span>()
+      <span class="fn">setMovie</span>(data)
+    } <span class="kw">catch</span> (err) {
+      <span class="kw">if</span> (err.name <span class="op">!==</span> <span class="str">'AbortError'</span>) <span class="fn">setError</span>(err.message)
+      <span class="cmt">// AbortError 是正常行為，不需要處理</span>
+    }
+  }
+
+  <span class="fn">loadMovie</span>()
+
+  <span class="kw">return</span> () <span class="op">=&gt;</span> controller.<span class="fn">abort</span>()  <span class="cmt">// cleanup：取消請求</span>
+}, [movieId])</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 計時器與事件監聽的 cleanup</span>
+    </div>
+    <pre><span class="cmt">// ① setInterval cleanup</span>
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="kw">const</span> id <span class="op">=</span> <span class="fn">setInterval</span>(() <span class="op">=&gt;</span> {
+    <span class="fn">setTime</span>(<span class="kw">new</span> <span class="type">Date</span>())
+  }, <span class="num">1000</span>)
+  <span class="kw">return</span> () <span class="op">=&gt;</span> <span class="fn">clearInterval</span>(id)   <span class="cmt">// 清除計時器</span>
+}, [])
+
+<span class="cmt">// ② window 事件監聽 cleanup</span>
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="kw">const</span> <span class="fn">handleResize</span> <span class="op">=</span> () <span class="op">=&gt;</span> <span class="fn">setWidth</span>(window.innerWidth)
+  window.<span class="fn">addEventListener</span>(<span class="str">'resize'</span>, handleResize)
+  <span class="kw">return</span> () <span class="op">=&gt;</span> window.<span class="fn">removeEventListener</span>(<span class="str">'resize'</span>, handleResize)
+}, [])
+
+<span class="cmt">// ③ WebSocket cleanup</span>
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="kw">const</span> ws <span class="op">=</span> <span class="kw">new</span> <span class="type">WebSocket</span>(<span class="str">'wss://api.example.com/live'</span>)
+  ws.<span class="fn">onmessage</span> <span class="op">=</span> e <span class="op">=&gt;</span> <span class="fn">setMessages</span>(prev <span class="op">=&gt;</span> [...prev, e.data])
+  <span class="kw">return</span> () <span class="op">=&gt;</span> ws.<span class="fn">close</span>()             <span class="cmt">// 關閉 WebSocket 連線</span>
+}, [])</pre>
+  </div>
+</section>
+
+<!-- ════════════════ CUSTOM HOOKS -->
+<section class="section" id="custom-hooks">
+  <div class="eyebrow">06 &mdash; Custom Hooks</div>
+  <h2 class="section-title">自訂 Hook</h2>
+  <p class="section-intro">
+    當多個元件共用相同的 stateful 邏輯時，可以將它抽取成一個
+    <strong>自訂 Hook</strong>（名稱必須以 <code>use</code> 開頭）。
+    自訂 Hook 本質上就是一個呼叫其他 Hooks 的普通函式。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — useFetch：通用資料請求 Hook</span>
+    </div>
+    <pre><span class="cmt">// hooks/useFetch.js</span>
+<span class="kw">import</span> { useState, useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">export function</span> <span class="fn">useFetch</span>(url) {
+  <span class="kw">const</span> [data, setData] <span class="op">=</span> <span class="fn">useState</span>(<span class="kw">null</span>)
+  <span class="kw">const</span> [loading, setLoading] <span class="op">=</span> <span class="fn">useState</span>(<span class="bool">true</span>)
+  <span class="kw">const</span> [error, setError] <span class="op">=</span> <span class="fn">useState</span>(<span class="kw">null</span>)
+
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    <span class="kw">if</span> (<span class="op">!</span>url) <span class="kw">return</span>
+    <span class="kw">const</span> controller <span class="op">=</span> <span class="kw">new</span> <span class="type">AbortController</span>()
+    <span class="fn">setLoading</span>(<span class="bool">true</span>)
+    <span class="fn">setError</span>(<span class="kw">null</span>)
+
+    <span class="fn">fetch</span>(url, { signal: controller.signal })
+      .<span class="fn">then</span>(res <span class="op">=&gt;</span> {
+        <span class="kw">if</span> (<span class="op">!</span>res.ok) <span class="kw">throw new</span> <span class="type">Error</span>(<span class="str">`HTTP <span class="op">${</span>res.status<span class="op">}</span>`</span>)
+        <span class="kw">return</span> res.<span class="fn">json</span>()
+      })
+      .<span class="fn">then</span>(json <span class="op">=&gt;</span> { <span class="fn">setData</span>(json); <span class="fn">setLoading</span>(<span class="bool">false</span>) })
+      .<span class="fn">catch</span>(err <span class="op">=&gt;</span> {
+        <span class="kw">if</span> (err.name <span class="op">!==</span> <span class="str">'AbortError'</span>) {
+          <span class="fn">setError</span>(err.message)
+          <span class="fn">setLoading</span>(<span class="bool">false</span>)
+        }
+      })
+
+    <span class="kw">return</span> () <span class="op">=&gt;</span> controller.<span class="fn">abort</span>()
+  }, [url])
+
+  <span class="kw">return</span> { data, loading, error }
+}
+
+<span class="cmt">// 在任意元件中使用：</span>
+<span class="kw">function</span> <span class="fn">MovieCard</span>({ id }) {
+  <span class="kw">const</span> { data, loading, error } <span class="op">=</span> <span class="fn">useFetch</span>(<span class="str">`/api/movies/<span class="op">${</span>id<span class="op">}</span>`</span>)
+  <span class="kw">if</span> (loading) <span class="kw">return</span> <span class="op">&lt;</span><span class="type">Skeleton</span> <span class="op">/&gt;</span>
+  <span class="kw">if</span> (error)   <span class="kw">return</span> <span class="op">&lt;</span><span class="type">ErrorMsg</span> msg={error} <span class="op">/&gt;</span>
+  <span class="kw">return</span> <span class="op">&lt;</span><span class="type">h2</span><span class="op">&gt;</span>{data.title}<span class="op">&lt;/</span><span class="type">h2</span><span class="op">&gt;</span>
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — useDebounce：防抖搜尋 Hook</span>
+    </div>
+    <pre><span class="cmt">// hooks/useDebounce.js</span>
+<span class="kw">import</span> { useState, useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">export function</span> <span class="fn">useDebounce</span>(value, delay <span class="op">=</span> <span class="num">500</span>) {
+  <span class="kw">const</span> [debouncedValue, setDebouncedValue] <span class="op">=</span> <span class="fn">useState</span>(value)
+
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    <span class="kw">const</span> timer <span class="op">=</span> <span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> <span class="fn">setDebouncedValue</span>(value), delay)
+    <span class="kw">return</span> () <span class="op">=&gt;</span> <span class="fn">clearTimeout</span>(timer)  <span class="cmt">// 使用者繼續輸入時，清除計時器</span>
+  }, [value, delay])
+
+  <span class="kw">return</span> debouncedValue
+}
+
+<span class="cmt">// 使用範例：只在使用者停止輸入 500ms 後才發出請求</span>
+<span class="kw">function</span> <span class="fn">SearchBar</span>() {
+  <span class="kw">const</span> [query, setQuery] <span class="op">=</span> <span class="fn">useState</span>(<span class="str">''</span>)
+  <span class="kw">const</span> debouncedQuery <span class="op">=</span> <span class="fn">useDebounce</span>(query, <span class="num">500</span>)
+
+  <span class="cmt">// 只有 debouncedQuery 改變時才觸發 API 請求</span>
+  <span class="kw">const</span> { data } <span class="op">=</span> <span class="fn">useFetch</span>(
+    debouncedQuery ? <span class="str">`/api/search?q=<span class="op">${</span>debouncedQuery<span class="op">}</span>`</span> : <span class="kw">null</span>
+  )
+
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span><span class="type">input</span>
+      value={query}
+      onChange={e <span class="op">=&gt;</span> <span class="fn">setQuery</span>(e.target.value)}
+      placeholder=<span class="str">"搜尋電影..."</span>
+    <span class="op">/&gt;</span>
+  )
+}</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">BEST PRACTICE</span>
+    將自訂 Hook 放在 <code>src/hooks/</code> 目錄下，每個 Hook 一個檔案（如 <code>useFetch.js</code>、<code>useDebounce.js</code>）。
+    這樣的組織方式讓 Hook 容易測試，也方便在不同專案間共用。
+  </div>
+</section>
+
+<!-- ════════════════ useContext -->
+<section class="section" id="usecontext">
+  <div class="eyebrow">07 &mdash; useContext</div>
+  <h2 class="section-title">useContext 與全域狀態</h2>
+  <p class="section-intro">
+    當資料需要跨越多個元件層級時，一層一層傳遞 props 會很麻煩，這稱為 <strong>Props Drilling</strong>。
+    Context 提供了一種讓元件直接「訂閱」資料來源的方式，不需要手動傳遞。
+  </p>
+
+  <div class="ctx-diagram">
+    <div style="font-family:var(--font-m);font-size:.62rem;color:var(--muted);letter-spacing:.1em;margin-bottom:1.5rem;">PROPS DRILLING vs CONTEXT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+      <div>
+        <div style="font-family:var(--font-m);font-size:.6rem;color:#f87171;margin-bottom:1rem;letter-spacing:.08em;">❌ PROPS DRILLING</div>
+        <div class="ctx-tree">
+          <div class="ctx-node provider" style="border-color:rgba(248,113,113,.4);color:#f87171;background:rgba(248,113,113,.06);">App（持有 theme）</div>
+          <div class="ctx-line"></div>
+          <div class="ctx-node skipped">Layout（只傳遞 theme）</div>
+          <div class="ctx-line"></div>
+          <div class="ctx-node skipped">Sidebar（只傳遞 theme）</div>
+          <div class="ctx-line"></div>
+          <div class="ctx-node consumer">Button（真正用到 theme）</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-m);font-size:.6rem;color:var(--accent2);margin-bottom:1rem;letter-spacing:.08em;">✅ CONTEXT</div>
+        <div class="ctx-tree">
+          <div class="ctx-node provider">ThemeProvider（提供 theme）</div>
+          <div class="ctx-line"></div>
+          <div class="ctx-children">
+            <div class="ctx-child">
+              <div class="ctx-node skipped">Layout</div>
+              <div class="ctx-line"></div>
+              <div class="ctx-node skipped">Sidebar</div>
+              <div class="ctx-line"></div>
+              <div class="ctx-node consumer">Button（直接訂閱）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 建立 ThemeContext（完整流程）</span>
+    </div>
+    <pre><span class="cmt">// contexts/ThemeContext.jsx</span>
+<span class="kw">import</span> { createContext, useContext, useState, useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="cmt">// ① 建立 Context（設定預設值，通常供測試使用）</span>
+<span class="kw">const</span> ThemeContext <span class="op">=</span> <span class="fn">createContext</span>({
+  theme: <span class="str">'dark'</span>,
+  toggleTheme: () <span class="op">=&gt;</span> {}
+})
+
+<span class="cmt">// ② Provider 元件：持有 state，提供給子樹</span>
+<span class="kw">export function</span> <span class="fn">ThemeProvider</span>({ children }) {
+  <span class="kw">const</span> [theme, setTheme] <span class="op">=</span> <span class="fn">useState</span>(() <span class="op">=&gt;</span>
+    localStorage.<span class="fn">getItem</span>(<span class="str">'theme'</span>) <span class="op">??</span> <span class="str">'dark'</span>
+  )
+
+  <span class="cmt">// 同步至 localStorage，並套用 CSS class</span>
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    localStorage.<span class="fn">setItem</span>(<span class="str">'theme'</span>, theme)
+    document.documentElement.dataset.theme <span class="op">=</span> theme
+  }, [theme])
+
+  <span class="kw">const</span> <span class="fn">toggleTheme</span> <span class="op">=</span> () <span class="op">=&gt;</span>
+    <span class="fn">setTheme</span>(t <span class="op">=&gt;</span> t <span class="op">===</span> <span class="str">'dark'</span> ? <span class="str">'light'</span> : <span class="str">'dark'</span>)
+
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span>ThemeContext.Provider value={{ theme, toggleTheme }}<span class="op">&gt;</span>
+      {children}
+    <span class="op">&lt;/</span>ThemeContext.Provider<span class="op">&gt;</span>
+  )
+}
+
+<span class="cmt">// ③ 自訂 Hook：讓使用方更簡潔，並加入防呆</span>
+<span class="kw">export function</span> <span class="fn">useTheme</span>() {
+  <span class="kw">const</span> ctx <span class="op">=</span> <span class="fn">useContext</span>(ThemeContext)
+  <span class="kw">if</span> (<span class="op">!</span>ctx) <span class="kw">throw new</span> <span class="type">Error</span>(<span class="str">'useTheme 必須在 ThemeProvider 內使用'</span>)
+  <span class="kw">return</span> ctx
+}
+
+<span class="cmt">// ④ 在任意深度的元件中使用</span>
+<span class="kw">function</span> <span class="fn">ThemeToggleButton</span>() {
+  <span class="kw">const</span> { theme, toggleTheme } <span class="op">=</span> <span class="fn">useTheme</span>()
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span><span class="type">button</span> onClick={toggleTheme}<span class="op">&gt;</span>
+      {theme <span class="op">===</span> <span class="str">'dark'</span> ? <span class="str">'🌙 深色'</span> : <span class="str">'☀️ 淺色'</span>}
+    <span class="op">&lt;/</span><span class="type">button</span><span class="op">&gt;</span>
+  )
+}</pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">⚡</div>
+      <div>
+        <div class="ctitle">Context 的效能考量</div>
+        <div class="csub">避免不必要的重新渲染</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        Context value 變化時，<strong>所有訂閱該 Context 的元件都會重新渲染</strong>。
+        若 Context 包含頻繁更新的資料（如滑鼠座標），效能會受到影響。
+      </p>
+      <p>
+        解決策略：
+        <em>①</em> 將頻繁更新與不常變動的資料拆成不同 Context（如 <code>ThemeContext</code> 與 <code>UserContext</code>）。
+        <em>②</em> 用 <code>useMemo</code> 穩定 value 物件，避免每次渲染都建立新物件。
+        <em>③</em> 大型應用考慮使用 <strong>Zustand</strong> 或 <strong>Redux Toolkit</strong> 等狀態管理方案。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — useMemo 穩定 Context value</span>
+    </div>
+    <pre><span class="kw">import</span> { useMemo } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">export function</span> <span class="fn">ThemeProvider</span>({ children }) {
+  <span class="kw">const</span> [theme, setTheme] <span class="op">=</span> <span class="fn">useState</span>(<span class="str">'dark'</span>)
+  <span class="kw">const</span> <span class="fn">toggleTheme</span> <span class="op">=</span> useCallback(() <span class="op">=&gt;</span>
+    <span class="fn">setTheme</span>(t <span class="op">=&gt;</span> t <span class="op">===</span> <span class="str">'dark'</span> ? <span class="str">'light'</span> : <span class="str">'dark'</span>)
+  , [])
+
+  <span class="cmt">// ✅ 只有 theme 改變時才建立新物件</span>
+  <span class="kw">const</span> value <span class="op">=</span> <span class="fn">useMemo</span>(() <span class="op">=&gt;</span> ({ theme, toggleTheme }), [theme, toggleTheme])
+
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span>ThemeContext.Provider value={value}<span class="op">&gt;</span>
+      {children}
+    <span class="op">&lt;/</span>ThemeContext.Provider<span class="op">&gt;</span>
+  )
+}</pre>
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">08 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+
+  <!-- Q1 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">下列哪個 useEffect 寫法，<strong>只會在元件首次掛載時執行一次</strong>？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','每次重新渲染後都會執行，等同於沒有依賴陣列。')">
+        <div class="quiz-key">A</div>
+        <div><code>useEffect(() =&gt; { ... })</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','空陣列代表「沒有任何依賴」，effect 只在掛載時執行一次，等同 componentDidMount。')">
+        <div class="quiz-key">B</div>
+        <div><code>useEffect(() =&gt; { ... }, [])</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','id 是依賴，當 id 改變時會重新執行，不是只執行一次。')">
+        <div class="quiz-key">C</div>
+        <div><code>useEffect(() =&gt; { ... }, [id])</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','這個語法不正確，useEffect 不接受 null 作為第二參數。')">
+        <div class="quiz-key">D</div>
+        <div><code>useEffect(() =&gt; { ... }, null)</code></div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-0"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">以下程式碼有什麼問題？</div>
+    <div class="code-block" style="margin:.5rem 0 1.2rem;">
+      <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">JSX</span></div>
+      <pre style="font-size:.78rem;padding:1rem 1.4rem;"><span class="kw">const</span> [count, setCount] <span class="op">=</span> <span class="fn">useState</span>(<span class="num">0</span>)
+<span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+  <span class="fn">setCount</span>(count <span class="op">+</span> <span class="num">1</span>)
+}, [count])</pre>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','語法完全正確，問題是邏輯層面的。')">
+        <div class="quiz-key">A</div>
+        <div>語法錯誤，useEffect 不能修改 state</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','setCount 觸發重繪 → count 更新 → effect 重新執行 → setCount 再觸發重繪，形成無限迴圈。')">
+        <div class="quiz-key">B</div>
+        <div>會造成無限迴圈，因為 effect 更新 count，而 count 又是依賴</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','只會執行一次並不正確，count 每次改變都會觸發 effect。')">
+        <div class="quiz-key">C</div>
+        <div>只會執行一次，沒有問題</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','React 完全允許在 useEffect 中更新 state，問題不在這裡。')">
+        <div class="quiz-key">D</div>
+        <div>useEffect 內部不能呼叫 setState</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-1"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">useEffect 的<strong>清除函式（cleanup function）</strong>何時被呼叫？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','只在卸載時執行的說法不完整。')">
+        <div class="quiz-key">A</div>
+        <div>只在元件卸載（unmount）時</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','只在重新執行前是不完整的描述。')">
+        <div class="quiz-key">B</div>
+        <div>只在下次執行 effect 之前</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','cleanup 在「下次 effect 執行前」以及「元件卸載時」都會被呼叫，確保每次執行都是乾淨的狀態。')">
+        <div class="quiz-key">C</div>
+        <div>在下次 effect 執行前，以及元件卸載時</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','元件掛載前不會執行 cleanup，因為此時還沒有 effect 需要清除。')">
+        <div class="quiz-key">D</div>
+        <div>在元件掛載前</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-2"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">關於 <code>useContext</code>，下列何者<strong>正確</strong>？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','useContext 不需要像 Redux 一樣的 Action 和 Reducer，它直接共用 React state。')">
+        <div class="quiz-key">A</div>
+        <div>useContext 需要搭配 Action 和 Reducer 才能使用</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Context 可以跨越任意深度，不限三層。')">
+        <div class="quiz-key">B</div>
+        <div>useContext 只能跨越最多三層元件</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','Context value 改變時，所有訂閱該 Context 的元件（Consumer）都會重新渲染，這是效能考量的重要原因。')">
+        <div class="quiz-key">C</div>
+        <div>Context value 改變時，所有訂閱該 Context 的元件都會重新渲染</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','createContext 需要在 React 的上下文中使用，但不強制在函式元件內建立。')">
+        <div class="quiz-key">D</div>
+        <div>createContext 必須在函式元件內部呼叫</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-3"></div>
+  </div>
+</section>
+
+<!-- ════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">09 &mdash; Weekly Project</div>
+  <h2 class="section-title">本週專案</h2>
+
+  <div class="project-hero">
+    <div class="project-eyebrow">PROJECT / WEEK 09</div>
+    <div class="project-name">CineSearch — 電影搜尋頁</div>
+    <div class="project-desc">
+      串接 TMDB（The Movie Database）公開 API，實作即時搜尋、分頁瀏覽、電影詳細資訊，
+      並加入深色 / 淺色主題切換，完整應用本週所有 Hook 技術。
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">申請 TMDB API Key</div>
+        <div class="step-body">前往 themoviedb.org 免費申請帳號並取得 API Key。在專案根目錄建立 <code>.env</code> 檔，加入 <code>REACT_APP_TMDB_KEY=你的key</code>。記得將 <code>.env</code> 加入 <code>.gitignore</code>。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">建立 ThemeContext</div>
+        <div class="step-body">在 <code>src/contexts/ThemeContext.jsx</code> 建立 Provider，管理 <code>theme</code> 狀態並同步至 <code>localStorage</code>。在 <code>App.jsx</code> 用 <code>&lt;ThemeProvider&gt;</code> 包住整個應用，並輸出 <code>useTheme</code> 自訂 Hook。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">實作 useFetch 與 useDebounce Hook</div>
+        <div class="step-body">在 <code>src/hooks/</code> 目錄建立兩個自訂 Hook：<code>useFetch</code> 封裝帶 AbortController 的 fetch 邏輯；<code>useDebounce</code> 實作 500ms 防抖，避免使用者每按一個鍵都發出請求。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">SearchBar 元件與即時搜尋</div>
+        <div class="step-body">建立 <code>SearchBar</code> 元件，使用 <code>useDebounce</code> 處理輸入值，再用 <code>useFetch</code> 向 <code>/search/movie</code> 端點發送請求。顯示骨架屏（Skeleton）作為載入中的佔位效果。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">MovieGrid 與 MovieCard 元件</div>
+        <div class="step-body">將搜尋結果以卡片網格呈現，每張卡片顯示電影海報（<code>poster_path</code>）、片名、評分與上映年份。加入圖片載入失敗的 fallback 圖片處理。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">MovieDetail 彈出面板</div>
+        <div class="step-body">點擊卡片後在右側滑入詳細資訊面板，使用獨立的 <code>useEffect</code> 根據所選電影 ID 請求詳細資料。同時更新 <code>document.title</code> 為當前電影名稱，離開時清除回預設值。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">錯誤處理與空狀態設計</div>
+        <div class="step-body">針對「網路錯誤」、「API 回傳 400/401/404」、「搜尋結果為空」三種情況分別顯示對應的提示訊息與圖示，讓使用者體驗完整。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">主題切換整合</div>
+        <div class="step-body">在 Header 加入切換按鈕，使用 <code>useTheme</code> 取得 <code>toggleTheme</code>。透過 CSS Variables 實作深色 / 淺色主題（在 <code>:root[data-theme="light"]</code> 覆寫變數），確保整個頁面平滑過渡。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">📁</div>
+      <div>
+        <div class="ctitle">建議的檔案結構</div>
+        <div class="csub">Feature-based 組織方式</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>將相關的邏輯放在一起，而不是按照檔案類型分類（不推薦把所有元件放在同一個資料夾）。</p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">Project Structure</span>
+    </div>
+    <pre>src/
+├── contexts/
+│   └── ThemeContext.jsx     <span class="cmt"># ThemeProvider + useTheme</span>
+├── hooks/
+│   ├── useFetch.js          <span class="cmt"># 通用 fetch Hook</span>
+│   └── useDebounce.js       <span class="cmt"># 防抖 Hook</span>
+├── components/
+│   ├── Header/
+│   │   ├── Header.jsx
+│   │   └── Header.module.css
+│   ├── SearchBar/
+│   │   └── SearchBar.jsx
+│   ├── MovieGrid/
+│   │   ├── MovieGrid.jsx
+│   │   └── MovieCard.jsx
+│   └── MovieDetail/
+│       └── MovieDetail.jsx
+├── api/
+│   └── tmdb.js              <span class="cmt"># API URL 與 helper functions</span>
+└── App.jsx</pre>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;margin:2.5rem 0 1rem;color:var(--text);">自我檢核清單</h3>
+  <div class="checklist" id="checklist">
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>ThemeContext 正確建立，深色 / 淺色切換並同步至 localStorage</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>useFetch Hook 包含 loading、error 狀態，以及 AbortController cleanup</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>useDebounce Hook 實作完成，搜尋不會在每次按鍵時觸發 API</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>MovieGrid 正確顯示搜尋結果，卡片包含海報、片名、評分</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>MovieDetail 面板正常開關，詳細資訊請求有獨立的 loading 狀態</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>document.title 隨選中電影更新，卸載時恢復預設</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>網路錯誤、API 錯誤、空結果三種情況都有對應的 UI 提示</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>TMDB API Key 存放在 .env，不暴露在 Git 歷史中</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">10 &mdash; Resources</div>
+  <h2 class="section-title">延伸資源</h2>
+  <div class="resource-grid">
+    <a class="resource-card" href="https://react.dev/reference/react/useEffect" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">useEffect – React Docs</div>
+      <div class="resource-desc">React 官方對 useEffect 最完整的解說，包含所有邊界情境與最佳實踐範例。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://react.dev/reference/react/useContext" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">useContext – React Docs</div>
+      <div class="resource-desc">Context API 的完整說明，包含 createContext、Provider 與效能最佳化建議。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://react.dev/learn/reusing-logic-with-custom-hooks" target="_blank" rel="noopener">
+      <div class="resource-type">官方指南</div>
+      <div class="resource-name">Custom Hooks 指南</div>
+      <div class="resource-desc">React 官方教學：何時應該抽取自訂 Hook，以及如何設計良好的 Hook 介面。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://usehooks.com" target="_blank" rel="noopener">
+      <div class="resource-type">參考集合</div>
+      <div class="resource-name">useHooks.com</div>
+      <div class="resource-desc">精選常用自訂 Hook 範例集，包含 useLocalStorage、usePrevious、useOnClickOutside 等。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://developer.themoviedb.org/docs" target="_blank" rel="noopener">
+      <div class="resource-type">API 文件</div>
+      <div class="resource-name">TMDB API Docs</div>
+      <div class="resource-desc">本週專案使用的電影資料庫 API 文件，含搜尋、詳情、圖片 base URL 等端點說明。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://overreacted.io/a-complete-guide-to-useeffect/" target="_blank" rel="noopener">
+      <div class="resource-type">深度文章</div>
+      <div class="resource-name">A Complete Guide to useEffect</div>
+      <div class="resource-desc">Dan Abramov（React 核心開發者）撰寫的 useEffect 深度解析，強烈推薦進階閱讀。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+  </div>
+</section>
+
+</div><!-- /content -->
+
+<nav class="bottom-nav">
+  <a href="week8.html" class="nav-btn">&larr; Week 08 — React 基礎</a>
+  <a href="index.html" class="home-link">&#8617; 返回總覽</a>
+  <a href="week10.html" class="nav-btn">Week 10 — React Router &rarr;</a>
+</nav>
+
+</main>
+
+<script>
+// Progress bar
+const bar = document.getElementById('progressBar')
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100
+  bar.style.width = pct + '%'
+})
+
+// Scroll-in sections
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+document.querySelectorAll('.section').forEach(s => obs.observe(s))
+
+// TOC active state
+const tocItems = document.querySelectorAll('.toc-item')
+const sections = document.querySelectorAll('.section[id]')
+const tocObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const id = e.target.getAttribute('id')
+    const link = document.querySelector(`.toc-item[href="#${id}"]`)
+    if (link) link.classList.toggle('active', e.isIntersecting)
+  })
+}, { threshold: 0.3, rootMargin: '-60px 0px -40% 0px' })
+sections.forEach(s => tocObs.observe(s))
+
+// Quiz
+let answered = []
+function answer(el, type, feedback) {
+  const block = el.closest('.quiz-block')
+  const idx = [...document.querySelectorAll('.quiz-block')].indexOf(block)
+  if (answered.includes(idx)) return
+  answered.push(idx)
+  block.querySelectorAll('.quiz-opt').forEach(o => o.style.pointerEvents = 'none')
+  el.classList.add(type)
+  const fb = block.querySelector('.quiz-fb')
+  fb.textContent = feedback
+  fb.classList.add('show')
+  if (type === 'wrong') fb.classList.add('wrong-fb')
+}
+
+// Checklist
+function toggleCheck(el) {
+  el.classList.toggle('done')
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : ''
+}
+</script>
+</body>
+</html>

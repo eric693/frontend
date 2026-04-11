@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 11 — Tailwind CSS 與元件設計</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0a00;
+  --bg2:#171000;
+  --bg3:#1f1700;
+  --surface:#271f00;
+  --border:#3a2e00;
+  --text:#fef3c7;
+  --muted:#78600a;
+  --accent:#fbbf24;
+  --accent-g:linear-gradient(135deg,#fbbf24,#f97316);
+  --accent2:#f97316;
+  --accent3:#34d399;
+  --blue:#60a5fa;
+  --red:#f87171;
+  --glow:rgba(251,191,36,0.15);
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(110px);opacity:0.08;}
+body::before{width:540px;height:540px;background:radial-gradient(circle,#fbbf24,transparent);top:-160px;right:-120px;}
+body::after{width:420px;height:420px;background:radial-gradient(circle,#f97316,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(15,10,0,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.58rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:2px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(251,191,36,.07),transparent);pointer-events:none;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-weight:900;font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-deco{position:absolute;right:4rem;top:50%;transform:translateY(-50%);pointer-events:none;opacity:0;animation:fadeUp .5s .6s forwards;}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);}
+.badge.hi{border-color:rgba(251,191,36,.45);color:var(--accent);background:rgba(251,191,36,.07);}
+.badge.hi2{border-color:rgba(249,115,22,.4);color:var(--accent2);background:rgba(249,115,22,.07);}
+.badge.hi3{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.07);}
+
+/* UTILITY PREVIEW (hero decoration) */
+.tw-preview{display:flex;flex-direction:column;gap:.4rem;font-family:var(--font-m);font-size:.62rem;}
+.tw-line{display:flex;align-items:center;gap:.5rem;}
+.tw-chip{padding:.18rem .55rem;border:1px solid;font-size:.58rem;white-space:nowrap;}
+.tw-chip.c1{border-color:rgba(251,191,36,.4);color:var(--accent);background:rgba(251,191,36,.07);}
+.tw-chip.c2{border-color:rgba(249,115,22,.35);color:var(--accent2);background:rgba(249,115,22,.06);}
+.tw-chip.c3{border-color:rgba(96,165,250,.35);color:var(--blue);background:rgba(96,165,250,.06);}
+.tw-chip.c4{border-color:rgba(52,211,153,.35);color:var(--accent3);background:rgba(52,211,153,.06);}
+.tw-arrow{color:var(--muted);font-size:.65rem;}
+.tw-result{color:var(--text);font-size:.65rem;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{font-family:var(--font-d);font-size:1.95rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.2rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:30px;height:30px;background:var(--accent-g);color:var(--bg);font-family:var(--font-m);font-size:.6rem;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#c8a060;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+.note{border-left:2px solid var(--accent);background:rgba(251,191,36,.05);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#c8a060;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent3);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent3);}
+.note.info{border-left-color:var(--blue);background:rgba(96,165,250,.06);color:#90b8f0;}
+.note.info .note-label{color:var(--blue);}
+.note.warn{border-left-color:var(--accent2);background:rgba(249,115,22,.07);color:#d4906a;}
+.note.warn .note-label{color:var(--accent2);}
+.note.danger{border-left-color:var(--red);background:rgba(248,113,113,.06);color:#e8a0a0;}
+.note.danger .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);}
+.kw{color:#fbbf24;}
+.fn{color:#f97316;}
+.str{color:#86efac;}
+.num{color:#f0abfc;}
+.cmt{color:#2a1e00;font-style:italic;}
+.op{color:#60a5fa;}
+.type{color:#f472b6;}
+.prop{color:#fde68a;}
+.bool{color:#fb7185;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+/* UTILITY TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(58,46,0,.7);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent3);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+.cpanel-hdr.neutral{background:rgba(251,191,36,.07);color:var(--accent);border-bottom:1px solid rgba(251,191,36,.2);}
+
+/* UTILITY REFERENCE GRID */
+.util-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.util-section{background:var(--bg2);padding:1.4rem;}
+.util-section-title{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
+.util-row{display:flex;justify-content:space-between;align-items:baseline;padding:.28rem 0;border-bottom:1px solid rgba(58,46,0,.4);}
+.util-row:last-child{border-bottom:none;}
+.util-class{font-family:var(--font-m);font-size:.72rem;color:var(--accent);}
+.util-value{font-size:.72rem;color:var(--muted);}
+
+/* BREAKPOINT TABLE */
+.bp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.bp-cell{background:var(--bg2);padding:1.2rem .8rem;text-align:center;}
+.bp-prefix{font-family:var(--font-m);font-size:.82rem;color:var(--accent);margin-bottom:.4rem;}
+.bp-size{font-family:var(--font-m);font-size:.68rem;color:var(--muted);}
+.bp-desc{font-size:.72rem;color:var(--muted);margin-top:.4rem;}
+
+/* FEAT GRID */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.feat-card{background:var(--bg2);padding:1.3rem;transition:background .2s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-name{font-family:var(--font-m);font-size:.72rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.feat-syntax{font-family:var(--font-m);font-size:.68rem;color:var(--accent2);margin-bottom:.5rem;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* LIVE DEMO CARD */
+.demo-card{border:1px solid var(--border);background:var(--bg2);padding:1.6rem;margin:1.5rem 0;}
+.demo-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1rem;}
+.demo-preview{background:var(--bg);border:1px solid var(--border);padding:1.5rem;display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:center;margin-bottom:1rem;}
+.tw-btn{padding:.5rem 1.1rem;font-family:var(--font-b);font-size:.82rem;font-weight:500;border:none;cursor:pointer;transition:opacity .15s;}
+.tw-btn-primary{background:linear-gradient(135deg,#fbbf24,#f97316);color:#0f0a00;}
+.tw-btn-outline{background:transparent;border:1px solid #fbbf24;color:#fbbf24;}
+.tw-btn-ghost{background:rgba(251,191,36,.1);color:#fbbf24;}
+.tw-card-demo{background:var(--bg3);border:1px solid var(--border);padding:1rem;width:160px;}
+.tw-card-img{height:70px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(249,115,22,.15));margin-bottom:.7rem;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.tw-card-title{font-size:.78rem;font-weight:500;color:var(--text);margin-bottom:.3rem;}
+.tw-card-sub{font-size:.68rem;color:var(--muted);}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(251,191,36,.05);}
+.quiz-opt.correct{border-color:var(--accent3);background:rgba(52,211,153,.06);color:var(--accent3);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent3);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+.quiz-fb.wrong-fb{border-left-color:var(--red);background:rgba(248,113,113,.05);color:#f87171;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent3);border-color:var(--accent3);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* PROJECT */
+.project-hero{background:var(--bg2);border:1px solid var(--border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'tw';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:5rem;color:var(--accent);opacity:.05;line-height:1;pointer-events:none;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:500;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .feat-grid{grid-template-columns:1fr 1fr;}
+  .util-grid{grid-template-columns:1fr;}
+  .bp-grid{grid-template-columns:1fr 1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 11 / 18 &mdash; Tailwind CSS</div>
+  <nav class="header-nav">
+    <a href="week10.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week12.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#philosophy">設計哲學</a>
+  <a class="toc-item" href="#setup">安裝設定</a>
+  <a class="toc-item" href="#core-utils">核心工具類</a>
+  <a class="toc-item" href="#rwd">響應式設計</a>
+  <a class="toc-item" href="#states">狀態修飾符</a>
+  <a class="toc-item" href="#component">元件設計</a>
+  <a class="toc-item" href="#darkmode">深色模式</a>
+  <a class="toc-item" href="#config">自訂主題</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-deco">
+    <div class="tw-preview">
+      <div class="tw-line"><span class="tw-chip c1">flex</span><span class="tw-chip c1">items-center</span><span class="tw-chip c1">gap-4</span></div>
+      <div class="tw-line"><span class="tw-chip c2">text-xl</span><span class="tw-chip c2">font-bold</span><span class="tw-chip c2">text-amber-400</span></div>
+      <div class="tw-line"><span class="tw-chip c3">md:grid-cols-3</span><span class="tw-chip c3">lg:grid-cols-4</span></div>
+      <div class="tw-line"><span class="tw-chip c4">hover:scale-105</span><span class="tw-chip c4">transition</span></div>
+      <div class="tw-line"><span class="tw-chip c1">dark:bg-zinc-900</span><span class="tw-chip c1">dark:text-white</span></div>
+      <div class="tw-line"><span class="tw-chip c2">rounded-xl</span><span class="tw-chip c2">shadow-lg</span><span class="tw-chip c2">p-6</span></div>
+    </div>
+  </div>
+  <div class="hero-label">Phase 03 &mdash; Week 11 of 18</div>
+  <h1>Tailwind CSS<br><span class="hi">工具類優先設計</span></h1>
+  <p class="hero-desc">
+    掌握 Utility-First 的思維轉換，用 Tailwind CSS 快速打造響應式元件。
+    本週將重新美化第 10 週的作品集網站，整合 RWD 斷點、深色模式與自訂主題系統。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">Utility-First</span>
+    <span class="badge hi">JIT 引擎</span>
+    <span class="badge hi2">RWD 斷點</span>
+    <span class="badge hi2">狀態修飾符</span>
+    <span class="badge hi3">深色模式</span>
+    <span class="badge hi3">自訂主題</span>
+    <span class="badge hi">作品集美化</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">從思維轉換到實戰應用，讓你能用 Tailwind 快速實現任何設計稿。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">理解 <strong>Utility-First</strong> 與傳統 CSS、CSS-in-JS 的核心差異，知道 Tailwind 適用的場景</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">能在 <strong>Vite + React</strong> 專案中正確安裝並設定 Tailwind CSS v3，理解 JIT 編譯原理</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">熟練使用<strong>間距、排版、顏色、Flex、Grid</strong> 等核心工具類，能快速還原設計稿</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">掌握 <code>sm:</code>、<code>md:</code>、<code>lg:</code>、<code>xl:</code> 等<strong>響應式前綴</strong>，實作 Mobile-First 的 RWD 佈局</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">善用 <code>hover:</code>、<code>focus:</code>、<code>active:</code>、<code>group-hover:</code> 等<strong>狀態修飾符</strong>製作互動效果</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">用 <code>@apply</code> 與元件抽象解決<strong>類名重複</strong>問題，並在 <code>tailwind.config.js</code> 中建立自訂主題</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ PHILOSOPHY -->
+<section class="section" id="philosophy">
+  <div class="eyebrow">02 &mdash; Design Philosophy</div>
+  <h2 class="section-title">Utility-First：思維的轉換</h2>
+  <p class="section-intro">
+    傳統 CSS 的做法是先為元素命名，再撰寫樣式。
+    Tailwind 反過來：直接在 HTML 上組合低階的工具類，不需要發明 class 名稱。
+  </p>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr bad">傳統 CSS 做法</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="cmt">&lt;!-- HTML --&gt;</span>
+&lt;<span class="type">div</span> class=<span class="str">"card"</span>&gt;
+  &lt;<span class="type">h2</span> class=<span class="str">"card-title"</span>&gt;片名&lt;/<span class="type">h2</span>&gt;
+  &lt;<span class="type">p</span> class=<span class="str">"card-desc"</span>&gt;簡介&lt;/<span class="type">p</span>&gt;
+&lt;/<span class="type">div</span>&gt;
+
+<span class="cmt">/* CSS */</span>
+<span class="fn">.card</span> {
+  background: <span class="str">#1a1a1a</span>;
+  border-radius: <span class="num">12px</span>;
+  padding: <span class="num">1.5rem</span>;
+  box-shadow: <span class="str">0 4px 20px rgba(0,0,0,.3)</span>;
+}
+<span class="fn">.card-title</span> {
+  font-size: <span class="num">1.25rem</span>;
+  font-weight: <span class="num">700</span>;
+  color: <span class="str">#fff</span>;
+  margin-bottom: <span class="num">.5rem</span>;
+}
+<span class="fn">.card-desc</span> { color: <span class="str">#aaa</span>; }</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">Tailwind 做法</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="cmt">&lt;!-- HTML — 不需要額外的 CSS 檔 --&gt;</span>
+&lt;<span class="type">div</span> class=<span class="str">"bg-zinc-900 rounded-xl
+       p-6 shadow-xl shadow-black/30"</span>&gt;
+  &lt;<span class="type">h2</span> class=<span class="str">"text-xl font-bold
+         text-white mb-2"</span>&gt;片名&lt;/<span class="type">h2</span>&gt;
+  &lt;<span class="type">p</span> class=<span class="str">"text-zinc-400"</span>&gt;簡介&lt;/<span class="type">p</span>&gt;
+&lt;/<span class="type">div</span>&gt;
+
+<span class="cmt">// 零 CSS 切換！只需改 class 名稱</span>
+<span class="cmt">// 所有樣式直接可見，無需來回跳檔</span>
+<span class="cmt">// 建置後只輸出實際使用到的 CSS</span></pre>
+    </div>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">JIT</div>
+      <div>
+        <div class="ctitle">JIT（Just-In-Time）編譯引擎</div>
+        <div class="csub">Tailwind v3 預設啟用，打包體積接近零</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        Tailwind v3 的 JIT 引擎會<strong>掃描你的程式碼</strong>，找出所有用到的 class，
+        只把這些 class 對應的 CSS 規則輸出到最終檔案中。
+        開發中即時生成、不需要 PurgeCSS，生產環境的 CSS 通常只有 <em>5–20 KB</em>（gzip 後）。
+      </p>
+      <p>
+        JIT 還解鎖了<strong>任意值語法</strong>：<code>w-[342px]</code>、<code>text-[#ff6b35]</code>、<code>grid-cols-[1fr_2fr_1fr]</code>——
+        只要在方括號內填入任意 CSS 值，JIT 就會即時生成對應的工具類。
+      </p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note-label">MINDSET SHIFT</span>
+    剛接觸 Tailwind 時，看到 HTML 上一串 class 會感到不適應——這很正常。
+    關鍵在於：你<strong>不再需要為樣式命名</strong>，也不再需要在 HTML 和 CSS 之間來回切換。
+    設計決策直接體現在標記語言上，可讀性反而更高。
+  </div>
+</section>
+
+<!-- ════════════════ SETUP -->
+<section class="section" id="setup">
+  <div class="eyebrow">03 &mdash; Installation</div>
+  <h2 class="section-title">安裝與設定</h2>
+  <p class="section-intro">
+    以 Vite + React 專案為例，完整走一遍 Tailwind CSS v3 的安裝流程。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">Terminal — 安裝步驟</span>
+    </div>
+    <pre><span class="cmt"># 1. 建立 Vite + React 專案（若尚未建立）</span>
+npm create vite@latest my-portfolio <span class="op">--</span> <span class="op">--</span>template react
+cd my-portfolio
+
+<span class="cmt"># 2. 安裝 Tailwind 及其 peer dependencies</span>
+npm install <span class="op">-D</span> tailwindcss postcss autoprefixer
+
+<span class="cmt"># 3. 產生設定檔</span>
+npx tailwindcss init <span class="op">-p</span>
+<span class="cmt"># 生成 tailwind.config.js 與 postcss.config.js</span></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">tailwind.config.js — 設定掃描範圍</span>
+    </div>
+    <pre><span class="cmt">/** @type {import('tailwindcss').Config} */</span>
+<span class="kw">export default</span> {
+  <span class="prop">content</span>: [
+    <span class="str">"./index.html"</span>,
+    <span class="str">"./src/**/*.{js,jsx,ts,tsx}"</span>,  <span class="cmt">// ← JIT 掃描這些檔案</span>
+  ],
+  <span class="prop">darkMode</span>: <span class="str">'class'</span>,              <span class="cmt">// 使用 class 控制深色模式</span>
+  <span class="prop">theme</span>: {
+    <span class="prop">extend</span>: {
+      <span class="cmt">// 自訂設計 token 放這裡（後面章節說明）</span>
+    },
+  },
+  <span class="prop">plugins</span>: [],
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/index.css — 引入 Tailwind 指令</span>
+    </div>
+    <pre><span class="cmt">/* 三個指令順序不能錯 */</span>
+<span class="op">@tailwind</span> base;        <span class="cmt">/* 重置瀏覽器預設樣式（Preflight）*/</span>
+<span class="op">@tailwind</span> components;  <span class="cmt">/* 元件層（供 @apply 抽取）*/</span>
+<span class="op">@tailwind</span> utilities;   <span class="cmt">/* 所有工具類 */</span></pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">VS CODE 推薦</span>
+    安裝官方擴充套件 <strong>Tailwind CSS IntelliSense</strong>，能在 class 屬性中自動補全、預覽顏色、
+    顯示對應的 CSS 值。這是提升開發效率最重要的工具之一。
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">常見錯誤</span>
+    <code>content</code> 路徑寫錯是最常見的問題。如果樣式沒有生效，先確認：
+    ① 路徑是否涵蓋所有使用 Tailwind class 的檔案、
+    ② class 名稱是否完整（不能動態拼接如 <code>"text-" + color</code>，JIT 無法掃描到動態字串）。
+  </div>
+</section>
+
+<!-- ════════════════ CORE UTILS -->
+<section class="section" id="core-utils">
+  <div class="eyebrow">04 &mdash; Core Utilities</div>
+  <h2 class="section-title">核心工具類速查</h2>
+  <p class="section-intro">
+    Tailwind 的命名遵循統一規則：<strong>屬性縮寫 + 尺度值</strong>。
+    掌握這套規律後，大多數 class 不需要查文件就能直覺猜出來。
+  </p>
+
+  <div class="util-grid">
+    <div class="util-section">
+      <div class="util-section-title">間距（Spacing）</div>
+      <div class="util-row"><span class="util-class">p-4</span><span class="util-value">padding: 1rem</span></div>
+      <div class="util-row"><span class="util-class">px-6 py-3</span><span class="util-value">x軸/y軸 padding</span></div>
+      <div class="util-row"><span class="util-class">pt-8 pb-4</span><span class="util-value">上/下 padding</span></div>
+      <div class="util-row"><span class="util-class">m-auto</span><span class="util-value">margin: auto</span></div>
+      <div class="util-row"><span class="util-class">mx-auto</span><span class="util-value">水平置中</span></div>
+      <div class="util-row"><span class="util-class">gap-4</span><span class="util-value">gap: 1rem</span></div>
+      <div class="util-row"><span class="util-class">space-y-4</span><span class="util-value">子元素垂直間距</span></div>
+    </div>
+    <div class="util-section">
+      <div class="util-section-title">尺寸（Sizing）</div>
+      <div class="util-row"><span class="util-class">w-full</span><span class="util-value">width: 100%</span></div>
+      <div class="util-row"><span class="util-class">w-1/2</span><span class="util-value">width: 50%</span></div>
+      <div class="util-row"><span class="util-class">w-screen</span><span class="util-value">width: 100vw</span></div>
+      <div class="util-row"><span class="util-class">max-w-4xl</span><span class="util-value">max-width: 56rem</span></div>
+      <div class="util-row"><span class="util-class">h-screen</span><span class="util-value">height: 100vh</span></div>
+      <div class="util-row"><span class="util-class">min-h-0</span><span class="util-value">min-height: 0</span></div>
+      <div class="util-row"><span class="util-class">w-[340px]</span><span class="util-value">任意值語法</span></div>
+    </div>
+    <div class="util-section">
+      <div class="util-section-title">排版（Typography）</div>
+      <div class="util-row"><span class="util-class">text-sm / lg / xl</span><span class="util-value">字體大小</span></div>
+      <div class="util-row"><span class="util-class">text-2xl</span><span class="util-value">1.5rem / 2rem</span></div>
+      <div class="util-row"><span class="util-class">font-bold</span><span class="util-value">font-weight: 700</span></div>
+      <div class="util-row"><span class="util-class">leading-relaxed</span><span class="util-value">line-height: 1.625</span></div>
+      <div class="util-row"><span class="util-class">tracking-wide</span><span class="util-value">letter-spacing: .025em</span></div>
+      <div class="util-row"><span class="util-class">truncate</span><span class="util-value">文字截斷 + 省略號</span></div>
+      <div class="util-row"><span class="util-class">text-center</span><span class="util-value">text-align: center</span></div>
+    </div>
+    <div class="util-section">
+      <div class="util-section-title">Flexbox</div>
+      <div class="util-row"><span class="util-class">flex</span><span class="util-value">display: flex</span></div>
+      <div class="util-row"><span class="util-class">flex-col</span><span class="util-value">flex-direction: column</span></div>
+      <div class="util-row"><span class="util-class">items-center</span><span class="util-value">align-items: center</span></div>
+      <div class="util-row"><span class="util-class">justify-between</span><span class="util-value">justify-content: space-between</span></div>
+      <div class="util-row"><span class="util-class">flex-1</span><span class="util-value">flex: 1 1 0%</span></div>
+      <div class="util-row"><span class="util-class">flex-wrap</span><span class="util-value">flex-wrap: wrap</span></div>
+      <div class="util-row"><span class="util-class">shrink-0</span><span class="util-value">flex-shrink: 0</span></div>
+    </div>
+    <div class="util-section">
+      <div class="util-section-title">Grid</div>
+      <div class="util-row"><span class="util-class">grid</span><span class="util-value">display: grid</span></div>
+      <div class="util-row"><span class="util-class">grid-cols-3</span><span class="util-value">3 等寬欄</span></div>
+      <div class="util-row"><span class="util-class">col-span-2</span><span class="util-value">橫跨 2 欄</span></div>
+      <div class="util-row"><span class="util-class">grid-rows-4</span><span class="util-value">4 等高列</span></div>
+      <div class="util-row"><span class="util-class">place-items-center</span><span class="util-value">水平 + 垂直置中</span></div>
+      <div class="util-row"><span class="util-class">auto-rows-fr</span><span class="util-value">自動等高列</span></div>
+      <div class="util-row"><span class="util-class">grid-cols-[1fr_2fr]</span><span class="util-value">任意欄寬比例</span></div>
+    </div>
+    <div class="util-section">
+      <div class="util-section-title">視覺效果</div>
+      <div class="util-row"><span class="util-class">rounded-xl</span><span class="util-value">border-radius: .75rem</span></div>
+      <div class="util-row"><span class="util-class">rounded-full</span><span class="util-value">border-radius: 9999px</span></div>
+      <div class="util-row"><span class="util-class">shadow-lg</span><span class="util-value">大陰影</span></div>
+      <div class="util-row"><span class="util-class">opacity-75</span><span class="util-value">opacity: .75</span></div>
+      <div class="util-row"><span class="util-class">ring-2 ring-amber-400</span><span class="util-value">外框光環</span></div>
+      <div class="util-row"><span class="util-class">backdrop-blur-md</span><span class="util-value">毛玻璃效果</span></div>
+      <div class="util-row"><span class="util-class">overflow-hidden</span><span class="util-value">overflow: hidden</span></div>
+    </div>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">SPACING SCALE</span>
+    Tailwind 的間距系統以 <strong>4px</strong> 為基本單位：<code>p-1</code> = 4px，<code>p-2</code> = 8px，<code>p-4</code> = 16px，<code>p-8</code> = 32px。
+    記住這個規律後，腦中就能直接換算，不需要查文件。
+  </div>
+</section>
+
+<!-- ════════════════ RWD -->
+<section class="section" id="rwd">
+  <div class="eyebrow">05 &mdash; Responsive Design</div>
+  <h2 class="section-title">響應式設計（Mobile-First）</h2>
+  <p class="section-intro">
+    Tailwind 採用 <strong>Mobile-First</strong> 策略：沒有前綴的 class 套用到所有螢幕尺寸，
+    加上前綴則代表「在該斷點以上生效」。
+  </p>
+
+  <div class="bp-grid">
+    <div class="bp-cell">
+      <div class="bp-prefix">（無前綴）</div>
+      <div class="bp-size">0px+</div>
+      <div class="bp-desc">預設（手機）</div>
+    </div>
+    <div class="bp-cell">
+      <div class="bp-prefix">sm:</div>
+      <div class="bp-size">640px+</div>
+      <div class="bp-desc">大手機 / 平板直向</div>
+    </div>
+    <div class="bp-cell">
+      <div class="bp-prefix">md:</div>
+      <div class="bp-size">768px+</div>
+      <div class="bp-desc">平板</div>
+    </div>
+    <div class="bp-cell">
+      <div class="bp-prefix">lg:</div>
+      <div class="bp-size">1024px+</div>
+      <div class="bp-desc">桌機（常用基準）</div>
+    </div>
+    <div class="bp-cell">
+      <div class="bp-prefix">xl:</div>
+      <div class="bp-size">1280px+</div>
+      <div class="bp-desc">寬螢幕</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 響應式卡片網格（Mobile-First）</span>
+    </div>
+    <pre><span class="cmt">{/* 手機: 1欄 → 平板: 2欄 → 桌機: 3欄 → 寬螢幕: 4欄 */}</span>
+&lt;<span class="type">div</span> className=<span class="str">"
+  grid grid-cols-1
+  sm:grid-cols-2
+  lg:grid-cols-3
+  xl:grid-cols-4
+  gap-6 p-6
+"</span>&gt;
+  {projects.<span class="fn">map</span>(project <span class="op">=&gt;</span> (
+    &lt;<span class="type">ProjectCard</span> key={project.id} {...project} /&gt;
+  ))}
+&lt;/<span class="type">div</span>&gt;
+
+<span class="cmt">{/* Hero Section：手機垂直 → 桌機水平 */}</span>
+&lt;<span class="type">section</span> className=<span class="str">"
+  flex flex-col items-center text-center
+  lg:flex-row lg:text-left lg:items-start
+  gap-12 px-6 py-20 max-w-6xl mx-auto
+"</span>&gt;
+  &lt;<span class="type">div</span> className=<span class="str">"lg:flex-1"</span>&gt;
+    &lt;<span class="type">h1</span> className=<span class="str">"
+      text-4xl sm:text-5xl lg:text-6xl
+      font-bold leading-tight
+    "</span>&gt;Hi, I&apos;m Eric&lt;/<span class="type">h1</span>&gt;
+    &lt;<span class="type">p</span> className=<span class="str">"mt-4 text-zinc-400 text-lg max-w-md"</span>&gt;
+      前端開發者
+    &lt;/<span class="type">p</span>&gt;
+  &lt;/<span class="type">div</span>&gt;
+  &lt;<span class="type">img</span>
+    className=<span class="str">"w-48 h-48 lg:w-64 lg:h-64 rounded-full object-cover"</span>
+    src=<span class="str">"/avatar.jpg"</span> alt=<span class="str">"Eric"</span>
+  /&gt;
+&lt;/<span class="type">section</span>&gt;</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">MOBILE-FIRST TIP</span>
+    設計時從手機版開始：先寫沒有前綴的基礎樣式（最小螢幕），
+    再用 <code>md:</code>、<code>lg:</code> 逐步疊加桌機版的差異。
+    這樣的 CSS 輸出最少，也和 Google 的 Mobile-First Indexing 方向一致。
+  </div>
+</section>
+
+<!-- ════════════════ STATES -->
+<section class="section" id="states">
+  <div class="eyebrow">06 &mdash; State Modifiers</div>
+  <h2 class="section-title">狀態修飾符與互動效果</h2>
+  <p class="section-intro">
+    Tailwind 的修飾符可以和任何工具類組合，精確控制元素在特定狀態下的樣式。
+    常用的有滑鼠互動、焦點、群組聯動、以及偽元素。
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">hover:</div>
+      <div class="feat-syntax">hover:bg-amber-400</div>
+      <div class="feat-desc">滑鼠懸停時套用，是最常用的互動修飾符</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">focus:</div>
+      <div class="feat-syntax">focus:ring-2 focus:outline-none</div>
+      <div class="feat-desc">鍵盤 focus 時顯示外框，提升無障礙性</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">active:</div>
+      <div class="feat-syntax">active:scale-95</div>
+      <div class="feat-desc">點擊按下瞬間的視覺回饋效果</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">group / group-hover:</div>
+      <div class="feat-syntax">group-hover:opacity-100</div>
+      <div class="feat-desc">父元素 hover 時，控制子元素樣式變化</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">disabled:</div>
+      <div class="feat-syntax">disabled:opacity-50 disabled:cursor-not-allowed</div>
+      <div class="feat-desc">按鈕停用狀態，搭配 cursor 提示使用者</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">transition / duration:</div>
+      <div class="feat-syntax">transition-all duration-300</div>
+      <div class="feat-desc">讓狀態切換有平滑過渡效果的基礎工具類</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 卡片懸停效果（group 技巧）</span>
+    </div>
+    <pre><span class="cmt">{/* group 加在父元素上，子元素用 group-hover: 聯動 */}</span>
+&lt;<span class="type">div</span> className=<span class="str">"
+  group relative overflow-hidden
+  bg-zinc-900 rounded-xl cursor-pointer
+  transition-transform duration-300
+  hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/10
+"</span>&gt;
+  &lt;<span class="type">img</span>
+    className=<span class="str">"w-full h-48 object-cover
+              transition-transform duration-500
+              group-hover:scale-105"</span>
+    src={project.image} alt={project.title}
+  /&gt;
+
+  <span class="cmt">{/* 懸停時從底部滑入的 overlay */}</span>
+  &lt;<span class="type">div</span> className=<span class="str">"
+    absolute inset-0 bg-gradient-to-t
+    from-black/80 to-transparent
+    flex items-end p-4
+    opacity-0 group-hover:opacity-100
+    transition-opacity duration-300
+  "</span>&gt;
+    &lt;<span class="type">span</span> className=<span class="str">"
+      text-white font-bold
+      translate-y-2 group-hover:translate-y-0
+      transition-transform duration-300
+    "</span>&gt;{project.title}&lt;/<span class="type">span</span>&gt;
+  &lt;/<span class="type">div</span>&gt;
+&lt;/<span class="type">div</span>&gt;</pre>
+  </div>
+</section>
+
+<!-- ════════════════ COMPONENT -->
+<section class="section" id="component">
+  <div class="eyebrow">07 &mdash; Component Patterns</div>
+  <h2 class="section-title">元件設計與類名管理</h2>
+  <p class="section-intro">
+    當同樣的 Tailwind class 組合在多處重複出現時，有三種主流做法來管理它。
+    選擇哪種取決於<strong>重複的程度</strong>與<strong>動態性的需求</strong>。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">01</div>
+      <div>
+        <div class="ctitle">策略一：React 元件抽象（推薦）</div>
+        <div class="csub">最符合 React 思維，同時保有 props 動態化的能力</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        在 React 中，<strong>重複的 UI 應該抽成元件，而不是抽成 CSS class</strong>。
+        這是 Tailwind 在元件化框架中最正確的使用姿勢。
+        元件封裝了 class 的組合，同時可以透過 props 控制動態變化。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — Button 元件：用 props 控制變體</span>
+    </div>
+    <pre><span class="cmt">// components/Button.jsx</span>
+<span class="kw">const</span> variants = {
+  <span class="prop">primary</span>:   <span class="str">'bg-amber-400 text-zinc-900 hover:bg-amber-300'</span>,
+  <span class="prop">secondary</span>: <span class="str">'bg-zinc-800 text-white hover:bg-zinc-700'</span>,
+  <span class="prop">outline</span>:   <span class="str">'border border-amber-400 text-amber-400 hover:bg-amber-400/10'</span>,
+  <span class="prop">ghost</span>:     <span class="str">'text-zinc-400 hover:text-white hover:bg-zinc-800'</span>,
+}
+
+<span class="kw">const</span> sizes = {
+  <span class="prop">sm</span>: <span class="str">'px-3 py-1.5 text-sm'</span>,
+  <span class="prop">md</span>: <span class="str">'px-5 py-2.5 text-base'</span>,
+  <span class="prop">lg</span>: <span class="str">'px-7 py-3.5 text-lg'</span>,
+}
+
+<span class="kw">export function</span> <span class="fn">Button</span>({
+  children,
+  variant <span class="op">=</span> <span class="str">'primary'</span>,
+  size <span class="op">=</span> <span class="str">'md'</span>,
+  disabled,
+  className <span class="op">=</span> <span class="str">''</span>,
+  ...props
+}) {
+  <span class="kw">return</span> (
+    &lt;<span class="type">button</span>
+      className={<span class="str">`
+        ${variants[variant]}
+        ${sizes[size]}
+        font-semibold rounded-lg
+        transition-all duration-200
+        active:scale-95
+        disabled:opacity-40 disabled:cursor-not-allowed
+        ${className}
+      `</span>.<span class="fn">trim</span>()}
+      disabled={disabled}
+      {...props}
+    &gt;
+      {children}
+    &lt;/<span class="type">button</span>&gt;
+  )
+}
+
+<span class="cmt">// 使用方式</span>
+&lt;<span class="type">Button</span> variant=<span class="str">"primary"</span> size=<span class="str">"lg"</span>&gt;查看作品集&lt;/<span class="type">Button</span>&gt;
+&lt;<span class="type">Button</span> variant=<span class="str">"outline"</span>&gt;聯絡我&lt;/<span class="type">Button</span>&gt;
+&lt;<span class="type">Button</span> variant=<span class="str">"ghost"</span> disabled&gt;Coming Soon&lt;/<span class="type">Button</span>&gt;</pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">02</div>
+      <div>
+        <div class="ctitle">策略二：@apply（純 CSS 複用）</div>
+        <div class="csub">適合需要在 CSS 中復用樣式，或整合第三方 HTML 的情況</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <code>@apply</code> 讓你在 CSS 中提取工具類成為語意化的 class。
+        適用場景：<em>① Markdown 渲染的內容</em>（無法加 class）、<em>② 第三方 UI 覆蓋</em>、
+        <em>③ 需要在多個框架中共用的樣式</em>。在 React 專案中，通常優先考慮元件抽象。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">CSS — @apply 提取元件樣式</span>
+    </div>
+    <pre><span class="cmt">/* src/index.css */</span>
+<span class="op">@tailwind</span> base;
+<span class="op">@tailwind</span> components;
+
+<span class="op">@layer</span> components {
+  <span class="fn">.btn-primary</span> {
+    <span class="op">@apply</span> bg-amber-400 text-zinc-900 px-5 py-2.5
+           font-semibold rounded-lg
+           hover:bg-amber-300 active:scale-95
+           transition-all duration-200;
+  }
+
+  <span class="cmt">/* Markdown prose 樣式（需安裝 @tailwindcss/typography） */</span>
+  <span class="fn">.prose-custom</span> {
+    <span class="op">@apply</span> prose prose-invert
+           prose-headings:text-amber-400
+           prose-a:text-amber-300;
+  }
+}
+
+<span class="op">@tailwind</span> utilities;</pre>
+  </div>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">03</div>
+      <div>
+        <div class="ctitle">策略三：clsx / cn 工具函式</div>
+        <div class="csub">管理條件式 class 合併，避免字串拼接的混亂</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        當元件有多個 props 會影響 class 時，字串模板會變得雜亂。
+        <code>clsx</code>（或 shadcn/ui 常用的 <em>cn 函式</em>）提供更清晰的條件式 class 合併方式。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — clsx 條件式 class 合併</span>
+    </div>
+    <pre><span class="kw">import</span> { clsx } <span class="kw">from</span> <span class="str">'clsx'</span>              <span class="cmt">// npm install clsx</span>
+<span class="kw">import</span> { twMerge } <span class="kw">from</span> <span class="str">'tailwind-merge'</span>   <span class="cmt">// npm install tailwind-merge</span>
+
+<span class="cmt">// cn：先合併條件，再去除 Tailwind class 衝突</span>
+<span class="kw">function</span> <span class="fn">cn</span>(...inputs) {
+  <span class="kw">return</span> <span class="fn">twMerge</span>(<span class="fn">clsx</span>(inputs))
+}
+
+<span class="cmt">// 使用範例</span>
+<span class="kw">function</span> <span class="fn">Badge</span>({ label, active, size }) {
+  <span class="kw">return</span> (
+    &lt;<span class="type">span</span> className={<span class="fn">cn</span>(
+      <span class="str">'inline-flex items-center rounded-full font-medium'</span>,
+      active
+        ? <span class="str">'bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/50'</span>
+        : <span class="str">'bg-zinc-800 text-zinc-400'</span>,
+      size <span class="op">===</span> <span class="str">'sm'</span> &amp;&amp; <span class="str">'px-2 py-0.5 text-xs'</span>,
+      size <span class="op">===</span> <span class="str">'md'</span> &amp;&amp; <span class="str">'px-3 py-1 text-sm'</span>,
+    )}&gt;
+      {label}
+    &lt;/<span class="type">span</span>&gt;
+  )
+}</pre>
+  </div>
+</section>
+
+<!-- ════════════════ DARK MODE -->
+<section class="section" id="darkmode">
+  <div class="eyebrow">08 &mdash; Dark Mode</div>
+  <h2 class="section-title">深色模式實作</h2>
+  <p class="section-intro">
+    Tailwind 支援兩種深色模式策略：<code>media</code>（跟隨系統設定）與 <code>class</code>（手動切換）。
+    作品集網站通常選擇 <code>class</code> 模式，讓使用者自行控制。
+  </p>
+
+  <table class="ptable">
+    <thead>
+      <tr>
+        <th>策略</th>
+        <th>說明</th>
+        <th>適用場景</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>darkMode: 'media'</code></td>
+        <td>自動跟隨 <code>prefers-color-scheme</code> 系統設定</td>
+        <td>不需要手動切換按鈕的簡單網站</td>
+      </tr>
+      <tr>
+        <td><code>darkMode: 'class'</code></td>
+        <td>在 <code>&lt;html&gt;</code> 上加 <code>dark</code> class 來啟用</td>
+        <td>需要切換按鈕、並記憶使用者偏好的應用</td>
+      </tr>
+      <tr>
+        <td><code>darkMode: ['class', '[data-theme="dark"]']</code></td>
+        <td>v3.4+：用自訂屬性選擇器取代 class</td>
+        <td>整合現有主題系統（如本課程前幾週用的方法）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">JSX — 深色模式切換完整實作</span>
+    </div>
+    <pre><span class="cmt">// hooks/useTheme.js</span>
+<span class="kw">import</span> { useState, useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">export function</span> <span class="fn">useTheme</span>() {
+  <span class="kw">const</span> [isDark, setIsDark] <span class="op">=</span> <span class="fn">useState</span>(() <span class="op">=&gt;</span>
+    localStorage.<span class="fn">getItem</span>(<span class="str">'theme'</span>) <span class="op">!==</span> <span class="str">'light'</span>  <span class="cmt">// 預設深色</span>
+  )
+
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    document.documentElement.classList.<span class="fn">toggle</span>(<span class="str">'dark'</span>, isDark)
+    localStorage.<span class="fn">setItem</span>(<span class="str">'theme'</span>, isDark ? <span class="str">'dark'</span> : <span class="str">'light'</span>)
+  }, [isDark])
+
+  <span class="kw">return</span> { isDark, <span class="fn">toggle</span>: () <span class="op">=&gt;</span> <span class="fn">setIsDark</span>(d <span class="op">=&gt;</span> <span class="op">!</span>d) }
+}
+
+<span class="cmt">// components/ThemeToggle.jsx</span>
+<span class="kw">import</span> { useTheme } <span class="kw">from</span> <span class="str">'../hooks/useTheme'</span>
+
+<span class="kw">export function</span> <span class="fn">ThemeToggle</span>() {
+  <span class="kw">const</span> { isDark, toggle } <span class="op">=</span> <span class="fn">useTheme</span>()
+  <span class="kw">return</span> (
+    &lt;<span class="type">button</span>
+      onClick={toggle}
+      className=<span class="str">"p-2 rounded-lg
+                 bg-zinc-800 hover:bg-zinc-700
+                 dark:bg-zinc-700 dark:hover:bg-zinc-600
+                 transition-colors duration-200"</span>
+      aria-label=<span class="str">"切換主題"</span>
+    &gt;
+      {isDark ? <span class="str">'☀️'</span> : <span class="str">'🌙'</span>}
+    &lt;/<span class="type">button</span>&gt;
+  )
+}
+
+<span class="cmt">{/* 在元件中使用 dark: 修飾符 */}</span>
+&lt;<span class="type">div</span> className=<span class="str">"
+  bg-white dark:bg-zinc-900
+  text-zinc-900 dark:text-zinc-100
+  border border-zinc-200 dark:border-zinc-700
+"</span>&gt;</pre>
+  </div>
+</section>
+
+<!-- ════════════════ CONFIG -->
+<section class="section" id="config">
+  <div class="eyebrow">09 &mdash; Custom Theme</div>
+  <h2 class="section-title">自訂主題（tailwind.config.js）</h2>
+  <p class="section-intro">
+    <code>tailwind.config.js</code> 是設計系統的核心。
+    在 <code>theme.extend</code> 中新增設計 Token，讓整個專案共用統一的顏色、字型、間距規範。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">tailwind.config.js — 完整自訂主題範例</span>
+    </div>
+    <pre><span class="kw">export default</span> {
+  content: [<span class="str">"./index.html"</span>, <span class="str">"./src/**/*.{js,jsx}"</span>],
+  darkMode: <span class="str">'class'</span>,
+  theme: {
+    extend: {
+      <span class="cmt">// 自訂顏色 palette（可搭配 CSS Variables）</span>
+      colors: {
+        brand: {
+          <span class="num">50</span>:  <span class="str">'#fffbeb'</span>,
+          <span class="num">400</span>: <span class="str">'#fbbf24'</span>,
+          <span class="num">500</span>: <span class="str">'#f59e0b'</span>,
+          <span class="num">900</span>: <span class="str">'#78350f'</span>,
+        },
+        surface: <span class="str">'rgb(var(--color-surface) / &lt;alpha-value&gt;)'</span>,
+      },
+
+      <span class="cmt">// 自訂字型</span>
+      fontFamily: {
+        sans:    [<span class="str">'Outfit'</span>, <span class="str">'system-ui'</span>, <span class="str">'sans-serif'</span>],
+        display: [<span class="str">'Playfair Display'</span>, <span class="str">'serif'</span>],
+        mono:    [<span class="str">'JetBrains Mono'</span>, <span class="str">'monospace'</span>],
+      },
+
+      <span class="cmt">// 自訂動畫</span>
+      keyframes: {
+        <span class="prop">fadeUp</span>: {
+          <span class="str">'0%'</span>:   { opacity: <span class="str">'0'</span>, transform: <span class="str">'translateY(20px)'</span> },
+          <span class="str">'100%'</span>: { opacity: <span class="str">'1'</span>, transform: <span class="str">'translateY(0)'</span> },
+        },
+        <span class="prop">shimmer</span>: {
+          <span class="str">'0%'</span>:   { backgroundPosition: <span class="str">'-200% 0'</span> },
+          <span class="str">'100%'</span>: { backgroundPosition: <span class="str">'200% 0'</span> },
+        }
+      },
+      animation: {
+        <span class="prop">fadeUp</span>:  <span class="str">'fadeUp .5s ease forwards'</span>,
+        <span class="prop">shimmer</span>: <span class="str">'shimmer 2s infinite linear'</span>,
+      },
+
+      <span class="cmt">// 延伸斷點</span>
+      screens: {
+        <span class="str">'2xl'</span>: <span class="str">'1536px'</span>,
+        <span class="str">'3xl'</span>: <span class="str">'1920px'</span>,
+      },
+    },
+  },
+  plugins: [
+    <span class="fn">require</span>(<span class="str">'@tailwindcss/typography'</span>),   <span class="cmt">// Markdown 排版</span>
+    <span class="fn">require</span>(<span class="str">'@tailwindcss/forms'</span>),         <span class="cmt">// 表單重置樣式</span>
+    <span class="fn">require</span>(<span class="str">'@tailwindcss/aspect-ratio'</span>), <span class="cmt">// 比例容器</span>
+  ],
+}</pre>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">DESIGN TOKEN TIP</span>
+    在 <code>theme.extend</code> 中新增的項目會<strong>合併</strong>到預設主題中，
+    直接使用 <code>theme</code>（不用 extend）則會<strong>完全覆蓋</strong>預設值，通常應使用 extend。
+    建議將品牌顏色命名為 <code>brand</code> 或專案名稱，而非直接覆蓋 <code>blue</code>、<code>gray</code> 等預設色系。
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">10 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+
+  <!-- Q1 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">Tailwind CSS 的 <strong>Mobile-First</strong> 策略代表什麼？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','Tailwind 的響應式修飾符是「在該斷點以上生效」的最小寬度查詢，不是最大寬度。')">
+        <div class="quiz-key">A</div>
+        <div>加了 <code>md:</code> 前綴的 class，只在螢幕寬度小於 768px 時生效</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','沒有前綴的 class 適用於所有尺寸（即手機），加了 sm:、md: 等前綴代表「在該斷點以上才生效」，這就是 Mobile-First 的含義。')">
+        <div class="quiz-key">B</div>
+        <div>沒有前綴的 class 適用於所有尺寸（最小螢幕），有前綴的 class 在達到該斷點後才生效</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Tailwind 沒有強制要求先寫手機版元件，它是一種 CSS 媒體查詢的策略，不是開發順序的規定。')">
+        <div class="quiz-key">C</div>
+        <div>必須先完成手機版元件，才能開始撰寫桌機版元件</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','md: 前綴代表 768px 以上生效，不是限定只在平板上才有效果。')">
+        <div class="quiz-key">D</div>
+        <div>加了 <code>md:</code> 前綴的 class 只在平板裝置上生效</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-0"></div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">以下哪個 class 組合能讓元素在手機為<strong>單欄</strong>、桌機為<strong>三欄</strong>的網格佈局？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','這兩個 class 都沒有前綴，意味著在所有尺寸都套用 grid-cols-3，手機也會是三欄。')">
+        <div class="quiz-key">A</div>
+        <div><code>grid grid-cols-3</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','grid-cols-1 無前綴代表所有尺寸預設一欄，lg:grid-cols-3 代表在 1024px 以上才改為三欄，符合 Mobile-First 的 RWD 做法。')">
+        <div class="quiz-key">B</div>
+        <div><code>grid grid-cols-1 lg:grid-cols-3</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Tailwind 使用的是最小寬度（min-width）媒體查詢，sm: 是 640px 以上，不是「手機以外」的正確表達方式。')">
+        <div class="quiz-key">C</div>
+        <div><code>grid sm:grid-cols-1 lg:grid-cols-3</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Tailwind 沒有 mobile: 這個前綴。')">
+        <div class="quiz-key">D</div>
+        <div><code>grid mobile:grid-cols-1 lg:grid-cols-3</code></div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-1"></div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">想要在父元素 hover 時讓<strong>子元素</strong>的樣式改變，應該使用什麼技巧？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','hover: 只能對元素本身作用，無法控制其子元素的樣式。')">
+        <div class="quiz-key">A</div>
+        <div>在子元素上使用 <code>hover:opacity-100</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','parent-hover: 並不存在於 Tailwind 中。')">
+        <div class="quiz-key">B</div>
+        <div>在子元素上使用 <code>parent-hover:opacity-100</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','在父元素加上 group class，子元素就能用 group-hover: 偵測父元素的 hover 狀態。這是 Tailwind 中實作聯動互動效果的標準做法。')">
+        <div class="quiz-key">C</div>
+        <div>父元素加 <code>group</code>，子元素使用 <code>group-hover:opacity-100</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','@apply 是在 CSS 中提取工具類的指令，無法解決這個問題。')">
+        <div class="quiz-key">D</div>
+        <div>用 <code>@apply</code> 在子元素的 CSS 中撰寫 hover 邏輯</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-2"></div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">關於 <code>tailwind.config.js</code> 中的 <code>theme.extend</code>，下列何者<strong>正確</strong>？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','extend 的作用是「合併」，不是覆蓋。若要完全替換預設值，直接使用 theme（不用 extend）才會覆蓋。')">
+        <div class="quiz-key">A</div>
+        <div>在 <code>theme.extend</code> 中新增的值會完全取代 Tailwind 的預設設定</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','extend 的目的是讓你擴充預設設定，不是只允許使用自訂值。')">
+        <div class="quiz-key">B</div>
+        <div>使用 <code>theme.extend</code> 後，只能使用自訂的顏色，無法使用 Tailwind 預設的 zinc、slate 等色系</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','theme.extend 會將自訂值合併到預設主題中，兩者可以同時使用。例如新增 brand 色系後，仍然可以繼續使用 zinc、amber 等預設色。')">
+        <div class="quiz-key">C</div>
+        <div>在 <code>theme.extend</code> 中新增的值會合併到預設主題，兩者可以同時使用</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','每次修改 tailwind.config.js 後，Vite 的 HMR 通常會自動重載，不需要手動重啟。')">
+        <div class="quiz-key">D</div>
+        <div>每次修改 <code>tailwind.config.js</code> 後，必須手動重啟開發伺服器才能生效</div>
+      </div>
+    </div>
+    <div class="quiz-fb" id="fb-3"></div>
+  </div>
+</section>
+
+<!-- ════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">11 &mdash; Weekly Project</div>
+  <h2 class="section-title">本週專案</h2>
+
+  <div class="project-hero">
+    <div class="project-eyebrow">PROJECT / WEEK 11</div>
+    <div class="project-name">Portfolio v2 — Tailwind 全面重構</div>
+    <div class="project-desc">
+      將第 10 週用 React Router 建立的作品集網站，全面移植至 Tailwind CSS。
+      重新設計視覺系統、加入完整的 RWD 響應式支援、深色模式切換，
+      並完善各頁面的微互動細節，達到可對外展示的完成度。
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">安裝 Tailwind 並遷移設定</div>
+        <div class="step-body">在現有的作品集專案中安裝 Tailwind CSS v3、clsx、tailwind-merge。設定 tailwind.config.js 的 content 路徑與 darkMode: 'class'，並在 index.css 引入三行 Tailwind 指令，同時移除原有的自訂 CSS 檔案。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">建立設計系統（tailwind.config.js）</div>
+        <div class="step-body">在 theme.extend 中定義品牌色（如 brand-400、brand-500）、自訂字型（display、mono）與動畫（fadeUp、shimmer）。建立 <code>src/lib/utils.js</code>，輸出 <code>cn</code> 工具函式供全專案使用。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">重構基礎 UI 元件</div>
+        <div class="step-body">建立 <code>components/ui/</code> 目錄，製作可重用的 Button、Badge、Card、Tag 元件，每個元件都支援 variant 和 size props。確保所有元件支援深色模式（dark: 修飾符）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">首頁 Hero Section RWD 重設計</div>
+        <div class="step-body">重新設計 Hero：手機版垂直排列，桌機版水平兩欄（照片 + 文字）。使用 <code>animate-fadeUp</code> 加入進場動畫，headings 使用 Playfair Display 搭配自訂色，加入 CTA 按鈕組（主按鈕 + 次要按鈕）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">作品集頁面：卡片網格 + Hover 效果</div>
+        <div class="step-body">實作響應式卡片網格（手機1欄 → 平板2欄 → 桌機3欄）。每張卡片使用 group + group-hover 實作「滑入顯示 overlay + 縮放圖片」的懸停效果，加入技術標籤（Badge 元件）與連結按鈕。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">技能頁面：進度條與分類展示</div>
+        <div class="step-body">設計技能分類卡片（前端、工具、設計），使用 Tailwind 的 w-0 → w-[80%] 搭配 transition-all 製作動畫進度條（Intersection Observer 觸發）。技術 icon 使用 react-icons。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">導覽列 + 主題切換整合</div>
+        <div class="step-body">重做 Navbar：使用 <code>backdrop-blur-md</code> 和 <code>bg-white/80 dark:bg-zinc-900/80</code> 製作毛玻璃效果，加入 useTheme Hook 與 ThemeToggle 按鈕。手機版使用 Hamburger Menu，點擊後滑入全寬 Drawer（Tailwind transition）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div>
+        <div class="step-title">聯絡表單 + Skeleton Loading</div>
+        <div class="step-body">安裝 <code>@tailwindcss/forms</code>，重新美化聯絡表單，加入 focus 光環、錯誤狀態（ring-red-500）與成功狀態。為作品集卡片製作 Skeleton 載入效果（使用 animate-shimmer）。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-card">
+    <div class="demo-label">元件預覽</div>
+    <div class="demo-preview">
+      <button class="tw-btn tw-btn-primary">查看作品集</button>
+      <button class="tw-btn tw-btn-outline">聯絡我</button>
+      <button class="tw-btn tw-btn-ghost">下載履歷</button>
+      <div class="tw-card-demo">
+        <div class="tw-card-img">🎬</div>
+        <div class="tw-card-title">CineSearch App</div>
+        <div class="tw-card-sub">React · Tailwind · TMDB API</div>
+      </div>
+    </div>
+    <div style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);">Button variants (primary / outline / ghost) + ProjectCard 卡片元件</div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.2rem;margin:2.5rem 0 1rem;color:var(--text);">自我檢核清單</h3>
+  <div class="checklist">
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>Tailwind 安裝成功，JIT 正常運作（class 即時生效）</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>tailwind.config.js 有自訂品牌色、字型與動畫設定</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>Button、Badge、Card 元件支援多種 variant，且深色模式下樣式正確</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>作品集卡片網格在手機、平板、桌機三個尺寸下佈局正確</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>卡片有 group-hover 懸停效果（overlay 滑入 + 圖片縮放）</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>Navbar 有毛玻璃效果，手機版有 Hamburger Menu</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>深色 / 淺色模式切換正常，偏好記憶至 localStorage</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>Lighthouse 行動版 Performance 分數達 90 分以上</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">12 &mdash; Resources</div>
+  <h2 class="section-title">延伸資源</h2>
+  <div class="resource-grid">
+    <a class="resource-card" href="https://tailwindcss.com/docs" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">Tailwind CSS Docs</div>
+      <div class="resource-desc">最完整的官方文件，搜尋功能強大，每個工具類都有即時預覽。建議收藏並善用右上角搜尋。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://tailwindui.com" target="_blank" rel="noopener">
+      <div class="resource-type">UI 元件</div>
+      <div class="resource-name">Tailwind UI</div>
+      <div class="resource-desc">官方付費元件庫，含數百個高品質 HTML + React 元件範例，是學習設計模式的最佳參考。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://ui.shadcn.com" target="_blank" rel="noopener">
+      <div class="resource-type">開源元件庫</div>
+      <div class="resource-name">shadcn/ui</div>
+      <div class="resource-desc">基於 Tailwind + Radix UI 的免費開源元件庫，直接複製原始碼到專案中，完全可自訂。目前最流行的 React UI 方案。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://www.creative-tim.com/twcomponents" target="_blank" rel="noopener">
+      <div class="resource-type">社群資源</div>
+      <div class="resource-name">Tailwind Components</div>
+      <div class="resource-desc">社群分享的免費 Tailwind 元件集，包含 Card、Navbar、Form、Modal 等常見 UI 模式，可直接參考複用。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://play.tailwindcss.com" target="_blank" rel="noopener">
+      <div class="resource-type">線上工具</div>
+      <div class="resource-name">Tailwind Play</div>
+      <div class="resource-desc">官方線上 Playground，支援完整的 Tailwind 設定，適合快速實驗 class 組合，不需要本地環境。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss" target="_blank" rel="noopener">
+      <div class="resource-type">開發工具</div>
+      <div class="resource-name">Tailwind IntelliSense</div>
+      <div class="resource-desc">VS Code 官方擴充套件：自動補全、class 排序建議、懸停顯示 CSS 值。開發 Tailwind 專案必裝。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+  </div>
+</section>
+
+</div><!-- /content -->
+
+<nav class="bottom-nav">
+  <a href="week10.html" class="nav-btn">&larr; Week 10 — React Router</a>
+  <a href="index.html" class="home-link">&#8617; 返回總覽</a>
+  <a href="week12.html" class="nav-btn">Week 12 — 部署上線 &rarr;</a>
+</nav>
+
+</main>
+
+<script>
+// Progress bar
+const bar = document.getElementById('progressBar')
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100
+  bar.style.width = pct + '%'
+})
+
+// Scroll-in sections
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+document.querySelectorAll('.section').forEach(s => obs.observe(s))
+
+// TOC active state
+const sections = document.querySelectorAll('.section[id]')
+const tocObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const id = e.target.getAttribute('id')
+    const link = document.querySelector(`.toc-item[href="#${id}"]`)
+    if (link) link.classList.toggle('active', e.isIntersecting)
+  })
+}, { threshold: 0.25, rootMargin: '-60px 0px -40% 0px' })
+sections.forEach(s => tocObs.observe(s))
+
+// Quiz
+let answered = []
+function answer(el, type, feedback) {
+  const block = el.closest('.quiz-block')
+  const idx = [...document.querySelectorAll('.quiz-block')].indexOf(block)
+  if (answered.includes(idx)) return
+  answered.push(idx)
+  block.querySelectorAll('.quiz-opt').forEach(o => o.style.pointerEvents = 'none')
+  el.classList.add(type)
+  const fb = block.querySelector('.quiz-fb')
+  fb.textContent = feedback
+  fb.classList.add('show')
+  if (type === 'wrong') fb.classList.add('wrong-fb')
+}
+
+// Checklist
+function toggleCheck(el) {
+  el.classList.toggle('done')
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : ''
+}
+</script>
+</body>
+</html>

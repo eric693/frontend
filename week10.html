@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 10 — React Router 與多頁面架構</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f0;--bg2:#eeebe3;--bg3:#e4e0d6;--surface:#ffffff;
+  --border:#d6d1c4;--border2:#bfb9a8;
+  --text:#1c1814;--muted:#7a7264;--faint:#a09880;
+  --r1:#e84040;--r2:#2563eb;--r3:#16a34a;--r4:#d97706;--r5:#7c3aed;
+  --accent:var(--r1);--accent-dim:rgba(232,64,64,.1);--accent-border:rgba(232,64,64,.3);
+  --code-bg:#1a1714;--code-text:#e8e2d8;
+  --font-d:'DM Serif Text',serif;
+  --font-b:'Figtree',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden;}
+
+/* subtle linen texture */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23c8c0b0' fill-opacity='0.15'/%3E%3C/svg%3E");
+  opacity:1;}
+
+.progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;z-index:500;background:linear-gradient(to right,var(--r1),var(--r2),var(--r3),var(--r4));transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(247,245,240,.93);backdrop-filter:blur(12px);border-bottom:2px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--r1);letter-spacing:.12em;text-decoration:none;font-weight:600;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);background:var(--bg3);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--r1);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.57rem;color:var(--faint);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:8px;height:8px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;transition:all .2s;background:transparent;}
+.toc-item:hover,.toc-item.active{color:var(--r1);}
+.toc-item:hover::before,.toc-item.active::before{border-color:var(--r1);background:var(--r1);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:5rem 3.5rem 4rem;border-bottom:2px solid var(--border);position:relative;overflow:hidden;min-height:440px;display:flex;flex-direction:column;justify-content:flex-end;}
+
+/* metro map decoration */
+.metro-deco{position:absolute;top:0;right:0;width:45%;height:100%;pointer-events:none;opacity:0;animation:fadeUp .5s .6s forwards;}
+.metro-svg{width:100%;height:100%;}
+
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--r1);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-size:clamp(2.8rem,5.5vw,5rem);line-height:1.05;letter-spacing:-.01em;margin-bottom:1.4rem;max-width:680px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{color:var(--r1);font-style:italic;}
+.hero h1 .hi2{color:var(--r2);}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-meta{display:flex;gap:0;border:2px solid var(--border);width:fit-content;background:var(--surface);opacity:0;animation:fadeUp .5s .5s forwards;}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--text);font-weight:600;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--r1);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--r1),transparent);}
+.section-title{font-family:var(--font-d);font-size:2.1rem;color:var(--text);margin-bottom:1.8rem;line-height:1.15;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+/* objectives */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:2px solid var(--border);}
+.obj-item{background:var(--surface);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg2);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--r1);font-weight:600;background:var(--accent-dim);border:1px solid var(--accent-border);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+/* concept blocks */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.1rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:28px;height:28px;background:var(--r1);color:#fff;font-family:var(--font-m);font-size:.65rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-b);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--surface);}
+.cbody p{font-size:.9rem;color:#4a4640;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:700;}
+.cbody em{color:var(--r1);font-style:normal;font-weight:700;}
+
+/* notes */
+.note{border-left:3px solid var(--r4);background:rgba(217,119,6,.08);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#5a3a10;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--r4);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--r3);background:rgba(22,163,74,.08);color:#1a4a20;}
+.note.tip .note-label{color:var(--r3);}
+.note.info{border-left-color:var(--r2);background:rgba(37,99,235,.08);color:#1a2a60;}
+.note.info .note-label{color:var(--r2);}
+.note.warn{border-left-color:var(--r1);background:rgba(232,64,64,.08);color:#5a1a1a;}
+.note.warn .note-label{color:var(--r1);}
+
+/* code */
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:#120f0c;border-bottom:1px solid #2a2520;}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:#554840;letter-spacing:.1em;}
+pre{background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);}
+.t{color:#93c5fd;}  /* component/tag */
+.p{color:#86efac;}  /* prop */
+.v{color:#fde68a;}  /* value/string */
+.c{color:#3a3228;font-style:italic;}  /* comment */
+.s{color:#f0abfc;}  /* keyword */
+.fn{color:#c4a6f0;} /* function */
+.kw{color:#fb923c;} /* jsx special */
+.str{color:#fde68a;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--r1);padding:.1em .4em;border:1px solid var(--border2);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg2);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+/* tables */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:2px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(214,209,196,.5);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--r1);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* demo areas */
+.demo-wrap{border:2px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1.1rem;background:var(--bg3);border-bottom:1px solid var(--border);font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+.demo-bar strong{color:var(--r1);}
+.demo-body{padding:1.8rem;background:var(--surface);}
+
+/* ══ METRO ROUTER SIMULATOR ══ */
+.router-sim{display:grid;grid-template-columns:200px 1fr;gap:0;min-height:360px;border:1px solid var(--border);overflow:hidden;}
+.router-sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.router-sidebar-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;padding:.8rem 1.2rem;border-bottom:1px solid var(--border);}
+.route-link{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.2rem;font-family:var(--font-m);font-size:.75rem;color:var(--muted);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent;user-select:none;}
+.route-link:hover{background:var(--bg3);color:var(--text);}
+.route-link.active{background:var(--surface);color:var(--text);font-weight:600;}
+.route-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.route-path{font-size:.62rem;color:var(--faint);margin-top:.1rem;}
+.router-content{background:var(--surface);position:relative;overflow:hidden;}
+.router-page{position:absolute;inset:0;padding:2rem;opacity:0;transform:translateX(20px);transition:opacity .3s,transform .3s;pointer-events:none;}
+.router-page.active{opacity:1;transform:translateX(0);pointer-events:all;}
+.router-page h3{font-family:var(--font-d);font-size:1.5rem;margin-bottom:.6rem;}
+.router-page p{font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:1rem;}
+.router-url-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.5rem 1rem;font-family:var(--font-m);font-size:.72rem;color:var(--muted);display:flex;align-items:center;gap:.5rem;}
+.router-url-bar .url-path{color:var(--r1);font-weight:600;}
+
+/* ══ URL ANATOMY ══ */
+.url-anatomy{display:flex;flex-direction:column;gap:.3rem;margin:1.2rem 0;font-family:var(--font-m);font-size:.82rem;}
+.url-full{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--bg2);padding:.8rem 1.2rem;border:1px solid var(--border);}
+.url-seg{padding:.2rem .1rem;border-bottom:2px solid transparent;cursor:help;transition:all .2s;}
+.url-seg:hover{border-bottom-color:currentColor;background:rgba(0,0,0,.04);}
+.url-legend{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem;}
+.url-badge{font-size:.65rem;padding:.2rem .6rem;border-radius:2px;display:flex;align-items:center;gap:.3rem;}
+
+/* ══ NESTED ROUTES VISUAL ══ */
+.nested-visual{border:1px solid var(--border);overflow:hidden;margin:1.2rem 0;}
+.nested-outer{padding:1rem;border:2px dashed var(--border2);background:var(--bg2);position:relative;margin:.8rem;}
+.nested-outer-label{font-family:var(--font-m);font-size:.62rem;color:var(--r2);margin-bottom:.6rem;}
+.nested-inner{padding:1rem;border:2px dashed var(--r3);background:rgba(22,163,74,.05);position:relative;}
+.nested-inner-label{font-family:var(--font-m);font-size:.62rem;color:var(--r3);margin-bottom:.4rem;}
+.outlet-box{background:var(--surface);border:1px solid var(--r3);padding:.8rem 1rem;font-family:var(--font-m);font-size:.72rem;color:var(--r3);text-align:center;}
+
+/* ══ COMPARE ══ */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--surface);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(22,163,74,.08);color:var(--r3);border-bottom:1px solid rgba(22,163,74,.2);}
+.cpanel-hdr.bad{background:rgba(232,64,64,.08);color:var(--r1);border-bottom:1px solid rgba(232,64,64,.2);}
+.cpanel-hdr.neutral{background:rgba(37,99,235,.08);color:var(--r2);border-bottom:1px solid rgba(37,99,235,.2);}
+
+/* ══ PARAMS PLAYGROUND ══ */
+.params-demo{display:flex;flex-direction:column;gap:1rem;}
+.params-input-row{display:flex;gap:.6rem;align-items:center;}
+.params-input{flex:1;font-family:var(--font-m);font-size:.8rem;padding:.45rem .9rem;border:1px solid var(--border2);background:var(--bg);color:var(--text);outline:none;}
+.params-input:focus{border-color:var(--r1);}
+.params-btn{font-family:var(--font-m);font-size:.72rem;padding:.45rem 1rem;background:var(--r1);color:#fff;border:none;cursor:pointer;transition:opacity .15s;}
+.params-btn:hover{opacity:.85;}
+.params-output{background:var(--code-bg);padding:1rem 1.2rem;font-family:var(--font-m);font-size:.75rem;color:var(--code-text);line-height:1.9;border:1px solid var(--border);min-height:80px;}
+.params-visual{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem;}
+.param-chip{font-family:var(--font-m);font-size:.7rem;padding:.3rem .8rem;border:1px solid;display:flex;align-items:center;gap:.4rem;}
+
+/* ══ NAVIGATION FLOW ══ */
+.nav-flow{position:relative;padding:1.5rem 0;}
+.flow-line{position:absolute;top:50%;left:60px;right:60px;height:2px;background:var(--border);z-index:0;}
+.flow-nodes{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+.flow-node{display:flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;}
+.flow-circle{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65rem;font-weight:600;border:2px solid var(--border);background:var(--surface);transition:all .2s;}
+.flow-node:hover .flow-circle{border-color:var(--r1);background:var(--accent-dim);color:var(--r1);}
+.flow-node.visited .flow-circle{background:var(--r1);border-color:var(--r1);color:#fff;}
+.flow-label{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-align:center;max-width:70px;}
+.flow-arrow{font-size:.8rem;color:var(--border2);}
+.nav-log{background:var(--code-bg);padding:.7rem 1rem;font-family:var(--font-m);font-size:.72rem;color:var(--code-text);margin-top:1rem;min-height:50px;line-height:1.8;}
+
+/* quiz */
+.quiz-block{background:var(--bg2);border:2px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--r1);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);line-height:1.3;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--r1);background:var(--accent-dim);}
+.quiz-opt.correct{border-color:var(--r3);background:rgba(22,163,74,.08);color:var(--r3);}
+.quiz-opt.wrong{border-color:var(--r1);background:rgba(232,64,64,.08);color:var(--r1);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* checklist */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--surface);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg2);}
+.check-item.done{background:rgba(22,163,74,.06);border-color:rgba(22,163,74,.3);}
+.check-item.done .check-box{background:var(--r3);border-color:var(--r3);color:#fff;font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* project */
+.project-hero{background:var(--code-bg);color:var(--code-text);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'<Route />';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:3.5rem;color:#fff;opacity:.05;pointer-events:none;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:#86efac;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;color:#fff;margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:#888;line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--surface);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg2);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--r1);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:700;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* resources */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--surface);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg2);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-b);font-size:.88rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--r1);margin-top:auto;padding-top:.4rem;}
+
+/* bottom nav */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:2px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--surface);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--r1);color:var(--r1);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--r1);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pageSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.metro-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .router-sim{grid-template-columns:1fr;min-height:auto;}
+  .router-sidebar{border-right:none;border-bottom:1px solid var(--border);}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+  .flow-nodes{gap:.5rem;}
+  .flow-circle{width:32px;height:32px;font-size:.55rem;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 10 / 18 &mdash; REACT ROUTER</div>
+  <nav class="header-nav">
+    <a href="week9.html">&larr; Week 09</a>
+    <a href="index.html">總覽</a>
+    <a href="week11.html">Week 11 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">路由基本概念</a>
+  <a class="toc-item" href="#concept-2">安裝與基本設定</a>
+  <a class="toc-item" href="#concept-3">動態路由參數</a>
+  <a class="toc-item" href="#concept-4">巢狀路由</a>
+  <a class="toc-item" href="#concept-5">程式化導航</a>
+  <a class="toc-item" href="#concept-6">保護路由</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <!-- Metro map SVG decoration -->
+    <div class="metro-deco">
+      <svg class="metro-svg" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Line 1 (red) -->
+        <path d="M20 80 L180 80 L240 140 L380 140" stroke="#e84040" stroke-width="6" stroke-linecap="round"/>
+        <!-- Line 2 (blue) -->
+        <path d="M20 160 L120 160 L180 80 L280 80 L380 80" stroke="#2563eb" stroke-width="6" stroke-linecap="round"/>
+        <!-- Line 3 (green) -->
+        <path d="M100 20 L100 200 L200 280" stroke="#16a34a" stroke-width="6" stroke-linecap="round"/>
+        <!-- Line 4 (orange) -->
+        <path d="M20 240 L380 240" stroke="#d97706" stroke-width="6" stroke-linecap="round"/>
+        <!-- Stations (circles) -->
+        <circle cx="100" cy="80" r="10" fill="white" stroke="#e84040" stroke-width="3"/>
+        <circle cx="180" cy="80" r="10" fill="white" stroke="#2563eb" stroke-width="3"/>
+        <circle cx="240" cy="140" r="10" fill="white" stroke="#e84040" stroke-width="3"/>
+        <circle cx="100" cy="160" r="10" fill="white" stroke="#2563eb" stroke-width="3"/>
+        <circle cx="100" cy="80" r="6" fill="#e84040"/>
+        <circle cx="180" cy="80" r="6" fill="#7c3aed"/>
+        <circle cx="240" cy="140" r="6" fill="#e84040"/>
+        <circle cx="100" cy="160" r="6" fill="#2563eb"/>
+        <circle cx="280" cy="240" r="10" fill="white" stroke="#d97706" stroke-width="3"/>
+        <circle cx="280" cy="240" r="6" fill="#d97706"/>
+        <!-- Labels -->
+        <text x="108" y="76" font-family="JetBrains Mono" font-size="9" fill="#1c1814" opacity=".5">/home</text>
+        <text x="188" y="76" font-family="JetBrains Mono" font-size="9" fill="#1c1814" opacity=".5">/about</text>
+        <text x="248" y="136" font-family="JetBrains Mono" font-size="9" fill="#1c1814" opacity=".5">/posts</text>
+        <text x="108" y="156" font-family="JetBrains Mono" font-size="9" fill="#1c1814" opacity=".5">/users</text>
+        <text x="288" y="236" font-family="JetBrains Mono" font-size="9" fill="#1c1814" opacity=".5">/contact</text>
+      </svg>
+    </div>
+    <div class="hero-label">PHASE 03 &mdash; 現代框架 / WEEK 10</div>
+    <h1>React <span class="hi">Router</span><br>多頁面<span class="hi2">架構</span></h1>
+    <p class="hero-desc">讓 React SPA 有「多個頁面」的感覺。這週你將學會用 React Router v6 管理 URL、建立巢狀路由、動態取得路徑參數，以及保護需要登入才能存取的頁面。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 03 — 現代框架</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">12–15 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">本週專案</div><div class="meta-cell-value">個人作品集網站</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">Week 09 Hooks</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">本週目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個核心能力，讓你的 React 應用從「單頁」進化到「多頁面架構」。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">解釋 SPA 路由的工作原理——為什麼 URL 改變了但頁面沒有重整，以及 Hash Router 和 Browser Router 的差異</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">安裝並設定 React Router v6，建立 <code>BrowserRouter</code>、<code>Routes</code>、<code>Route</code> 的基本結構，並正確使用 <code>Link</code> 取代 <code>&lt;a&gt;</code> 標籤</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">使用 <code>:param</code> 語法定義動態路由，並用 <code>useParams()</code> Hook 在元件中取得 URL 參數</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">建立巢狀路由結構，理解 <code>Outlet</code> 元件的作用，並實作共用 Layout（header/footer 保持，只有中間內容切換）</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">使用 <code>useNavigate()</code> Hook 實作程式化跳頁，區分 <code>push</code>（加入歷史）和 <code>replace</code>（取代歷史）兩種模式</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">實作保護路由（Protected Route）元件，讓未登入使用者自動被導向登入頁，並在登入後回到原本要去的頁面</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: 路由基本概念 -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">SPA 路由是什麼？</h2>
+      <p class="section-intro">傳統網站每換一頁就向伺服器要一份新 HTML。SPA 只載入一次 HTML，之後的「換頁」完全在瀏覽器裡發生——這就是前端路由。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">傳統 MPA vs 現代 SPA</div><div class="csub">Multi-Page App vs Single-Page App</div></div></div>
+        <div class="cbody">
+          <p>傳統的<em>多頁應用（MPA）</em>：點擊連結 → 瀏覽器向伺服器發送請求 → 伺服器回傳完整 HTML → 頁面重新載入。每次換頁都有白屏閃爍，速度取決於網路。</p>
+          <p><em>單頁應用（SPA）</em>：只有第一次載入時請求 HTML，之後的「換頁」完全在瀏覽器端發生——JavaScript 更新 URL（用 History API）、根據 URL 決定渲染哪個元件、切換速度接近即時。</p>
+          <p>React Router 的工作就是：<strong>監聽 URL 變化，根據 URL 決定渲染哪個 React 元件</strong>。它是 URL 和元件之間的對應表。</p>
+          <div class="note info">
+            <span class="note-label">History API</span>
+            瀏覽器的 History API 讓 JavaScript 可以改變 URL（<code>history.pushState()</code>）而不觸發頁面重整。React Router 在底層使用這個 API——這也是為什麼你需要在伺服器設定「所有路由都回傳 index.html」，否則直接訪問 <code>/about</code> 會得到 404。
+          </div>
+        </div>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">BrowserRouter vs HashRouter</div><div class="csub">兩種路由模式的選擇</div></div></div>
+        <div class="cbody">
+          <p><em>BrowserRouter</em>（推薦）：使用真實的 URL 路徑，如 <code>example.com/about</code>。外觀乾淨，SEO 友好。需要伺服器配合設定（Vite dev server 已自動處理，部署到 Vercel/Netlify 也自動支援）。</p>
+          <p><em>HashRouter</em>：URL 中有 <code>#</code>，如 <code>example.com/#/about</code>。<code>#</code> 後的部分不會被送到伺服器，因此不需要伺服器特別設定，適合靜態檔案伺服器或某些特殊環境。但 URL 不好看，也不利 SEO。</p>
+          <p><strong>結論</strong>：在 Vite 開發環境和主流部署平台（Vercel、Netlify）使用 <em>BrowserRouter</em>。只有在無法設定伺服器時才考慮 HashRouter。</p>
+        </div>
+      </div>
+
+      <!-- Router Simulator -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>ROUTER SIMULATOR</strong><span>點擊左側連結模擬頁面切換（URL 不真的改變）</span></div>
+        <div class="demo-body" style="padding:0;">
+          <div class="router-url-bar">
+            <span style="color:var(--faint);">&#128274;</span>
+            <span>localhost:5173</span>
+            <span class="url-path" id="simUrl">/</span>
+          </div>
+          <div class="router-sim">
+            <div class="router-sidebar">
+              <div class="router-sidebar-label">NAVIGATION</div>
+              <div class="route-link active" data-page="home" data-path="/">
+                <div class="route-dot" style="background:var(--r1);"></div>
+                <div><div>首頁</div><div class="route-path">/</div></div>
+              </div>
+              <div class="route-link" data-page="about" data-path="/about">
+                <div class="route-dot" style="background:var(--r2);"></div>
+                <div><div>關於</div><div class="route-path">/about</div></div>
+              </div>
+              <div class="route-link" data-page="projects" data-path="/projects">
+                <div class="route-dot" style="background:var(--r3);"></div>
+                <div><div>作品集</div><div class="route-path">/projects</div></div>
+              </div>
+              <div class="route-link" data-page="project-detail" data-path="/projects/42">
+                <div class="route-dot" style="background:var(--r3);border:2px dashed var(--r3);background:transparent;"></div>
+                <div><div>作品詳情</div><div class="route-path">/projects/:id</div></div>
+              </div>
+              <div class="route-link" data-page="contact" data-path="/contact">
+                <div class="route-dot" style="background:var(--r4);"></div>
+                <div><div>聯絡</div><div class="route-path">/contact</div></div>
+              </div>
+              <div class="route-link" data-page="notfound" data-path="/anything">
+                <div class="route-dot" style="background:var(--faint);"></div>
+                <div><div>未知路由</div><div class="route-path">/*</div></div>
+              </div>
+            </div>
+            <div class="router-content" id="routerContent">
+              <div class="router-page active" data-page="home">
+                <h3 style="color:var(--r1);">&#127968; 首頁</h3>
+                <p>這是 <code>/</code> 路由渲染的元件（<code>&lt;HomePage /&gt;</code>）。</p>
+                <p style="font-family:var(--font-m);font-size:.72rem;color:var(--muted);">對應規則：<code style="color:var(--r3);">&lt;Route path="/" element={&lt;HomePage /&gt;} /&gt;</code></p>
+              </div>
+              <div class="router-page" data-page="about">
+                <h3 style="color:var(--r2);">&#128100; 關於我</h3>
+                <p>這是 <code>/about</code> 路由渲染的元件（<code>&lt;AboutPage /&gt;</code>）。</p>
+                <p style="font-family:var(--font-m);font-size:.72rem;color:var(--muted);">對應規則：<code style="color:var(--r3);">&lt;Route path="/about" element={&lt;AboutPage /&gt;} /&gt;</code></p>
+              </div>
+              <div class="router-page" data-page="projects">
+                <h3 style="color:var(--r3);">&#128193; 作品集列表</h3>
+                <p>這是 <code>/projects</code> 路由渲染的元件（<code>&lt;ProjectsPage /&gt;</code>）。</p>
+                <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem;">點擊「作品詳情」看 <code>:id</code> 動態路由的效果。</p>
+              </div>
+              <div class="router-page" data-page="project-detail">
+                <h3 style="color:var(--r3);">&#128196; 作品 #42</h3>
+                <p>動態路由 <code>/projects/42</code> — 在元件中用 <code>useParams()</code> 取得 <code>id = "42"</code>。</p>
+                <p style="font-family:var(--font-m);font-size:.72rem;color:var(--muted);">對應規則：<code style="color:var(--r3);">&lt;Route path="/projects/:id" element={&lt;ProjectDetail /&gt;} /&gt;</code></p>
+                <div style="margin-top:.8rem;background:var(--bg2);padding:.7rem 1rem;font-family:var(--font-m);font-size:.72rem;border-left:2px solid var(--r3);">
+                  const { id } = useParams();&nbsp;&nbsp;<span style="color:var(--r3);">// "42"</span>
+                </div>
+              </div>
+              <div class="router-page" data-page="contact">
+                <h3 style="color:var(--r4);">&#9993; 聯絡我</h3>
+                <p>這是 <code>/contact</code> 路由渲染的元件（<code>&lt;ContactPage /&gt;</code>）。</p>
+              </div>
+              <div class="router-page" data-page="notfound">
+                <h3 style="color:var(--faint);">&#10060; 404 Not Found</h3>
+                <p>沒有任何 Route 的 path 匹配當前 URL，渲染通用的 <code>*</code> 路由。</p>
+                <p style="font-family:var(--font-m);font-size:.72rem;color:var(--muted);">對應規則：<code style="color:var(--r3);">&lt;Route path="*" element={&lt;NotFoundPage /&gt;} /&gt;</code></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: 安裝與基本設定 -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">安裝與基本設定</h2>
+      <p class="section-intro">React Router v6 是目前的主流版本，API 設計比 v5 更直覺。學習 v6 的寫法，避免在網路上看到 v5 範例時混用。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">核心元件：BrowserRouter、Routes、Route</div><div class="csub">v6 路由架構的三個支柱</div></div></div>
+        <div class="cbody">
+          <p><code>BrowserRouter</code>（簡稱 <code>Router</code>）是路由的<strong>提供者</strong>，需要包裹整個應用（通常放在 main.jsx 或 App.jsx 最外層）。它監聽瀏覽器 URL 的變化並提供路由上下文給所有子元件。</p>
+          <p><code>Routes</code> 是路由規則的<strong>容器</strong>，會在所有子 <code>Route</code> 中找到最匹配當前 URL 的那一個並渲染它。v6 中的 <code>Routes</code> 自動只渲染最佳匹配，不需要像 v5 那樣加 <code>exact</code> 屬性。</p>
+          <p><code>Route</code> 定義一條路由規則：<code>path</code> 是 URL 模式，<code>element</code> 是匹配時要渲染的 JSX 元素。</p>
+          <p><em>Link</em> 取代 <code>&lt;a href&gt;</code>——它渲染成 <code>&lt;a&gt;</code> 標籤，但點擊時不會讓頁面重整，而是更新 URL 並觸發 React Router 重新渲染對應元件。<em>NavLink</em> 是 Link 的增強版，當路由匹配時自動加上 <code>active</code> 類別，適合導覽列高亮效果。</p>
+        </div>
+      </div>
+
+      <!-- v5 vs v6 compare -->
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr bad">v5 寫法（已過時）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">// react-router-dom v5</span>
+<span class="s">import</span> { Switch, Route } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;Switch&gt;</span>
+      <span class="c">{/* exact 避免 / 匹配所有 */}</span>
+      <span class="t">&lt;Route</span> <span class="p">exact</span> <span class="p">path</span>=<span class="v">"/"</span>
+        <span class="p">component</span>=<span class="kw">{</span>HomePage<span class="kw">}</span> <span class="t">/&gt;</span>
+      <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/about"</span>
+        <span class="p">component</span>=<span class="kw">{</span>AboutPage<span class="kw">}</span> <span class="t">/&gt;</span>
+    <span class="t">&lt;/Switch&gt;</span>
+  );
+}</pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">v6 寫法（現代，推薦）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;"><span class="c">// react-router-dom v6</span>
+<span class="s">import</span> { Routes, Route } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;Routes&gt;</span>
+      <span class="c">{/* 不需要 exact，自動最佳匹配 */}</span>
+      <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/"</span>
+        <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;HomePage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+      <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/about"</span>
+        <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;AboutPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+    <span class="t">&lt;/Routes&gt;</span>
+  );
+}</pre>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — React Router v6 完整基本設定</div></div>
+        <pre><span class="c">// 1. 安裝</span>
+<span class="c">// npm install react-router-dom</span>
+
+<span class="c">// ── main.jsx：在最外層包 BrowserRouter ──</span>
+<span class="s">import</span> { BrowserRouter } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+<span class="s">import</span> App <span class="s">from</span> <span class="v">'./App'</span>;
+
+ReactDOM.<span class="fn">createRoot</span>(document.<span class="fn">getElementById</span>(<span class="v">'root'</span>)).<span class="fn">render</span>(
+  <span class="t">&lt;BrowserRouter&gt;</span>
+    <span class="t">&lt;App /&gt;</span>
+  <span class="t">&lt;/BrowserRouter&gt;</span>
+);
+
+<span class="c">// ── App.jsx：定義路由規則 ──</span>
+<span class="s">import</span> { Routes, Route, Link, NavLink } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+<span class="s">import</span> HomePage     <span class="s">from</span> <span class="v">'./pages/HomePage'</span>;
+<span class="s">import</span> AboutPage    <span class="s">from</span> <span class="v">'./pages/AboutPage'</span>;
+<span class="s">import</span> ProjectsPage <span class="s">from</span> <span class="v">'./pages/ProjectsPage'</span>;
+<span class="s">import</span> NotFoundPage <span class="s">from</span> <span class="v">'./pages/NotFoundPage'</span>;
+
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;&gt;</span>
+      <span class="c">{/* 導覽列：用 NavLink 自動高亮 */}</span>
+      <span class="t">&lt;nav&gt;</span>
+        <span class="t">&lt;NavLink</span>
+          <span class="p">to</span>=<span class="v">"/"</span>
+          <span class="p">className</span>=<span class="kw">{</span>({ isActive }) => isActive ? <span class="v">'nav-link active'</span> : <span class="v">'nav-link'</span><span class="kw">}</span>
+          <span class="p">end</span>  <span class="c">{/* / 路由加 end 避免永遠 active */}</span>
+        <span class="t">&gt;</span>首頁<span class="t">&lt;/NavLink&gt;</span>
+        <span class="t">&lt;NavLink</span> <span class="p">to</span>=<span class="v">"/about"</span> <span class="p">className</span>=<span class="kw">{</span>({ isActive }) => isActive ? <span class="v">'active'</span> : <span class="v">''</span><span class="kw">}</span><span class="t">&gt;</span>
+          關於
+        <span class="t">&lt;/NavLink&gt;</span>
+        <span class="t">&lt;Link</span> <span class="p">to</span>=<span class="v">"/projects"</span><span class="t">&gt;</span>作品集<span class="t">&lt;/Link&gt;</span>  <span class="c">{/* 不需要高亮時用 Link */}</span>
+      <span class="t">&lt;/nav&gt;</span>
+
+      <span class="c">{/* 路由規則 */}</span>
+      <span class="t">&lt;Routes&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/"</span>         <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;HomePage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/about"</span>    <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;AboutPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/projects"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;ProjectsPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"*"</span>         <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;NotFoundPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>  <span class="c">{/* 404 */}</span>
+      <span class="t">&lt;/Routes&gt;</span>
+    <span class="t">&lt;/&gt;</span>
+  );
+}</pre>
+      </div>
+
+      <div class="note tip">
+        <span class="note-label">Link vs &lt;a&gt; 的本質差異</span>
+        <code>&lt;a href="/about"&gt;</code> 讓瀏覽器向伺服器請求 <code>/about</code> 的 HTML，造成整頁重載。<code>&lt;Link to="/about"&gt;</code> 用 History API 更新 URL，觸發 React Router 更換元件，<strong>不向伺服器發請求、不重載頁面</strong>。在 React 應用中，站內連結一律用 Link；站外連結（指向其他網站）才用 <code>&lt;a&gt;</code>。
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: 動態路由參數 -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">動態路由參數</h2>
+      <p class="section-intro">一個電商網站有上萬個商品頁面，不可能為每個商品定義一條路由。動態路由讓你用一條規則匹配所有這類 URL。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">URL 解剖：param、query、hash</div><div class="csub">三種資訊傳遞方式</div></div></div>
+        <div class="cbody">
+          <p>URL 可以攜帶三種不同形式的資訊，各有適用場景：</p>
+          <p><em>Route Param（路徑參數）</em>：URL 路徑的一部分，如 <code>/posts/42</code> 中的 <code>42</code>。用 <code>:id</code> 定義，用 <code>useParams()</code> 取得。適合<strong>必要的、識別資源的</strong>資訊。</p>
+          <p><em>Query String（查詢字串）</em>：URL 中 <code>?</code> 後面的鍵值對，如 <code>/search?q=react&page=2</code>。用 <code>useSearchParams()</code> 取得。適合<strong>可選的、過濾/分頁</strong>資訊。</p>
+          <p><em>Hash（錨點）</em>：URL 中 <code>#</code> 後的部分，如 <code>/about#contact</code>。用於頁面內錨點跳轉，不會送到伺服器。</p>
+        </div>
+      </div>
+
+      <!-- URL Anatomy Visual -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>URL 結構解析</strong><span>滑鼠移到各個顏色區段查看說明</span></div>
+        <div class="demo-body">
+          <div class="url-anatomy">
+            <div class="url-full">
+              <span class="url-seg" style="color:var(--r4);" title="Protocol（協議）：https 是加密的 HTTP">https://</span>
+              <span class="url-seg" style="color:var(--muted);" title="Host（主機名稱）：你的域名">myportfolio.com</span>
+              <span class="url-seg" style="color:var(--r1);" title="Pathname（路徑）：Route 規則匹配的部分">/projects/</span>
+              <span class="url-seg" style="color:var(--r2);font-weight:600;" title="Route Param（路徑參數）：:id 對應的值，用 useParams() 取得">42</span>
+              <span class="url-seg" style="color:var(--muted);" title="Query String 開始符號">?</span>
+              <span class="url-seg" style="color:var(--r3);" title="Query String（查詢參數）：可選的篩選條件，用 useSearchParams() 取得">tab=preview&lang=zh</span>
+              <span class="url-seg" style="color:var(--muted);" title="Hash 開始符號">#</span>
+              <span class="url-seg" style="color:var(--r5);" title="Hash（錨點）：頁面內跳轉，不送伺服器">demo</span>
+            </div>
+            <div class="url-legend">
+              <span class="url-badge" style="background:rgba(217,119,6,.1);color:var(--r4);border:1px solid rgba(217,119,6,.3);">&#9632; Protocol</span>
+              <span class="url-badge" style="background:rgba(232,64,64,.1);color:var(--r1);border:1px solid rgba(232,64,64,.3);">&#9632; Pathname（Route 匹配範圍）</span>
+              <span class="url-badge" style="background:rgba(37,99,235,.1);color:var(--r2);border:1px solid rgba(37,99,235,.3);">&#9632; Route Param（:id）</span>
+              <span class="url-badge" style="background:rgba(22,163,74,.1);color:var(--r3);border:1px solid rgba(22,163,74,.3);">&#9632; Query String</span>
+              <span class="url-badge" style="background:rgba(124,58,237,.1);color:var(--r5);border:1px solid rgba(124,58,237,.3);">&#9632; Hash（錨點）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Params Playground -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>useParams() PLAYGROUND</strong><span>輸入 URL，模擬 useParams 回傳值</span></div>
+        <div class="demo-body">
+          <div class="params-demo">
+            <div style="font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.5rem;">Route 定義：<code>/projects/:category/:id</code></div>
+            <div class="params-input-row">
+              <span style="font-family:var(--font-m);font-size:.8rem;color:var(--muted);">/projects/</span>
+              <input class="params-input" id="paramCategory" type="text" placeholder="category" value="web" style="max-width:120px;">
+              <span style="font-family:var(--font-m);font-size:.8rem;color:var(--muted);">/</span>
+              <input class="params-input" id="paramId" type="text" placeholder="id" value="42" style="max-width:80px;">
+              <button class="params-btn" id="parseParamBtn">解析</button>
+            </div>
+            <div class="params-output" id="paramsOutput">
+              <span style="color:#554840;">// 點擊解析按鈕</span>
+            </div>
+            <div style="font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-top:.8rem;">Query String 解析：<code>/projects?tab=preview&sort=date</code></div>
+            <div class="params-input-row">
+              <span style="font-family:var(--font-m);font-size:.8rem;color:var(--muted);">/projects?</span>
+              <input class="params-input" id="queryInput" type="text" placeholder="key=value&key=value" value="tab=preview&sort=date&page=1">
+              <button class="params-btn" id="parseQueryBtn" style="background:var(--r3);">解析</button>
+            </div>
+            <div class="params-output" id="queryOutput">
+              <span style="color:#554840;">// 點擊解析按鈕</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 動態路由與 useParams / useSearchParams</div></div>
+        <pre><span class="c">// ── 定義動態路由 ──</span>
+<span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/projects/:id"</span>           <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;ProjectDetail /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+<span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/projects/:category/:id"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;ProjectDetail /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+<span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/users/:username/posts/:postId"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Post /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+
+<span class="c">// ── 在元件中取得 params ──</span>
+<span class="s">import</span> { useParams } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="s">function</span> <span class="fn">ProjectDetail</span>() {
+  <span class="s">const</span> { id, category } = <span class="fn">useParams</span>();
+  <span class="c">// 存取 /projects/web/42 時：id="42", category="web"</span>
+  <span class="c">// useParams 回傳的值都是字串！數字要自行轉換</span>
+  <span class="s">const</span> projectId = <span class="fn">Number</span>(id);
+
+  <span class="c">// 常見用法：用 param 取得對應資料</span>
+  <span class="s">const</span> [project, setProject] = <span class="fn">useState</span>(<span class="s">null</span>);
+  <span class="fn">useEffect</span>(() => {
+    <span class="fn">fetchProject</span>(id).<span class="fn">then</span>(setProject);
+  }, [id]); <span class="c">// id 是依賴項，路由改變時重新取資料</span>
+
+  <span class="s">if</span> (!project) <span class="s">return</span> <span class="t">&lt;div&gt;</span>載入中...<span class="t">&lt;/div&gt;</span>;
+  <span class="s">return</span> <span class="t">&lt;h1&gt;</span><span class="kw">{</span>project.title<span class="kw">}</span><span class="t">&lt;/h1&gt;</span>;
+}
+
+<span class="c">// ── 取得與設定 Query String ──</span>
+<span class="s">import</span> { useSearchParams } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="s">function</span> <span class="fn">SearchPage</span>() {
+  <span class="s">const</span> [searchParams, setSearchParams] = <span class="fn">useSearchParams</span>();
+
+  <span class="s">const</span> query = searchParams.<span class="fn">get</span>(<span class="v">'q'</span>);        <span class="c">// 取值</span>
+  <span class="s">const</span> page  = searchParams.<span class="fn">get</span>(<span class="v">'page'</span>) ?? <span class="v">'1'</span>; <span class="c">// 預設值</span>
+
+  <span class="s">const</span> <span class="fn">handleSearch</span> = (newQuery) => {
+    <span class="fn">setSearchParams</span>({ q: newQuery, page: <span class="v">'1'</span> }); <span class="c">// 更新 URL</span>
+    <span class="c">// URL 變為 /search?q=react&page=1</span>
+  };
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;p&gt;</span>搜尋：<span class="kw">{</span>query<span class="kw">}</span>，第 <span class="kw">{</span>page<span class="kw">}</span> 頁<span class="t">&lt;/p&gt;</span>
+      <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>() => <span class="fn">setSearchParams</span>({ q: query, page: <span class="fn">String</span>(<span class="fn">Number</span>(page)+<span class="str">1</span>) })<span class="kw">}</span><span class="t">&gt;</span>
+        下一頁
+      <span class="t">&lt;/button&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: 巢狀路由 -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">巢狀路由與 Outlet</h2>
+      <p class="section-intro">大多數應用都有共用的 Layout（Header + Footer 不變，中間內容切換）。巢狀路由讓你優雅地實現這個模式，而不是在每個頁面元件中重複加 Header 和 Footer。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">Outlet：子路由的插入點</div><div class="csub">共用 Layout 的核心機制</div></div></div>
+        <div class="cbody">
+          <p><code>Outlet</code> 是一個特殊元件，放在 Layout 元件中，作為「子路由內容的插入點」。當 URL 匹配到某個子路由時，React Router 把對應的子元件渲染到 Outlet 的位置。</p>
+          <p>這讓你可以定義一個 <code>RootLayout</code> 元件包含 Header 和 Footer，其中的 <code>&lt;Outlet /&gt;</code> 會根據 URL 自動替換成 HomePage、AboutPage 等子頁面內容。Header 和 Footer 永遠存在，不會因為切換頁面而重新掛載。</p>
+          <p>巢狀路由也可以多層——例如 Dashboard 有自己的子路由（/dashboard/analytics、/dashboard/users），每一層都可以有自己的 Layout 和 Outlet。</p>
+        </div>
+      </div>
+
+      <!-- Nested Route Visual -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>巢狀路由結構視覺化</strong><span></span></div>
+        <div class="demo-body">
+          <div class="nested-visual">
+            <div style="padding:1rem;background:var(--bg2);font-family:var(--font-m);font-size:.65rem;color:var(--muted);border-bottom:1px solid var(--border);">BrowserRouter</div>
+            <div style="padding:.8rem 1rem;background:var(--surface);">
+              <div class="nested-outer">
+                <div class="nested-outer-label" style="color:var(--r2);">&#9888; RootLayout 元件（共用 Header + Footer）</div>
+                <div style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);padding:.5rem 1rem;font-family:var(--font-m);font-size:.7rem;color:var(--r2);margin-bottom:.6rem;">&lt;Header /&gt; — 永遠存在</div>
+                <div class="nested-inner">
+                  <div class="nested-inner-label">Outlet — 子路由內容插入這裡</div>
+                  <div class="outlet-box" id="outletDemo">
+                    &lt;HomePage /&gt;（當 URL = "/"）
+                  </div>
+                  <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap;">
+                    <button style="font-family:var(--font-m);font-size:.62rem;padding:.2rem .6rem;border:1px solid var(--r3);background:transparent;color:var(--r3);cursor:pointer;" onclick="setOutlet('/')">/ 首頁</button>
+                    <button style="font-family:var(--font-m);font-size:.62rem;padding:.2rem .6rem;border:1px solid var(--r3);background:transparent;color:var(--r3);cursor:pointer;" onclick="setOutlet('/about')">/about</button>
+                    <button style="font-family:var(--font-m);font-size:.62rem;padding:.2rem .6rem;border:1px solid var(--r3);background:transparent;color:var(--r3);cursor:pointer;" onclick="setOutlet('/projects')">/projects</button>
+                    <button style="font-family:var(--font-m);font-size:.62rem;padding:.2rem .6rem;border:1px solid var(--r3);background:transparent;color:var(--r3);cursor:pointer;" onclick="setOutlet('/projects/42')">/projects/42</button>
+                  </div>
+                </div>
+                <div style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);padding:.5rem 1rem;font-family:var(--font-m);font-size:.7rem;color:var(--r2);margin-top:.6rem;">&lt;Footer /&gt; — 永遠存在</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 巢狀路由與 Outlet</div></div>
+        <pre><span class="c">// ── Layout 元件 ──</span>
+<span class="s">import</span> { Outlet, Link } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="s">function</span> <span class="fn">RootLayout</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;header&gt;</span>
+        <span class="t">&lt;nav&gt;</span>
+          <span class="t">&lt;Link</span> <span class="p">to</span>=<span class="v">"/"</span><span class="t">&gt;</span>首頁<span class="t">&lt;/Link&gt;</span>
+          <span class="t">&lt;Link</span> <span class="p">to</span>=<span class="v">"/about"</span><span class="t">&gt;</span>關於<span class="t">&lt;/Link&gt;</span>
+        <span class="t">&lt;/nav&gt;</span>
+      <span class="t">&lt;/header&gt;</span>
+
+      <span class="t">&lt;main&gt;</span>
+        <span class="t">&lt;Outlet /&gt;</span>  <span class="c">{/* 子路由內容插入這裡 */}</span>
+      <span class="t">&lt;/main&gt;</span>
+
+      <span class="t">&lt;footer&gt;</span>&copy; 2025<span class="t">&lt;/footer&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── App.jsx：定義巢狀路由 ──</span>
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;Routes&gt;</span>
+      <span class="c">{/* 父路由：渲染 Layout */}</span>
+      <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;RootLayout /&gt;</span><span class="kw">}</span><span class="t">&gt;</span>
+        <span class="c">{/* 子路由：渲染進 Outlet */}</span>
+        <span class="t">&lt;Route</span> <span class="p">index</span>           <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;HomePage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>  <span class="c">{/* index = 預設子路由 */}</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"about"</span>   <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;AboutPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"projects"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;ProjectsPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+
+        <span class="c">{/* 巢狀路由的巢狀路由 */}</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"dashboard"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;DashboardLayout /&gt;</span><span class="kw">}</span><span class="t">&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">index</span>                 <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;DashboardHome /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"analytics"</span>      <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Analytics /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"users"</span>          <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Users /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;/Route&gt;</span>
+
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"*"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;NotFoundPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+      <span class="t">&lt;/Route&gt;</span>
+    <span class="t">&lt;/Routes&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: 程式化導航 -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">程式化導航</h2>
+      <p class="section-intro">有時候換頁不是使用者點擊 Link，而是由程式碼觸發——表單提交成功後跳轉、登出後回到首頁、條件判斷後自動跳轉。這需要 <code>useNavigate()</code>。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">useNavigate：push vs replace</div><div class="csub">歷史記錄的管理策略</div></div></div>
+        <div class="cbody">
+          <p><code>useNavigate()</code> 回傳一個 <code>navigate</code> 函式，呼叫 <code>navigate('/path')</code> 就像使用者點了 Link。預設是 <em>push 模式</em>——把新路由推入瀏覽器歷史記錄，使用者可以按返回鍵回到之前的頁面。</p>
+          <p><em>replace 模式</em>（<code>navigate('/path', { replace: true })</code>）：取代當前歷史記錄，而非新增一條。適合「不應該能返回的」跳轉——例如登入成功後跳轉到主頁，不希望使用者按返回鍵又回到登入頁。</p>
+          <p><code>navigate(-1)</code> 等同瀏覽器的返回鍵；<code>navigate(1)</code> 等同前進鍵；<code>navigate(-2)</code> 後退兩步。這讓你可以用程式控制瀏覽器歷史的前進後退。</p>
+          <div class="note tip">
+            <span class="note-label">傳遞 state 給下一頁</span>
+            <code>navigate('/success', { state: { orderId: 42 } })</code> 可以把資料傳給下一頁，在目標頁面用 <code>useLocation().state</code> 取得。這適合傳遞「一次性的訊息」（如成功通知），不需要儲存在 URL 或 localStorage 中。
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Flow Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>NAVIGATE HISTORY DEMO</strong><span>點擊節點模擬 push / replace 行為</span></div>
+        <div class="demo-body">
+          <div style="display:flex;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <button class="params-btn" id="navPushBtn">navigate('/about') — push</button>
+            <button class="params-btn" id="navReplaceBtn" style="background:var(--r3);">navigate('/login', replace) — replace</button>
+            <button class="params-btn" id="navBackBtn" style="background:var(--r4);">navigate(-1) — 返回</button>
+            <button class="params-btn" id="navResetBtn" style="background:var(--muted);">重置</button>
+          </div>
+          <div style="font-family:var(--font-m);font-size:.68rem;color:var(--muted);margin-bottom:.5rem;">瀏覽器歷史記錄堆疊（最右 = 當前頁面）：</div>
+          <div id="historyStack" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;min-height:40px;padding:.5rem;background:var(--bg2);border:1px solid var(--border);margin-bottom:.8rem;"></div>
+          <div class="nav-log" id="navLog"><span style="color:#554840;">// 點擊上方按鈕觀察歷史記錄變化</span></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — useNavigate 完整用法</div></div>
+        <pre><span class="s">import</span> { useNavigate, useLocation } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="c">// ── 基本程式化跳頁 ──</span>
+<span class="s">function</span> <span class="fn">LoginForm</span>() {
+  <span class="s">const</span> navigate = <span class="fn">useNavigate</span>();
+
+  <span class="s">const</span> <span class="fn">handleSubmit</span> = <span class="s">async</span> (e) => {
+    e.<span class="fn">preventDefault</span>();
+    <span class="s">await</span> <span class="fn">login</span>(credentials);
+
+    <span class="c">// 登入成功：用 replace，不讓使用者返回登入頁</span>
+    navigate(<span class="v">'/dashboard'</span>, { replace: <span class="s">true</span> });
+  };
+  <span class="s">return</span> <span class="t">&lt;form</span> <span class="p">onSubmit</span>=<span class="kw">{</span>handleSubmit<span class="kw">}</span><span class="t">&gt;</span>...<span class="t">&lt;/form&gt;</span>;
+}
+
+<span class="c">// ── 儲存「登入後要去哪」再跳轉 ──</span>
+<span class="s">function</span> <span class="fn">ProtectedPage</span>() {
+  <span class="s">const</span> navigate = <span class="fn">useNavigate</span>();
+  <span class="s">const</span> location = <span class="fn">useLocation</span>();  <span class="c">// 取得當前位置資訊</span>
+
+  <span class="s">if</span> (!isLoggedIn) {
+    <span class="c">// 記住想去的頁面，登入後再跳轉回去</span>
+    navigate(<span class="v">'/login'</span>, {
+      replace: <span class="s">true</span>,
+      state: { from: location.pathname } <span class="c">// 傳遞當前路徑</span>
+    });
+    <span class="s">return</span> <span class="s">null</span>;
+  }
+  <span class="s">return</span> <span class="t">&lt;div&gt;</span>受保護內容<span class="t">&lt;/div&gt;</span>;
+}
+
+<span class="c">// ── 在登入頁接收並使用 state ──</span>
+<span class="s">function</span> <span class="fn">LoginPage</span>() {
+  <span class="s">const</span> navigate = <span class="fn">useNavigate</span>();
+  <span class="s">const</span> location = <span class="fn">useLocation</span>();
+  <span class="s">const</span> from = location.state?.from ?? <span class="v">'/'</span>; <span class="c">// 登入前想去的頁面</span>
+
+  <span class="s">const</span> <span class="fn">handleLogin</span> = <span class="s">async</span> () => {
+    <span class="s">await</span> <span class="fn">login</span>();
+    navigate(from, { replace: <span class="s">true</span> }); <span class="c">// 回到原本要去的頁面</span>
+  };
+}
+
+<span class="c">// ── 其他常用模式 ──</span>
+navigate(<span class="v">'/posts'</span>);                  <span class="c">// push（新增歷史）</span>
+navigate(<span class="v">'/posts'</span>, { replace: <span class="s">true</span> }); <span class="c">// replace（取代歷史）</span>
+navigate(-<span class="str">1</span>);                         <span class="c">// 返回上一頁</span>
+navigate(<span class="str">1</span>);                          <span class="c">// 前進下一頁</span>
+navigate(<span class="v">`/posts/${id}`</span>);            <span class="c">// 動態路徑</span>
+
+<span class="c">// ── useLocation：取得當前路由資訊 ──</span>
+<span class="s">const</span> location = <span class="fn">useLocation</span>();
+location.pathname;  <span class="c">// "/posts/42"</span>
+location.search;    <span class="c">// "?tab=preview"</span>
+location.hash;      <span class="c">// "#section-2"</span>
+location.state;     <span class="c">// navigate 傳入的 state</span></pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: Protected Routes -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">保護路由</h2>
+      <p class="section-intro">有些頁面需要登入才能存取（儀表板、個人設定、管理後台）。保護路由是一個包裝元件，在渲染子路由之前先檢查使用者是否有權限。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">PrivateRoute 設計模式</div><div class="csub">在渲染前進行權限檢查</div></div></div>
+        <div class="cbody">
+          <p><em>PrivateRoute</em>（或稱 RequireAuth）是一個包裝元件：如果使用者已登入，渲染 <code>&lt;Outlet /&gt;</code>（或 <code>children</code>）讓路由正常進入；如果未登入，用 <code>&lt;Navigate /&gt;</code> 元件自動重新導向到登入頁。</p>
+          <p><code>&lt;Navigate /&gt;</code> 是宣告式的版本——它是一個元件，渲染時自動觸發跳轉，效果等同呼叫 <code>navigate()</code>。在需要在 JSX return 中觸發跳轉時（而非事件處理器中）使用它。</p>
+          <p>最佳實踐：<strong>記住使用者原本要去的頁面</strong>（用 <code>state: { from: location }</code>），讓使用者登入後可以直接回到目標頁面，而非每次都回到首頁。這個細節大幅提升使用者體驗。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JSX — 完整保護路由實作</div></div>
+        <pre><span class="s">import</span> { Navigate, Outlet, useLocation } <span class="s">from</span> <span class="v">'react-router-dom'</span>;
+
+<span class="c">// ── 方法一：PrivateRoute 元件（推薦）──</span>
+<span class="s">function</span> <span class="fn">PrivateRoute</span>() {
+  <span class="s">const</span> { user } = <span class="fn">useAuth</span>();       <span class="c">// 從 AuthContext 取得使用者狀態</span>
+  <span class="s">const</span> location = <span class="fn">useLocation</span>();
+
+  <span class="s">if</span> (!user) {
+    <span class="c">// 未登入：跳轉到登入頁，記住原本的路徑</span>
+    <span class="s">return</span> <span class="t">&lt;Navigate</span> <span class="p">to</span>=<span class="v">"/login"</span>
+             <span class="p">state</span>=<span class="kw">{{</span><span class="p">from</span>: location<span class="kw">}}</span>
+             <span class="p">replace</span> <span class="t">/&gt;</span>;
+  }
+  <span class="c">// 已登入：渲染子路由</span>
+  <span class="s">return</span> <span class="t">&lt;Outlet /&gt;</span>;
+}
+
+<span class="c">// ── 在路由設定中使用 ──</span>
+<span class="s">function</span> <span class="fn">App</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;Routes&gt;</span>
+      <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"/"</span>      <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;RootLayout /&gt;</span><span class="kw">}</span><span class="t">&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">index</span>        <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;HomePage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"login"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;LoginPage /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+
+        <span class="c">{/* 受保護的路由群組 */}</span>
+        <span class="t">&lt;Route</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;PrivateRoute /&gt;</span><span class="kw">}</span><span class="t">&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"dashboard"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Dashboard /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"profile"</span>   <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Profile /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+          <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"settings"</span>  <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;Settings /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;/Route&gt;</span>
+      <span class="t">&lt;/Route&gt;</span>
+    <span class="t">&lt;/Routes&gt;</span>
+  );
+}
+
+<span class="c">// ── 登入頁：登入後跳回原本的頁面 ──</span>
+<span class="s">function</span> <span class="fn">LoginPage</span>() {
+  <span class="s">const</span> navigate = <span class="fn">useNavigate</span>();
+  <span class="s">const</span> location = <span class="fn">useLocation</span>();
+  <span class="s">const</span> { login } = <span class="fn">useAuth</span>();
+  <span class="s">const</span> from = location.state?.from?.pathname ?? <span class="v">'/'</span>;
+
+  <span class="s">const</span> <span class="fn">handleLogin</span> = <span class="s">async</span> (credentials) => {
+    <span class="s">try</span> {
+      <span class="s">await</span> <span class="fn">login</span>(credentials);
+      navigate(from, { replace: <span class="s">true</span> }); <span class="c">// 跳回原本要去的頁面</span>
+    } <span class="s">catch</span> {
+      setError(<span class="v">'帳號或密碼錯誤'</span>);
+    }
+  };
+  <span class="s">return</span> <span class="t">&lt;form&gt;</span>...<span class="t">&lt;/form&gt;</span>;
+}
+
+<span class="c">// ── 方法二：角色權限路由 ──</span>
+<span class="s">function</span> <span class="fn">RequireRole</span>({ allowedRoles }) {
+  <span class="s">const</span> { user } = <span class="fn">useAuth</span>();
+  <span class="s">if</span> (!user) <span class="s">return</span> <span class="t">&lt;Navigate</span> <span class="p">to</span>=<span class="v">"/login"</span> <span class="p">replace</span> <span class="t">/&gt;</span>;
+  <span class="s">if</span> (!allowedRoles.<span class="fn">includes</span>(user.role))
+    <span class="s">return</span> <span class="t">&lt;Navigate</span> <span class="p">to</span>=<span class="v">"/403"</span> <span class="p">replace</span> <span class="t">/&gt;</span>;
+  <span class="s">return</span> <span class="t">&lt;Outlet /&gt;</span>;
+}
+
+<span class="c">// 使用：只有 admin 可以存取</span>
+<span class="t">&lt;Route</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;RequireRole</span> <span class="p">allowedRoles</span>=<span class="kw">{</span>[<span class="v">'admin'</span>]<span class="kw">}</span> <span class="t">/&gt;</span><span class="kw">}</span><span class="t">&gt;</span>
+  <span class="t">&lt;Route</span> <span class="p">path</span>=<span class="v">"admin"</span> <span class="p">element</span>=<span class="kw">{</span><span class="t">&lt;AdminPanel /&gt;</span><span class="kw">}</span> <span class="t">/&gt;</span>
+<span class="t">&lt;/Route&gt;</span></pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>Hook / 元件</th><th>用途</th><th>回傳值</th></tr></thead>
+        <tbody>
+          <tr><td>useParams()</td><td>取得 URL 路徑參數（:id）</td><td>物件，如 {'{'}id: "42"{'}'}</td></tr>
+          <tr><td>useSearchParams()</td><td>讀取/設定 Query String</td><td>[searchParams, setSearchParams]</td></tr>
+          <tr><td>useNavigate()</td><td>程式化跳頁</td><td>navigate(path, options) 函式</td></tr>
+          <tr><td>useLocation()</td><td>取得當前路由資訊</td><td>{'{'} pathname, search, hash, state {'}'}</td></tr>
+          <tr><td>&lt;Navigate /&gt;</td><td>宣告式重新導向（在 JSX return 中用）</td><td>元件，渲染時自動跳轉</td></tr>
+          <tr><td>&lt;Outlet /&gt;</td><td>子路由的渲染位置</td><td>元件，渲染匹配的子路由</td></tr>
+          <tr><td>&lt;NavLink /&gt;</td><td>有 active 狀態的連結</td><td>元件，className 可接受函式</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋 React Router 的核心概念與常見陷阱。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">在 React 應用中，站內頁面之間的跳轉應該用哪個元件？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>&lt;a href="/about"&gt;</code> ── 標準 HTML 連結</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>&lt;button onClick={() =&gt; window.location.href = '/about'}&gt;</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>&lt;Link to="/about"&gt;</code> ── React Router 提供的連結元件</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>&lt;a href="/about" target="_blank"&gt;</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>&lt;Link&gt;</code> 使用 History API 更新 URL，不觸發頁面重整，React Router 監聽到 URL 變化後渲染對應元件——這就是 SPA 的精髓。選項 A 和 B 都會讓整個頁面重新載入，應用的 state 全部丟失，效果和傳統網站無異。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>思考「SPA 換頁的核心原則」——換頁時頁面不能重整，所有的 React 狀態要保留。哪種方式能做到這點？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">你定義了路由 <code>/posts/:id</code>，使用者訪問 <code>/posts/hello-world</code>。在元件中 <code>useParams().id</code> 的值是什麼？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>數字 <code>0</code>（找不到對應的數字 ID）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>字串 <code>"hello-world"</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>undefined</code>（只接受數字）</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>路由不會匹配，渲染 404 頁面</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>useParams()</code> 永遠回傳<strong>字串</strong>，不管 URL 中的值看起來是數字還是文字。<code>:id</code> 是通配符，匹配任何非 <code>/</code> 的字元。所以 <code>/posts/hello-world</code>、<code>/posts/42</code>、<code>/posts/abc-123</code> 都能匹配，<code>id</code> 值分別是對應的字串。需要數字時，自行用 <code>Number(id)</code> 或 <code>parseInt(id)</code> 轉換。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>記住：<code>useParams()</code> 的回傳值型別是什麼？URL 是純文字，解析出來的值自然也是⋯⋯</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q"><code>Outlet</code> 元件的作用是什麼？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>它是 React Router 內建的 404 頁面元件</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>它用來在元件之間傳遞資料，類似 Context</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>它是路由的出口，所有路由都必須放在 Outlet 裡面</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>放在 Layout 元件中，標記「子路由元件應該渲染在這個位置」</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>&lt;Outlet /&gt;</code> 是巢狀路由的核心機制。你在 Layout 元件（如 RootLayout）中放一個 <code>&lt;Outlet /&gt;</code>，React Router 會把當前匹配的子路由元件渲染到這個位置。Header 和 Footer 永遠存在（因為它們在 Layout 裡），只有 Outlet 的位置會根據 URL 改變。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Outlet 和巢狀路由有關。想想「共用 Layout + 切換頁面內容」這個需求——Outlet 解決了什麼問題？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">實作保護路由時，未登入的使用者訪問 <code>/dashboard</code>，你希望他們跳轉到 <code>/login</code> 後，登入成功再回到 <code>/dashboard</code>。最佳做法是什麼？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>用 localStorage 儲存目標路徑，登入後讀取並跳轉</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>登入後永遠跳回首頁（<code>/</code>），讓使用者自己再導航</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>用 <code>navigate('/login', { state: { from: location } })</code> 傳遞來源頁面，登入後用 <code>location.state?.from</code> 取得並跳轉</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>在 URL 加上 <code>?redirect=/dashboard</code>，登入後解析 query string</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>用 React Router 的 <code>state</code> 傳遞來源位置是最優雅的做法：<code>navigate('/login', {'{'} state: {'{'} from: location {'}'} {'}'})</code>，在登入頁用 <code>useLocation().state?.from</code> 取得來源路徑，登入成功後 <code>navigate(from, {'{'} replace: true {'}'})</code>。這不需要 localStorage，state 只在一次導航中存在，不會殘留。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>React Router 的 navigate 函式可以傳遞額外的 state 給目標頁面，這個 state 在目標頁面用 useLocation() 取得。這比操作 localStorage 更乾淨。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：個人作品集網站</h2>
+      <p class="section-intro">這週把前幾週的 React 技能整合起來，建立一個有多個頁面、巢狀路由和完整導覽的個人作品集網站。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 10 PROJECT</div>
+        <div class="project-name">個人作品集<br>多頁面 React 應用</div>
+        <p class="project-desc">使用 React Router v6 建立真實的多頁面作品集網站，涵蓋共用 Layout、動態作品詳情頁、404 頁面、以及可選的身份驗證流程。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立頁面結構與安裝 React Router</div>
+            <div class="step-body">在 Week 08 的 Vite 專案基礎上，執行 <code>npm install react-router-dom</code>。建立 <code>src/pages/</code> 目錄，新增：<code>HomePage.jsx</code>、<code>AboutPage.jsx</code>、<code>ProjectsPage.jsx</code>、<code>ProjectDetailPage.jsx</code>、<code>ContactPage.jsx</code>、<code>NotFoundPage.jsx</code>。每個頁面先放最小化的 JSX。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 RootLayout 與共用導覽列</div>
+            <div class="step-body">新建 <code>src/layouts/RootLayout.jsx</code>，包含 <code>&lt;header&gt;</code>（用 NavLink 建立導覽，active 時高亮）、<code>&lt;main&gt;&lt;Outlet /&gt;&lt;/main&gt;</code>、<code>&lt;footer&gt;</code>。在 main.jsx 或 App.jsx 設定 BrowserRouter，在 App.jsx 建立巢狀路由結構，RootLayout 作為父路由。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">定義完整路由規則</div>
+            <div class="step-body">在 App.jsx 中設定：<code>/</code>（index，HomePage）、<code>/about</code>（AboutPage）、<code>/projects</code>（ProjectsPage）、<code>/projects/:id</code>（ProjectDetailPage）、<code>/contact</code>（ContactPage）、<code>*</code>（NotFoundPage，自訂 404 頁面加返回首頁按鈕）。確認每條路由都能正常訪問。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立作品集資料與 ProjectsPage</div>
+            <div class="step-body">新建 <code>src/data/projects.js</code>，匯出一個作品陣列（至少 4 個，每個有 id、title、description、tags、imageUrl）。ProjectsPage 引入資料，用 <code>.map()</code> 渲染作品卡片，每張卡片包含一個 <code>&lt;Link to={`/projects/${project.id}`}&gt;</code> 連結到詳情頁。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">實作 ProjectDetailPage（useParams）</div>
+            <div class="step-body">在 ProjectDetailPage 中用 <code>const { id } = useParams()</code> 取得 ID，再從資料陣列中 <code>.find()</code> 對應的作品。若找不到（id 不存在），渲染錯誤訊息並附上返回作品列表的 Link。頁面顯示作品標題、詳細描述、技術標籤。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入作品篩選功能（useSearchParams）</div>
+            <div class="step-body">在 ProjectsPage 用 <code>useSearchParams()</code> 取得 <code>?tag=react</code> 之類的篩選條件。根據 tag 篩選顯示的作品。建立技術標籤按鈕，點擊時用 <code>setSearchParams({ tag: tagName })</code> 更新 URL。這樣篩選結果可以被分享（URL 包含篩選狀態）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：實作保護路由</div>
+            <div class="step-body">建立一個 <code>src/context/AuthContext.jsx</code>，用 useState 管理簡單的登入狀態（不需要真實 API，用按鈕切換 isLoggedIn 即可）。建立 <code>PrivateRoute.jsx</code>，未登入時跳轉到 <code>/login</code>，並用 state 記住原本路徑。新增 AdminPage，設為保護路由。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">收尾：Scroll 回頂部與 404 優化</div>
+            <div class="step-body">路由切換後滾動位置不會自動回頂，需要建立 <code>ScrollToTop</code> 元件：在元件中用 <code>useEffect</code> 監聽 <code>location.pathname</code> 變化，每次切換路由時執行 <code>window.scrollTo(0, 0)</code>。把這個元件放在 RootLayout 中使用。404 頁面加上有趣的設計和明確的返回指引。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>安裝 react-router-dom，在 main.jsx 加上 BrowserRouter 包裹</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>建立 RootLayout（含 header/nav/footer）和 Outlet，巢狀路由設定正確</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>導覽列使用 NavLink，當前頁面的連結有 active 樣式高亮</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有站內連結使用 Link 而非 &lt;a href&gt;，換頁不重載</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>作品詳情頁用 useParams 取得 id，找不到 id 時有適當的錯誤處理</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>有 404 頁面（path="*"），附有返回首頁的 Link 按鈕</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）用 useSearchParams 實作作品篩選，篩選狀態反映在 URL</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）實作保護路由，未登入跳轉到登入頁，登入後回到原頁</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">React Router 官方文件設計精良，強烈建議通讀 Tutorial 章節。</p>
+      <div class="resource-grid">
+        <a href="https://reactrouter.com/en/main/start/tutorial" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方互動教學</div>
+          <div class="resource-name">React Router v6 Tutorial</div>
+          <div class="resource-desc">官方 30 分鐘的全功能教學，從安裝到巢狀路由、動態路徑、錯誤邊界，以聯絡人管理應用為例，涵蓋幾乎所有核心功能。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://reactrouter.com/en/main/hooks/use-navigate" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">API 文件</div>
+          <div class="resource-name">useNavigate / useParams API</div>
+          <div class="resource-desc">React Router 所有 Hook 的完整 API 說明，含範例程式碼。useParams、useNavigate、useLocation、useSearchParams 都在這裡。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://reactrouter.com/en/main/routers/create-browser-router" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">進階概念</div>
+          <div class="resource-name">Data Router（v6.4+）</div>
+          <div class="resource-desc">React Router v6.4 引入的 Data APIs（loader、action），讓路由可以在渲染前自動取得資料。這是未來的方向，值得了解。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.robinwieruch.de/react-router/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">深度教程</div>
+          <div class="resource-name">Robin Wieruch — React Router 教程</div>
+          <div class="resource-desc">業界知名的 React 教學作者，這篇 React Router v6 教程涵蓋所有常見模式，包含認證流程、保護路由等實戰場景。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://github.com/remix-run/react-router/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">版本更新</div>
+          <div class="resource-name">React Router 更新日誌</div>
+          <div class="resource-desc">如果你在網路上看到舊版（v5）的範例，這裡可以查閱 API 變化，了解 v5→v6 的遷移差異（Switch→Routes、component→element 等）。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://stackblitz.com/github/remix-run/react-router/tree/main/examples/basic" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">線上範例</div>
+          <div class="resource-name">React Router 官方範例合集</div>
+          <div class="resource-desc">官方提供的可執行範例，涵蓋 basic、auth、lazy-loading、modal 等常見模式，可以直接在瀏覽器中編輯和執行。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week9.html" class="nav-btn">&larr; Week 09：React Hooks</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week11.html" class="nav-btn">Week 11：Tailwind CSS &rarr;</a>
+  </div>
+</main>
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progressBar').style.width = Math.min(p,100) + '%';
+});
+
+// ── Scroll Reveal ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.07 });
+document.querySelectorAll('.section').forEach(s => obs.observe(s));
+
+// ── TOC Active ──
+const secIds = ['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls = secIds.map(id => document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll', () => {
+  let cur = '';
+  secEls.forEach(el => { if(window.scrollY >= el.offsetTop - 130) cur = el.id; });
+  document.querySelectorAll('.toc-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('href') === '#' + cur);
+  });
+});
+
+// ── Router Simulator ──
+const pageMap = {
+  home: { title: '🏠 首頁', color: 'var(--r1)', content: '這是 <code>/</code> 路由渲染的元件（<code>&lt;HomePage /&gt;</code>）。', rule: '&lt;Route path="/" element={&lt;HomePage /&gt;} /&gt;' },
+  about: { title: '👤 關於我', color: 'var(--r2)', content: '這是 <code>/about</code> 路由渲染的元件（<code>&lt;AboutPage /&gt;</code>）。', rule: '&lt;Route path="/about" element={&lt;AboutPage /&gt;} /&gt;' },
+  projects: { title: '📁 作品集列表', color: 'var(--r3)', content: '這是 <code>/projects</code> 路由渲染的元件（<code>&lt;ProjectsPage /&gt;</code>）。點擊「作品詳情」看 <code>:id</code> 動態路由。', rule: '&lt;Route path="/projects" element={&lt;ProjectsPage /&gt;} /&gt;' },
+  'project-detail': { title: '📄 作品 #42', color: 'var(--r3)', content: '動態路由 <code>/projects/42</code> — 在元件中用 <code>useParams()</code> 取得 <code>id = "42"</code>。', rule: '&lt;Route path="/projects/:id" element={&lt;ProjectDetail /&gt;} /&gt;', extra: '<div style="margin-top:.8rem;background:var(--bg2);padding:.7rem 1rem;font-family:var(--font-m);font-size:.72rem;border-left:2px solid var(--r3);">const { id } = useParams(); &nbsp;// "42"</div>' },
+  contact: { title: '✉️ 聯絡我', color: 'var(--r4)', content: '這是 <code>/contact</code> 路由渲染的元件（<code>&lt;ContactPage /&gt;</code>）。', rule: '&lt;Route path="/contact" element={&lt;ContactPage /&gt;} /&gt;' },
+  notfound: { title: '❌ 404 Not Found', color: 'var(--faint)', content: '沒有任何 Route 匹配當前 URL，渲染 <code>*</code> 通用路由。', rule: '&lt;Route path="*" element={&lt;NotFoundPage /&gt;} /&gt;' },
+};
+
+document.querySelectorAll('.route-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.route-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    const page = link.dataset.page;
+    const path = link.dataset.path;
+    document.getElementById('simUrl').textContent = path;
+    const info = pageMap[page];
+    if(!info) return;
+
+    document.querySelectorAll('.router-page').forEach(p => p.classList.remove('active'));
+    const target = document.querySelector(`.router-page[data-page="${page}"]`);
+    if(target) {
+      target.classList.add('active');
+    }
+  });
+});
+
+// ── Params Playground ──
+document.getElementById('parseParamBtn').addEventListener('click', () => {
+  const cat = document.getElementById('paramCategory').value.trim() || 'web';
+  const id  = document.getElementById('paramId').value.trim() || '42';
+  const out = document.getElementById('paramsOutput');
+  out.innerHTML =
+    `<span style="color:#4a8a5a;">// useParams() 回傳值</span>\n` +
+    `<span style="color:#93c5fd;">const</span> { id, category } = <span style="color:#c4a6f0;">useParams</span>();\n\n` +
+    `<span style="color:#f0abfc;">id</span>       = <span style="color:#fde68a;">"${id}"</span>  <span style="color:#3a3228;">// 永遠是字串！</span>\n` +
+    `<span style="color:#f0abfc;">category</span> = <span style="color:#fde68a;">"${cat}"</span>\n\n` +
+    `<span style="color:#4a8a5a;">// 若需要數字：</span>\n` +
+    `<span style="color:#93c5fd;">const</span> projectId = <span style="color:#c4a6f0;">Number</span>(id); <span style="color:#3a3228;">// ${Number(id) || 'NaN（非數字字串）'}</span>`;
+});
+
+document.getElementById('parseQueryBtn').addEventListener('click', () => {
+  const raw = document.getElementById('queryInput').value.trim();
+  const out = document.getElementById('queryOutput');
+  try {
+    const params = new URLSearchParams(raw);
+    let lines = `<span style="color:#4a8a5a;">// useSearchParams() 解析結果</span>\n`;
+    lines += `<span style="color:#93c5fd;">const</span> [searchParams] = <span style="color:#c4a6f0;">useSearchParams</span>();\n\n`;
+    params.forEach((val, key) => {
+      lines += `searchParams.<span style="color:#c4a6f0;">get</span>(<span style="color:#fde68a;">'${key}'</span>) = <span style="color:#fde68a;">"${val}"</span>\n`;
+    });
+    lines += `\n<span style="color:#4a8a5a;">// 更新 URL：setSearchParams({'{'} tab: 'new' {'}'})</span>`;
+    out.innerHTML = lines;
+  } catch(e) {
+    out.textContent = '解析錯誤：請確認格式為 key=value&key=value';
+  }
+});
+
+// ── Outlet Demo ──
+const outletMap = {
+  '/': '&lt;HomePage /&gt;（當 URL = "/"）',
+  '/about': '&lt;AboutPage /&gt;（當 URL = "/about"）',
+  '/projects': '&lt;ProjectsPage /&gt;（當 URL = "/projects"）',
+  '/projects/42': '&lt;ProjectDetailPage id="42" /&gt;（當 URL = "/projects/42"）',
+};
+function setOutlet(path) {
+  const box = document.getElementById('outletDemo');
+  box.style.opacity = '0';
+  box.style.transform = 'translateX(8px)';
+  setTimeout(() => {
+    box.textContent = outletMap[path] || '&lt;NotFound /&gt;';
+    box.innerHTML = outletMap[path] || '&lt;NotFoundPage /&gt;（當 URL 無匹配）';
+    box.style.opacity = '1';
+    box.style.transform = 'translateX(0)';
+  }, 150);
+  box.style.transition = 'opacity .15s, transform .15s';
+}
+
+// ── Navigation History Demo ──
+let historyArr = ['/'];
+let historyIdx = 0;
+
+function renderHistory() {
+  const stack = document.getElementById('historyStack');
+  stack.innerHTML = '';
+  historyArr.forEach((path, i) => {
+    const chip = document.createElement('span');
+    chip.style.cssText = `font-family:var(--font-m);font-size:.7rem;padding:.25rem .6rem;border:1px solid;transition:all .2s;`;
+    if(i === historyIdx) {
+      chip.style.borderColor = 'var(--r1)';
+      chip.style.color = 'var(--r1)';
+      chip.style.background = 'rgba(232,64,64,.1)';
+      chip.style.fontWeight = '600';
+    } else {
+      chip.style.borderColor = 'var(--border2)';
+      chip.style.color = 'var(--muted)';
+    }
+    chip.textContent = path;
+    stack.appendChild(chip);
+    if(i < historyArr.length - 1) {
+      const arrow = document.createElement('span');
+      arrow.textContent = '→';
+      arrow.style.cssText = 'color:var(--border2);font-size:.7rem;';
+      stack.appendChild(arrow);
+    }
+  });
+}
+renderHistory();
+
+function addNavLog(msg) {
+  const log = document.getElementById('navLog');
+  const div = document.createElement('div');
+  div.innerHTML = msg;
+  if(log.firstChild && log.firstChild.tagName === 'SPAN') log.innerHTML = '';
+  log.insertBefore(div, log.firstChild);
+  while(log.children.length > 6) log.removeChild(log.lastChild);
+}
+
+const pages = ['/', '/about', '/projects', '/contact', '/dashboard', '/settings'];
+let pageIdx = 0;
+
+document.getElementById('navPushBtn').addEventListener('click', () => {
+  pageIdx = (pageIdx + 1) % pages.length;
+  const newPath = pages[pageIdx];
+  historyArr = historyArr.slice(0, historyIdx + 1);
+  historyArr.push(newPath);
+  historyIdx = historyArr.length - 1;
+  renderHistory();
+  addNavLog(`<span style="color:#93c5fd;">navigate</span>(<span style="color:#fde68a;">'${newPath}'</span>) — <span style="color:#86efac;">push：新增到歷史，可按返回鍵</span>`);
+});
+
+document.getElementById('navReplaceBtn').addEventListener('click', () => {
+  const newPath = '/login';
+  historyArr[historyIdx] = newPath;
+  renderHistory();
+  addNavLog(`<span style="color:#93c5fd;">navigate</span>(<span style="color:#fde68a;">'/login'</span>, { replace: <span style="color:#f0abfc;">true</span> }) — <span style="color:#fde68a;">replace：取代當前，無法返回</span>`);
+});
+
+document.getElementById('navBackBtn').addEventListener('click', () => {
+  if(historyIdx > 0) {
+    historyIdx--;
+    renderHistory();
+    addNavLog(`<span style="color:#93c5fd;">navigate</span>(-<span style="color:#fb923c;">1</span>) — <span style="color:#c4a6f0;">返回上一頁：${historyArr[historyIdx]}</span>`);
+  } else {
+    addNavLog(`<span style="color:#f87171;">已在第一頁，無法返回</span>`);
+  }
+});
+
+document.getElementById('navResetBtn').addEventListener('click', () => {
+  historyArr = ['/'];
+  historyIdx = 0;
+  pageIdx = 0;
+  renderHistory();
+  document.getElementById('navLog').innerHTML = '<span style="color:#554840;">// 已重置</span>';
+});
+
+// ── Quiz ──
+document.querySelectorAll('.quiz-block').forEach(block => {
+  const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts = block.querySelectorAll('.quiz-opt');
+  const fbs  = block.querySelectorAll('.quiz-fb');
+  let done = false;
+  opts.forEach((opt, i) => {
+    opt.addEventListener('click', () => {
+      if(done) return;
+      done = true;
+      opts.forEach(o => o.style.pointerEvents = 'none');
+      if(i === correct) {
+        opt.classList.add('correct');
+        fbs[0] && fbs[0].classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        opts[correct].classList.add('correct');
+        fbs[1] && fbs[1].classList.add('show');
+        setTimeout(() => {
+          done = false;
+          opts.forEach(o => { o.style.pointerEvents = ''; o.classList.remove('wrong','correct'); });
+          fbs.forEach(f => f.classList.remove('show'));
+        }, 2800);
+      }
+    });
+  });
+});
+
+// ── Checklist ──
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+}
+</script>
+</body>
+</html>
