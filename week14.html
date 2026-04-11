@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 14 — 後端基礎與資料庫串接</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Mulish:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050d18;--bg2:#081424;--bg3:#0c1e35;--surface:#102540;
+  --border:#1a3a5c;--border2:#1f4a73;
+  --text:#dbeeff;--muted:#5a8aac;--faint:#2a5070;
+  --accent:#ff7043;--accent-dim:rgba(255,112,67,.1);--accent-border:rgba(255,112,67,.3);
+  --teal:#00bcd4;--teal-dim:rgba(0,188,212,.1);--teal-border:rgba(0,188,212,.3);
+  --green:#26a69a;--green-dim:rgba(38,166,154,.1);
+  --purple:#ab47bc;--purple-dim:rgba(171,71,188,.1);
+  --red:#ef5350;--red-dim:rgba(239,83,80,.1);
+  --gold:#ffa726;--gold-dim:rgba(255,167,38,.1);
+  --code-bg:#020a14;--code-text:#b8d8f0;
+  --font-d:'Libre Baskerville',serif;
+  --font-b:'Mulish',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden;}
+
+/* Deep ocean ambient glow */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%,rgba(0,188,212,.06),transparent),
+    radial-gradient(ellipse 50% 50% at 80% 80%,rgba(255,112,67,.05),transparent),
+    radial-gradient(ellipse 70% 30% at 50% 100%,rgba(38,166,154,.04),transparent);
+}
+
+/* Subtle wave texture */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.06;
+  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300bcd4' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes ripple{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.5);opacity:0}}
+@keyframes dataFlow{0%{stroke-dashoffset:100}100%{stroke-dashoffset:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:linear-gradient(to right,var(--teal),var(--accent));box-shadow:0 0 8px var(--teal);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.85rem 2.5rem;background:rgba(5,13,24,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--teal);letter-spacing:.12em;text-decoration:none;font-weight:600;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--teal);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.57rem;color:var(--faint);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:all .2s;}
+.toc-item:hover,.toc-item.active{color:var(--teal);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--teal);width:12px;border-radius:1px;box-shadow:0 0 6px var(--teal);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:5rem 3.5rem 4rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+
+/* Animated DB diagram in hero */
+.hero-deco{position:absolute;right:3rem;top:50%;transform:translateY(-50%);width:240px;height:200px;pointer-events:none;opacity:0;animation:fadeUp .5s .7s forwards;}
+
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--teal);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-size:clamp(2.6rem,5vw,4.5rem);font-weight:700;line-height:1.08;letter-spacing:-.01em;margin-bottom:1.4rem;max-width:700px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{color:var(--teal);}
+.hero h1 .hi2{color:var(--accent);font-style:italic;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-meta{display:flex;gap:0;border:1px solid var(--border);width:fit-content;opacity:0;animation:fadeUp .5s .5s forwards;}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--teal);font-weight:600;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--teal),transparent);opacity:.7;}
+.section-title{font-family:var(--font-d);font-size:2rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.15;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--teal);font-weight:600;background:var(--teal-dim);border:1px solid var(--teal-border);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.1rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:28px;height:28px;background:linear-gradient(135deg,var(--teal),var(--accent));color:#fff;font-family:var(--font-m);font-size:.65rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:4px;}
+.ctitle{font-family:var(--font-b);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#8ab4cc;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:700;}
+.cbody em{color:var(--teal);font-style:normal;font-weight:700;}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-dim);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#c89a50;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--gold);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--green);background:var(--green-dim);color:#5ab8b0;}
+.note.tip .note-label{color:var(--green);}
+.note.info{border-left-color:var(--teal);background:var(--teal-dim);color:#60b8cc;}
+.note.info .note-label{color:var(--teal);}
+.note.warn{border-left-color:var(--red);background:var(--red-dim);color:#d87878;}
+.note.warn .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;}
+pre{background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);}
+.t{color:#80d8f0;}   /* tag/type */
+.p{color:#a5d6a7;}   /* property/attr */
+.v{color:#fff176;}   /* value/string */
+.c{color:#1e3a50;font-style:italic;}  /* comment */
+.s{color:#f48fb1;}   /* keyword */
+.fn{color:#ce93d8;}  /* function */
+.kw{color:#ffab91;}  /* jsx keyword */
+.str{color:#fff176;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--teal);padding:.1em .4em;border:1px solid var(--border2);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(26,58,92,.4);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--teal);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* DEMO AREAS */
+.demo-wrap{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+.demo-bar strong{color:var(--teal);}
+.demo-body{padding:1.8rem;background:var(--bg);}
+
+/* ── SCHEMA BUILDER ── */
+.schema-area{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+.schema-table{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;overflow:hidden;}
+.schema-table-head{padding:.6rem 1rem;background:linear-gradient(to right,rgba(0,188,212,.15),rgba(255,112,67,.08));border-bottom:1px solid var(--border2);font-family:var(--font-m);font-size:.72rem;font-weight:600;color:var(--teal);display:flex;align-items:center;gap:.5rem;}
+.schema-table-head .table-icon{width:14px;height:14px;border:1px solid var(--teal);border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:.55rem;}
+.schema-field{display:flex;align-items:center;padding:.45rem 1rem;border-bottom:1px solid rgba(26,58,92,.4);font-family:var(--font-m);font-size:.7rem;gap:.6rem;}
+.schema-field:last-child{border-bottom:none;}
+.field-name{color:var(--text);flex:1;}
+.field-type{color:var(--gold);font-size:.65rem;background:rgba(255,167,38,.08);padding:.1rem .35rem;border:1px solid rgba(255,167,38,.2);}
+.field-pk{color:var(--accent);font-size:.6rem;background:rgba(255,112,67,.1);padding:.1rem .3rem;border:1px solid rgba(255,112,67,.2);}
+.field-fk{color:var(--purple);font-size:.6rem;background:rgba(171,71,188,.1);padding:.1rem .3rem;border:1px solid rgba(171,71,188,.2);}
+.field-null{color:var(--faint);font-size:.6rem;}
+.schema-relation{display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65rem;color:var(--muted);padding:.5rem 0;gap:.4rem;}
+.rel-line{flex:1;height:1px;background:var(--border2);}
+.rel-badge{padding:.15rem .5rem;border:1px solid var(--border2);background:var(--bg3);}
+
+/* ── QUERY BUILDER DEMO ── */
+.query-builder{display:flex;flex-direction:column;gap:.8rem;}
+.qb-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.qb-label{font-family:var(--font-m);font-size:.65rem;color:var(--muted);width:80px;flex-shrink:0;}
+.qb-select{font-family:var(--font-m);font-size:.75rem;padding:.35rem .7rem;background:var(--bg2);border:1px solid var(--border2);color:var(--text);outline:none;cursor:pointer;}
+.qb-select:focus{border-color:var(--teal);}
+.qb-input{font-family:var(--font-m);font-size:.75rem;padding:.35rem .7rem;background:var(--bg2);border:1px solid var(--border2);color:var(--text);outline:none;flex:1;min-width:120px;}
+.qb-input:focus{border-color:var(--teal);}
+.qb-run{font-family:var(--font-m);font-size:.7rem;padding:.38rem 1rem;background:var(--teal);color:var(--bg);border:none;cursor:pointer;transition:opacity .15s;font-weight:600;}
+.qb-run:hover{opacity:.85;}
+.qb-result{background:var(--code-bg);border:1px solid var(--border);padding:1rem 1.2rem;font-family:var(--font-m);font-size:.72rem;color:var(--code-text);line-height:1.8;min-height:80px;overflow-x:auto;}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch-diagram{display:flex;align-items:center;justify-content:center;gap:0;position:relative;padding:1rem 0;overflow-x:auto;}
+.arch-node{display:flex;flex-direction:column;align-items:center;gap:.4rem;flex-shrink:0;}
+.arch-box{padding:.6rem 1rem;border:1px solid;font-family:var(--font-m);font-size:.65rem;font-weight:600;text-align:center;min-width:80px;transition:all .2s;cursor:pointer;position:relative;}
+.arch-box:hover{transform:translateY(-2px);}
+.arch-label{font-family:var(--font-m);font-size:.55rem;color:var(--faint);letter-spacing:.08em;margin-top:.2rem;}
+.arch-arrow{display:flex;align-items:center;padding:0 .4rem;color:var(--border2);font-size:.8rem;flex-shrink:0;}
+.arch-arrow.active-arrow{color:var(--teal);}
+
+/* ── RLS DEMO ── */
+.rls-demo{display:flex;flex-direction:column;gap:.6rem;}
+.rls-row{display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;border:1px solid;font-family:var(--font-m);font-size:.72rem;}
+.rls-user{width:80px;flex-shrink:0;font-weight:600;}
+.rls-query{flex:1;color:var(--muted);}
+.rls-result{font-weight:600;white-space:nowrap;}
+.rls-allowed{border-color:var(--green);background:var(--green-dim);}
+.rls-allowed .rls-result{color:var(--green);}
+.rls-denied{border-color:var(--red);background:var(--red-dim);}
+.rls-denied .rls-result{color:var(--red);}
+
+/* compare */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:var(--green-dim);color:var(--green);border-bottom:1px solid rgba(38,166,154,.2);}
+.cpanel-hdr.bad{background:var(--red-dim);color:var(--red);border-bottom:1px solid rgba(239,83,80,.2);}
+.cpanel-hdr.info{background:var(--teal-dim);color:var(--teal);border-bottom:1px solid var(--teal-border);}
+
+/* quiz */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--teal);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.3;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--teal);background:var(--teal-dim);}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-dim);color:var(--red);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* checklist */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:var(--green-dim);border-color:rgba(38,166,154,.3);}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* project */
+.project-hero{background:var(--bg2);border:1px solid var(--border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'supabase.from()';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:2.8rem;color:var(--teal);opacity:.06;pointer-events:none;white-space:nowrap;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--teal);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.2;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--teal);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:700;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* resources */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-b);font-size:.88rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--teal);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--teal);color:var(--teal);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--teal);}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-deco{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .schema-area{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+  .arch-diagram{flex-wrap:wrap;justify-content:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 14 / 18 &mdash; BACKEND + DATABASE</div>
+  <nav class="header-nav">
+    <a href="week13.html">&larr; Week 13</a>
+    <a href="index.html">總覽</a>
+    <a href="week15.html">Week 15 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">Next.js 專案結構</a>
+  <a class="toc-item" href="#concept-2">API Routes</a>
+  <a class="toc-item" href="#concept-3">Supabase 設定</a>
+  <a class="toc-item" href="#concept-4">資料庫設計</a>
+  <a class="toc-item" href="#concept-5">CRUD 操作</a>
+  <a class="toc-item" href="#concept-6">Row Level Security</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作專案</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <!-- Animated SVG DB diagram -->
+    <div class="hero-deco">
+      <svg width="240" height="200" viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tables -->
+        <rect x="10" y="20" width="80" height="100" rx="4" fill="rgba(0,188,212,.08)" stroke="rgba(0,188,212,.4)" stroke-width="1"/>
+        <text x="30" y="36" font-family="JetBrains Mono" font-size="9" fill="#00bcd4">users</text>
+        <line x1="10" y1="42" x2="90" y2="42" stroke="rgba(0,188,212,.3)"/>
+        <text x="16" y="56" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">id uuid PK</text>
+        <text x="16" y="70" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">email text</text>
+        <text x="16" y="84" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">name text</text>
+        <text x="16" y="98" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">created_at</text>
+        <!-- Posts table -->
+        <rect x="150" y="20" width="80" height="110" rx="4" fill="rgba(255,112,67,.08)" stroke="rgba(255,112,67,.4)" stroke-width="1"/>
+        <text x="168" y="36" font-family="JetBrains Mono" font-size="9" fill="#ff7043">posts</text>
+        <line x1="150" y1="42" x2="230" y2="42" stroke="rgba(255,112,67,.3)"/>
+        <text x="156" y="56" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">id uuid PK</text>
+        <text x="156" y="70" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">user_id FK</text>
+        <text x="156" y="84" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">title text</text>
+        <text x="156" y="98" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">content</text>
+        <text x="156" y="112" font-family="JetBrains Mono" font-size="8" fill="#5a8aac">created_at</text>
+        <!-- Relation line -->
+        <line x1="90" y1="70" x2="150" y2="70" stroke="rgba(171,71,188,.6)" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <circle cx="90" cy="70" r="3" fill="#ab47bc"/>
+        <circle cx="150" cy="70" r="3" fill="#ab47bc"/>
+        <text x="108" y="66" font-family="JetBrains Mono" font-size="7" fill="#ab47bc">1:N</text>
+        <!-- Next.js API box -->
+        <rect x="80" y="148" width="80" height="36" rx="4" fill="rgba(38,166,154,.1)" stroke="rgba(38,166,154,.4)" stroke-width="1"/>
+        <text x="92" y="162" font-family="JetBrains Mono" font-size="8" fill="#26a69a">Next.js</text>
+        <text x="88" y="176" font-family="JetBrains Mono" font-size="8" fill="#26a69a">API Route</text>
+        <!-- Connecting lines to tables -->
+        <line x1="120" y1="148" x2="50" y2="120" stroke="rgba(38,166,154,.3)" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="120" y1="148" x2="190" y2="130" stroke="rgba(38,166,154,.3)" stroke-width="1" stroke-dasharray="3,2"/>
+      </svg>
+    </div>
+    <div class="hero-label">PHASE 04 &mdash; Side Project 實戰 / WEEK 14</div>
+    <h1>後端基礎<br><span class="hi">資料庫</span><span class="hi2">串接</span></h1>
+    <p class="hero-desc">從純前端跨界全端。這週你將學會用 Next.js App Router 建立 API，連接 Supabase PostgreSQL 資料庫，實作完整的 CRUD 操作，讓你的應用真正能儲存和讀取資料。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 04 — Side Project</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">12–15 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">技術</div><div class="meta-cell-value">Next.js + Supabase</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">Week 13 專案規劃</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">學習目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個核心能力，帶你從純前端開發者升級為能處理資料庫的全端開發者。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">理解 Next.js App Router 的資料夾結構，區分 Server Component、Client Component 和 API Route Handler 的使用場景</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">在 <code>app/api/</code> 目錄建立 Route Handler，正確處理 GET、POST、PUT、DELETE 請求並回傳結構化 JSON 回應</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">建立 Supabase 專案，設計並建立資料表，設定欄位型別、預設值、主鍵和外鍵約束</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">使用 Supabase JavaScript SDK 執行 select、insert、update、delete 操作，並正確處理回傳的 data 和 error</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">理解 Row Level Security（RLS）的概念，為資料表啟用 RLS 並建立 Policy，確保使用者只能存取自己的資料</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">從前端 React 元件呼叫後端 API，處理 loading 狀態、錯誤狀態，並在資料變更後正確更新 UI</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: Next.js 專案結構 -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">Next.js App Router 結構</h2>
+      <p class="section-intro">Next.js 13+ 引入的 App Router 讓前後端可以在同一個專案中共存。理解它的資料夾結構，是建立全端應用的第一步。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">App Router 資料夾慣例</div><div class="csub">app/ 目錄結構完整解說</div></div></div>
+        <div class="cbody">
+          <p>Next.js App Router 以<strong>資料夾結構定義路由</strong>，每個資料夾代表一個路由段（route segment）。資料夾裡的特定檔名有特殊功能：<code>page.tsx</code> 是頁面、<code>layout.tsx</code> 是共用版面、<code>route.ts</code> 是 API 端點、<code>loading.tsx</code> 是載入狀態、<code>error.tsx</code> 是錯誤處理。</p>
+          <p><em>Server Components（預設）</em>：在伺服器端渲染，可以直接存取資料庫、讀取環境變數，不能使用 useState、useEffect 等 React Hook。<em>Client Components</em>：在瀏覽器端渲染，需要在檔案頂端加 <code>'use client'</code>，可以使用 Hook 和事件處理。</p>
+          <p>重要原則：<strong>盡量讓元件在伺服器端渲染</strong>（更快、更安全），只有需要互動的部分才加 <code>'use client'</code>。這和 React SPA 的思維完全相反。</p>
+          <div class="note info">
+            <span class="note-label">App Router vs Pages Router</span>
+            Next.js 有兩套路由系統：舊的 Pages Router（<code>pages/</code> 目錄）和新的 App Router（<code>app/</code> 目錄）。新專案應該使用 App Router，它支援 React Server Components，效能更好。網路上很多舊教學用 Pages Router，注意區別。
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">專案結構 &mdash; Next.js App Router 完整範例</div></div>
+        <pre><span class="c">my-app/</span>
+<span class="c">├── app/                          # App Router 根目錄</span>
+<span class="c">│   ├── layout.tsx                # 根 Layout（全域 HTML 結構）</span>
+<span class="c">│   ├── page.tsx                  # 首頁 /</span>
+<span class="c">│   ├── loading.tsx               # 全域載入 UI</span>
+<span class="c">│   ├── error.tsx                 # 全域錯誤頁</span>
+<span class="c">│   │</span>
+<span class="c">│   ├── about/</span>
+<span class="c">│   │   └── page.tsx              # /about 頁面</span>
+<span class="c">│   │</span>
+<span class="c">│   ├── dashboard/</span>
+<span class="c">│   │   ├── layout.tsx            # Dashboard 共用 Layout</span>
+<span class="c">│   │   ├── page.tsx              # /dashboard</span>
+<span class="c">│   │   └── settings/</span>
+<span class="c">│   │       └── page.tsx          # /dashboard/settings</span>
+<span class="c">│   │</span>
+<span class="c">│   └── api/                     # API Routes（後端）</span>
+<span class="c">│       ├── posts/</span>
+<span class="c">│       │   ├── route.ts          # GET /api/posts, POST /api/posts</span>
+<span class="c">│       │   └── [id]/</span>
+<span class="c">│       │       └── route.ts      # GET/PUT/DELETE /api/posts/:id</span>
+<span class="c">│       └── users/</span>
+<span class="c">│           └── route.ts          # GET /api/users</span>
+<span class="c">│</span>
+<span class="c">├── components/                   # 共用 React 元件</span>
+<span class="c">│   ├── ui/                       # 基礎 UI 元件</span>
+<span class="c">│   └── features/                 # 業務邏輯元件</span>
+<span class="c">│</span>
+<span class="c">├── lib/                          # 工具函式</span>
+<span class="c">│   ├── supabase/</span>
+<span class="c">│   │   ├── client.ts             # 瀏覽器端 Supabase Client</span>
+<span class="c">│   │   └── server.ts             # 伺服器端 Supabase Client</span>
+<span class="c">│   └── utils.ts</span>
+<span class="c">│</span>
+<span class="c">├── types/                        # TypeScript 型別定義</span>
+<span class="c">│   └── database.ts               # Supabase 自動生成的 DB 型別</span>
+<span class="c">│</span>
+<span class="c">├── .env.local                    # 本地環境變數（不提交）</span>
+<span class="c">└── next.config.js</span></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TypeScript &mdash; Server vs Client Component</div></div>
+        <pre><span class="c">// ── Server Component（預設，無需宣告）──</span>
+<span class="c">// app/dashboard/page.tsx</span>
+<span class="s">import</span> { createServerClient } <span class="s">from</span> <span class="v">'@/lib/supabase/server'</span>;
+
+<span class="s">export default async function</span> <span class="fn">DashboardPage</span>() {
+  <span class="c">// 可直接在元件中 await 資料，不需要 useEffect</span>
+  <span class="s">const</span> supabase = <span class="fn">createServerClient</span>();
+  <span class="s">const</span> { data: posts } = <span class="s">await</span> supabase
+    .<span class="fn">from</span>(<span class="v">'posts'</span>)
+    .<span class="fn">select</span>(<span class="v">'*'</span>)
+    .<span class="fn">order</span>(<span class="v">'created_at'</span>, { ascending: <span class="s">false</span> });
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;h1&gt;</span>我的文章<span class="t">&lt;/h1&gt;</span>
+      <span class="kw">{</span>posts?.map(post => (
+        <span class="t">&lt;PostCard</span> <span class="p">key</span>=<span class="kw">{</span>post.id<span class="kw">}</span> <span class="p">post</span>=<span class="kw">{</span>post<span class="kw">}</span> <span class="t">/&gt;</span>
+      ))<span class="kw">}</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── Client Component（需互動才用）──</span>
+<span class="c">// components/features/NewPostForm.tsx</span>
+<span class="v">'use client'</span>;  <span class="c">// 告訴 Next.js 這是客戶端元件</span>
+
+<span class="s">import</span> { useState } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="s">export default function</span> <span class="fn">NewPostForm</span>() {
+  <span class="s">const</span> [title, setTitle] = <span class="fn">useState</span>(<span class="v">''</span>);
+  <span class="s">const</span> [loading, setLoading] = <span class="fn">useState</span>(<span class="s">false</span>);
+
+  <span class="s">const</span> <span class="fn">handleSubmit</span> = <span class="s">async</span> (e: React.FormEvent) => {
+    e.<span class="fn">preventDefault</span>();
+    <span class="fn">setLoading</span>(<span class="s">true</span>);
+    <span class="s">await</span> <span class="fn">fetch</span>(<span class="v">'/api/posts'</span>, {
+      method: <span class="v">'POST'</span>,
+      body: JSON.<span class="fn">stringify</span>({ title }),
+    });
+    <span class="fn">setLoading</span>(<span class="s">false</span>);
+  };
+
+  <span class="s">return</span> <span class="t">&lt;form</span> <span class="p">onSubmit</span>=<span class="kw">{</span>handleSubmit<span class="kw">}</span><span class="t">&gt;</span>...<span class="t">&lt;/form&gt;</span>;
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: API Routes -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">Next.js API Route Handlers</h2>
+      <p class="section-intro">API Route 讓你在 Next.js 專案中直接撰寫後端邏輯，不需要另外建立 Express 伺服器。它們在伺服器端執行，可以安全地存取資料庫和環境變數。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">Route Handler 語法</div><div class="csub">app/api/&lt;路徑&gt;/route.ts</div></div></div>
+        <div class="cbody">
+          <p>在 <code>app/api/</code> 目錄建立 <code>route.ts</code> 檔案，匯出以 HTTP 方法命名的函式（<code>GET</code>、<code>POST</code>、<code>PUT</code>、<code>DELETE</code>）。每個函式接受一個 <code>Request</code> 物件，回傳一個 <code>Response</code>。</p>
+          <p>Next.js 的 <code>NextResponse</code> 提供便利的靜態方法：<code>NextResponse.json(data, { status: 200 })</code> 自動設定 Content-Type 並序列化資料。錯誤回應用 <code>NextResponse.json({ error: '...' }, { status: 400 })</code>。</p>
+          <p><em>動態路由</em>：在資料夾名稱加方括號 <code>[id]</code>，在 route handler 的第二個參數 <code>params</code> 中取得：<code>params.id</code>。</p>
+        </div>
+      </div>
+
+      <!-- Architecture Diagram -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>REQUEST FLOW</strong><span>點擊各節點查看說明</span></div>
+        <div class="demo-body">
+          <div class="arch-diagram" id="archDiagram">
+            <div class="arch-node">
+              <div class="arch-box" style="border-color:var(--teal);color:var(--teal);background:var(--teal-dim);" data-info="瀏覽器（Client）&#10;React 元件呼叫 fetch() 或 supabase SDK&#10;等待回應並更新 UI">Client</div>
+              <div class="arch-label">React 元件</div>
+            </div>
+            <div class="arch-arrow" id="arr1">&#8594;</div>
+            <div class="arch-node">
+              <div class="arch-box" style="border-color:var(--green);color:var(--green);background:var(--green-dim);" data-info="Next.js 伺服器&#10;接收 HTTP 請求&#10;route.ts 中的 GET/POST 函式處理&#10;可安全存取環境變數和資料庫">Next.js<br>API</div>
+              <div class="arch-label">app/api/route.ts</div>
+            </div>
+            <div class="arch-arrow" id="arr2">&#8594;</div>
+            <div class="arch-node">
+              <div class="arch-box" style="border-color:var(--accent);color:var(--accent);background:var(--accent-dim);" data-info="Supabase SDK&#10;在伺服器端呼叫 Supabase API&#10;使用 Service Role Key（私密）&#10;可繞過 RLS（Admin 操作）">Supabase<br>SDK</div>
+              <div class="arch-label">lib/supabase/server</div>
+            </div>
+            <div class="arch-arrow" id="arr3">&#8594;</div>
+            <div class="arch-node">
+              <div class="arch-box" style="border-color:var(--purple);color:var(--purple);background:var(--purple-dim);" data-info="PostgreSQL 資料庫&#10;由 Supabase 托管&#10;執行 SQL 查詢&#10;回傳結果">PostgreSQL<br>DB</div>
+              <div class="arch-label">Supabase 雲端</div>
+            </div>
+          </div>
+          <div id="archInfo" style="margin-top:1rem;font-family:var(--font-m);font-size:.72rem;color:var(--muted);min-height:2.5rem;padding:.5rem .8rem;background:var(--bg2);border:1px solid var(--border);white-space:pre-line;"></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TypeScript &mdash; Route Handler 完整範例</div></div>
+        <pre><span class="c">// app/api/posts/route.ts</span>
+<span class="s">import</span> { NextRequest, NextResponse } <span class="s">from</span> <span class="v">'next/server'</span>;
+<span class="s">import</span> { createServerClient } <span class="s">from</span> <span class="v">'@/lib/supabase/server'</span>;
+
+<span class="c">// GET /api/posts — 取得所有文章</span>
+<span class="s">export async function</span> <span class="fn">GET</span>(request: NextRequest) {
+  <span class="s">try</span> {
+    <span class="s">const</span> supabase = <span class="fn">createServerClient</span>();
+    <span class="s">const</span> { searchParams } = <span class="s">new</span> URL(request.url);
+    <span class="s">const</span> limit = searchParams.<span class="fn">get</span>(<span class="v">'limit'</span>) ?? <span class="v">'10'</span>;
+
+    <span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+      .<span class="fn">from</span>(<span class="v">'posts'</span>)
+      .<span class="fn">select</span>(<span class="v">'id, title, created_at, users(name)'</span>)
+      .<span class="fn">order</span>(<span class="v">'created_at'</span>, { ascending: <span class="s">false</span> })
+      .<span class="fn">limit</span>(<span class="fn">Number</span>(limit));
+
+    <span class="s">if</span> (error) <span class="s">throw</span> error;
+
+    <span class="s">return</span> NextResponse.<span class="fn">json</span>({ data });
+  } <span class="s">catch</span> (err) {
+    <span class="s">return</span> NextResponse.<span class="fn">json</span>(
+      { error: <span class="v">'無法取得文章'</span> },
+      { status: <span class="str">500</span> }
+    );
+  }
+}
+
+<span class="c">// POST /api/posts — 新增文章</span>
+<span class="s">export async function</span> <span class="fn">POST</span>(request: NextRequest) {
+  <span class="s">try</span> {
+    <span class="s">const</span> body = <span class="s">await</span> request.<span class="fn">json</span>();
+    <span class="s">const</span> { title, content } = body;
+
+    <span class="c">// 基本驗證</span>
+    <span class="s">if</span> (!title?.trim()) {
+      <span class="s">return</span> NextResponse.<span class="fn">json</span>(
+        { error: <span class="v">'標題不能為空'</span> },
+        { status: <span class="str">400</span> }
+      );
+    }
+
+    <span class="s">const</span> supabase = <span class="fn">createServerClient</span>();
+    <span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+      .<span class="fn">from</span>(<span class="v">'posts'</span>)
+      .<span class="fn">insert</span>({ title, content })
+      .<span class="fn">select</span>()
+      .<span class="fn">single</span>(); <span class="c">// 回傳新增的那一筆</span>
+
+    <span class="s">if</span> (error) <span class="s">throw</span> error;
+
+    <span class="s">return</span> NextResponse.<span class="fn">json</span>({ data }, { status: <span class="str">201</span> });
+  } <span class="s">catch</span> (err) {
+    <span class="s">return</span> NextResponse.<span class="fn">json</span>(
+      { error: <span class="v">'新增失敗'</span> },
+      { status: <span class="str">500</span> }
+    );
+  }
+}
+
+<span class="c">// app/api/posts/[id]/route.ts — 動態路由</span>
+<span class="s">export async function</span> <span class="fn">DELETE</span>(
+  request: NextRequest,
+  { params }: { params: { id: <span class="t">string</span> } }
+) {
+  <span class="s">const</span> { id } = params; <span class="c">// 從 URL /api/posts/42 取得 "42"</span>
+  <span class="s">const</span> supabase = <span class="fn">createServerClient</span>();
+  <span class="s">const</span> { error } = <span class="s">await</span> supabase
+    .<span class="fn">from</span>(<span class="v">'posts'</span>)
+    .<span class="fn">delete</span>()
+    .<span class="fn">eq</span>(<span class="v">'id'</span>, id);
+
+  <span class="s">if</span> (error) <span class="s">return</span> NextResponse.<span class="fn">json</span>({ error }, { status: <span class="str">500</span> });
+  <span class="s">return</span> NextResponse.<span class="fn">json</span>({ success: <span class="s">true</span> });
+}</pre>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>HTTP 方法</th><th>慣例用途</th><th>回應狀態碼</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td>取得資源（單筆或列表）</td><td>200 OK</td></tr>
+          <tr><td>POST</td><td>建立新資源</td><td>201 Created</td></tr>
+          <tr><td>PUT</td><td>完整更新資源（全部欄位）</td><td>200 OK</td></tr>
+          <tr><td>PATCH</td><td>部分更新資源（只改動的欄位）</td><td>200 OK</td></tr>
+          <tr><td>DELETE</td><td>刪除資源</td><td>200 OK 或 204 No Content</td></tr>
+          <tr><td>任何方法</td><td>驗證失敗（缺少必填欄位）</td><td>400 Bad Request</td></tr>
+          <tr><td>任何方法</td><td>未登入</td><td>401 Unauthorized</td></tr>
+          <tr><td>任何方法</td><td>沒有權限</td><td>403 Forbidden</td></tr>
+          <tr><td>任何方法</td><td>找不到資源</td><td>404 Not Found</td></tr>
+          <tr><td>任何方法</td><td>伺服器內部錯誤</td><td>500 Internal Server Error</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- CONCEPT 3: Supabase 設定 -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">Supabase 設定</h2>
+      <p class="section-intro">Supabase 是 Firebase 的開源替代品，提供 PostgreSQL 資料庫、身份驗證、即時訂閱和儲存服務。它有友善的 UI 和 JavaScript SDK，非常適合全端入門。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">Supabase Client 初始化</div><div class="csub">瀏覽器端 vs 伺服器端</div></div></div>
+        <div class="cbody">
+          <p>Supabase 有兩個重要的密鑰：<em>anon key</em>（公開，可在前端使用，受 RLS 保護）和 <em>service_role key</em>（私密，只能在伺服器端使用，可繞過 RLS）。</p>
+          <p><strong>永遠不要在前端程式碼中使用 service_role key</strong>。它有完整的資料庫存取權限，如果外洩，任何人都能讀取或刪除你所有的資料。</p>
+          <p>Next.js 中需要兩個不同的 Supabase client：<em>瀏覽器端</em>（<code>createBrowserClient</code>）用在 Client Component，使用 anon key；<em>伺服器端</em>（<code>createServerClient</code>）用在 API Route 和 Server Component，可以使用 service_role key 進行管理操作。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TypeScript &mdash; Supabase Client 設定</div></div>
+        <pre><span class="c">// ── 1. 安裝 ──</span>
+<span class="c">// npm install @supabase/supabase-js @supabase/ssr</span>
+
+<span class="c">// ── 2. .env.local ──</span>
+<span class="t">NEXT_PUBLIC_SUPABASE_URL</span>=https://xyzxyz.supabase.co
+<span class="t">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>=eyJhbGci...  <span class="c"># 公開，前端可用</span>
+<span class="t">SUPABASE_SERVICE_ROLE_KEY</span>=eyJhbGci...       <span class="c"># 私密，只能後端用！</span>
+
+<span class="c">// ── 3. lib/supabase/client.ts（瀏覽器端）──</span>
+<span class="s">import</span> { createBrowserClient } <span class="s">from</span> <span class="v">'@supabase/ssr'</span>;
+
+<span class="s">export function</span> <span class="fn">createClient</span>() {
+  <span class="s">return</span> <span class="fn">createBrowserClient</span>(
+    process.env.<span class="t">NEXT_PUBLIC_SUPABASE_URL</span>!,
+    process.env.<span class="t">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>!
+  );
+}
+
+<span class="c">// ── 4. lib/supabase/server.ts（伺服器端）──</span>
+<span class="s">import</span> { createServerClient } <span class="s">from</span> <span class="v">'@supabase/ssr'</span>;
+<span class="s">import</span> { cookies } <span class="s">from</span> <span class="v">'next/headers'</span>;
+
+<span class="s">export function</span> <span class="fn">createClient</span>() {
+  <span class="s">const</span> cookieStore = <span class="fn">cookies</span>();
+  <span class="s">return</span> <span class="fn">createServerClient</span>(
+    process.env.<span class="t">NEXT_PUBLIC_SUPABASE_URL</span>!,
+    process.env.<span class="t">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>!,
+    {
+      cookies: {
+        <span class="fn">get</span>(name) { <span class="s">return</span> cookieStore.<span class="fn">get</span>(name)?.value; },
+        <span class="fn">set</span>(name, value, options) { cookieStore.<span class="fn">set</span>(name, value, options); },
+        <span class="fn">remove</span>(name, options) { cookieStore.<span class="fn">set</span>(name, <span class="v">''</span>, options); },
+      },
+    }
+  );
+}
+
+<span class="c">// ── 5. 在 API Route 中使用 Admin Client ──</span>
+<span class="s">import</span> { createClient as createAdmin } <span class="s">from</span> <span class="v">'@supabase/supabase-js'</span>;
+
+<span class="s">function</span> <span class="fn">getAdminClient</span>() {
+  <span class="s">return</span> <span class="fn">createAdmin</span>(
+    process.env.<span class="t">NEXT_PUBLIC_SUPABASE_URL</span>!,
+    process.env.<span class="t">SUPABASE_SERVICE_ROLE_KEY</span>!  <span class="c">// 私密！只在伺服器用</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: 資料庫設計 -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">資料庫設計</h2>
+      <p class="section-intro">好的資料庫設計是應用穩定運行的基礎。理解資料表結構、欄位型別和關聯，是從前端思維切換到全端思維的重要一步。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">常用 PostgreSQL 欄位型別</div><div class="csub">Supabase / PostgreSQL 型別速查</div></div></div>
+        <div class="cbody">
+          <p><em>uuid</em>：通用唯一識別符，Supabase 預設用 <code>gen_random_uuid()</code> 自動生成，適合所有主鍵（比遞增數字 ID 更安全，不會暴露資料量）。</p>
+          <p><em>text</em>：無長度限制的字串，PostgreSQL 中 text 和 varchar 效能相同，建議統一用 text 而非 varchar。<em>int8 / bigint</em>：大整數，適合計數器。<em>numeric</em>：精確小數，適合金額。</p>
+          <p><em>timestamptz</em>：帶時區的時間戳記，<strong>永遠用 timestamptz 而非 timestamp</strong>，Supabase 建議用 <code>now()</code> 作為預設值。<em>bool</em>：布林值。<em>jsonb</em>：可查詢的 JSON 物件，適合儲存彈性結構的資料。</p>
+        </div>
+      </div>
+
+      <!-- Schema Visual -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>SCHEMA DESIGNER</strong><span>Todo App 的資料庫設計</span></div>
+        <div class="demo-body">
+          <div class="schema-area">
+            <div>
+              <div class="schema-table">
+                <div class="schema-table-head"><span class="table-icon">T</span>users（Supabase Auth 內建）</div>
+                <div class="schema-field"><span class="field-name">id</span><span class="field-type">uuid</span><span class="field-pk">PK</span></div>
+                <div class="schema-field"><span class="field-name">email</span><span class="field-type">text</span><span class="field-null">unique</span></div>
+                <div class="schema-field"><span class="field-name">created_at</span><span class="field-type">timestamptz</span></div>
+              </div>
+              <div class="schema-relation">
+                <div class="rel-line"></div>
+                <div class="rel-badge">1 users : N todos</div>
+                <div class="rel-line"></div>
+              </div>
+              <div class="schema-table">
+                <div class="schema-table-head"><span class="table-icon">T</span>todos</div>
+                <div class="schema-field"><span class="field-name">id</span><span class="field-type">uuid</span><span class="field-pk">PK</span><span style="font-size:.6rem;color:var(--faint);">gen_random_uuid()</span></div>
+                <div class="schema-field"><span class="field-name">user_id</span><span class="field-type">uuid</span><span class="field-fk">FK → users.id</span></div>
+                <div class="schema-field"><span class="field-name">title</span><span class="field-type">text</span><span class="field-null">not null</span></div>
+                <div class="schema-field"><span class="field-name">is_done</span><span class="field-type">bool</span><span style="font-size:.6rem;color:var(--faint);">default false</span></div>
+                <div class="schema-field"><span class="field-name">priority</span><span class="field-type">int2</span><span style="font-size:.6rem;color:var(--faint);">default 0</span></div>
+                <div class="schema-field"><span class="field-name">due_date</span><span class="field-type">timestamptz</span><span class="field-null">nullable</span></div>
+                <div class="schema-field"><span class="field-name">created_at</span><span class="field-type">timestamptz</span><span style="font-size:.6rem;color:var(--faint);">now()</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="schema-table">
+                <div class="schema-table-head"><span class="table-icon">T</span>tags</div>
+                <div class="schema-field"><span class="field-name">id</span><span class="field-type">int4</span><span class="field-pk">PK serial</span></div>
+                <div class="schema-field"><span class="field-name">name</span><span class="field-type">text</span><span class="field-null">unique</span></div>
+                <div class="schema-field"><span class="field-name">color</span><span class="field-type">text</span><span style="font-size:.6rem;color:var(--faint);">#hex</span></div>
+              </div>
+              <div class="schema-relation">
+                <div class="rel-line"></div>
+                <div class="rel-badge">N:M 多對多（中間表）</div>
+                <div class="rel-line"></div>
+              </div>
+              <div class="schema-table">
+                <div class="schema-table-head"><span class="table-icon">T</span>todo_tags（關聯表）</div>
+                <div class="schema-field"><span class="field-name">todo_id</span><span class="field-type">uuid</span><span class="field-fk">FK → todos.id</span></div>
+                <div class="schema-field"><span class="field-name">tag_id</span><span class="field-type">int4</span><span class="field-fk">FK → tags.id</span></div>
+                <div style="padding:.3rem 1rem;font-family:var(--font-m);font-size:.62rem;color:var(--faint);">PRIMARY KEY (todo_id, tag_id)</div>
+              </div>
+              <div style="margin-top:1rem;padding:.8rem;background:var(--bg3);border:1px solid var(--border);font-family:var(--font-m);font-size:.65rem;line-height:1.8;color:var(--muted);">
+                <div style="color:var(--teal);margin-bottom:.3rem;">欄位設計原則</div>
+                <div><span style="color:var(--gold);">PK</span> 主鍵，唯一識別每一筆資料</div>
+                <div><span style="color:var(--purple);">FK</span> 外鍵，關聯到另一個資料表</div>
+                <div><span style="color:var(--faint);">not null</span> 此欄位為必填</div>
+                <div><span style="color:var(--faint);">default</span> 未填時的預設值</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">SQL &mdash; 在 Supabase SQL Editor 建立資料表</div></div>
+        <pre><span class="c">-- ── 建立 todos 資料表 ──</span>
+<span class="s">CREATE TABLE</span> todos (
+  id         uuid        <span class="s">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  user_id    uuid        <span class="s">NOT NULL REFERENCES</span> auth.users(id) <span class="s">ON DELETE CASCADE</span>,
+  title      text        <span class="s">NOT NULL</span>,
+  is_done    boolean     <span class="s">NOT NULL DEFAULT</span> <span class="s">false</span>,
+  priority   smallint    <span class="s">NOT NULL DEFAULT</span> <span class="str">0</span>,
+  due_date   timestamptz,                    <span class="c">-- nullable，可選</span>
+  created_at timestamptz <span class="s">NOT NULL DEFAULT</span> now()
+);
+
+<span class="c">-- ── 建立索引（加快查詢速度）──</span>
+<span class="s">CREATE INDEX</span> todos_user_id_idx <span class="s">ON</span> todos(user_id);
+<span class="s">CREATE INDEX</span> todos_created_at_idx <span class="s">ON</span> todos(created_at <span class="s">DESC</span>);
+
+<span class="c">-- ── 常用 Supabase Dashboard SQL 查詢 ──</span>
+
+<span class="c">-- 查看所有資料</span>
+<span class="s">SELECT</span> * <span class="s">FROM</span> todos <span class="s">ORDER BY</span> created_at <span class="s">DESC</span> <span class="s">LIMIT</span> <span class="str">20</span>;
+
+<span class="c">-- 加入關聯查詢（JOIN）</span>
+<span class="s">SELECT</span>
+  t.id, t.title, t.is_done,
+  u.email <span class="s">AS</span> user_email
+<span class="s">FROM</span> todos t
+<span class="s">JOIN</span> auth.users u <span class="s">ON</span> t.user_id = u.id
+<span class="s">WHERE</span> t.is_done = <span class="s">false</span>
+<span class="s">ORDER BY</span> t.priority <span class="s">DESC</span>;</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: CRUD Operations -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">Supabase CRUD 操作</h2>
+      <p class="section-intro">Supabase JavaScript SDK 提供鏈式 API，讓資料庫操作和寫原生 SQL 一樣強大，但語法更像 JavaScript。掌握這套 API 就能處理所有資料操作需求。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">永遠處理 error</div><div class="csub">Supabase 回傳 { data, error } 解構模式</div></div></div>
+        <div class="cbody">
+          <p>Supabase SDK 的每個操作都回傳 <code>{ data, error }</code> 物件。<strong>操作失敗時 data 是 null，error 有值；操作成功時 error 是 null，data 有值</strong>。永遠要先檢查 error，再使用 data。</p>
+          <p>常見的錯誤處理模式：用 <code>if (error) throw error;</code> 或 <code>if (error) return NextResponse.json({ error }, { status: 500 });</code> 中止執行，不要假設操作一定成功。</p>
+        </div>
+      </div>
+
+      <!-- Query Builder Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>QUERY BUILDER PLAYGROUND</strong><span>選擇操作類型，即時生成 Supabase SDK 程式碼與模擬結果</span></div>
+        <div class="demo-body">
+          <div class="query-builder">
+            <div class="qb-row">
+              <div class="qb-label">操作:</div>
+              <select class="qb-select" id="qbOperation">
+                <option value="select">select（查詢）</option>
+                <option value="insert">insert（新增）</option>
+                <option value="update">update（更新）</option>
+                <option value="delete">delete（刪除）</option>
+                <option value="select-join">select + join（關聯查詢）</option>
+                <option value="select-filter">select + filter（篩選）</option>
+              </select>
+            </div>
+            <div class="qb-row">
+              <div class="qb-label">資料表:</div>
+              <select class="qb-select" id="qbTable">
+                <option value="todos">todos</option>
+                <option value="users">users</option>
+                <option value="tags">tags</option>
+              </select>
+              <button class="qb-run" id="qbRunBtn">產生程式碼</button>
+            </div>
+          </div>
+          <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin:.8rem 0 .4rem;">GENERATED CODE</div>
+          <div class="qb-result" id="qbResult"><span style="color:var(--faint);">// 點擊「產生程式碼」</span></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TypeScript &mdash; Supabase CRUD 完整參考</div></div>
+        <pre><span class="s">import</span> { createClient } <span class="s">from</span> <span class="v">'@/lib/supabase/server'</span>;
+<span class="s">const</span> supabase = <span class="fn">createClient</span>();
+
+<span class="c">// ── SELECT（查詢）──</span>
+
+<span class="c">// 查詢所有欄位</span>
+<span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">select</span>(<span class="v">'*'</span>);
+
+<span class="c">// 查詢指定欄位 + 關聯資料</span>
+<span class="s">const</span> { data } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">select</span>(<span class="v">'id, title, is_done, tags(id, name, color)'</span>);
+
+<span class="c">// 篩選條件</span>
+<span class="s">const</span> { data } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">select</span>(<span class="v">'*'</span>)
+  .<span class="fn">eq</span>(<span class="v">'is_done'</span>, <span class="s">false</span>)          <span class="c">// is_done = false</span>
+  .<span class="fn">eq</span>(<span class="v">'user_id'</span>, userId)           <span class="c">// user_id = userId</span>
+  .<span class="fn">gt</span>(<span class="v">'priority'</span>, <span class="str">0</span>)              <span class="c">// priority > 0</span>
+  .<span class="fn">ilike</span>(<span class="v">'title'</span>, <span class="v">'%react%'</span>)     <span class="c">// 模糊搜尋（大小寫不分）</span>
+  .<span class="fn">order</span>(<span class="v">'created_at'</span>, { ascending: <span class="s">false</span> })
+  .<span class="fn">range</span>(<span class="str">0</span>, <span class="str">9</span>);                   <span class="c">// 分頁：第 0-9 筆</span>
+
+<span class="c">// 查詢單筆</span>
+<span class="s">const</span> { data } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">select</span>(<span class="v">'*'</span>)
+  .<span class="fn">eq</span>(<span class="v">'id'</span>, id)
+  .<span class="fn">single</span>();  <span class="c">// 強制回傳單一物件，找不到會 error</span>
+
+<span class="c">// ── INSERT（新增）──</span>
+<span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">insert</span>({
+    user_id: userId,
+    title: <span class="v">'學習 Supabase'</span>,
+    priority: <span class="str">2</span>,
+  })
+  .<span class="fn">select</span>()   <span class="c">// 要 select 才會回傳新增的資料</span>
+  .<span class="fn">single</span>();
+
+<span class="c">// 批次新增</span>
+<span class="s">const</span> { data } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">insert</span>([
+    { title: <span class="v">'任務一'</span> },
+    { title: <span class="v">'任務二'</span> },
+  ]);
+
+<span class="c">// ── UPDATE（更新）──</span>
+<span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">update</span>({ is_done: <span class="s">true</span> })  <span class="c">// 只更新指定欄位</span>
+  .<span class="fn">eq</span>(<span class="v">'id'</span>, todoId)
+  .<span class="fn">select</span>()
+  .<span class="fn">single</span>();
+
+<span class="c">// ── DELETE（刪除）──</span>
+<span class="s">const</span> { error } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'todos'</span>)
+  .<span class="fn">delete</span>()
+  .<span class="fn">eq</span>(<span class="v">'id'</span>, todoId);
+
+<span class="c">// ── UPSERT（有則更新，無則新增）──</span>
+<span class="s">const</span> { data } = <span class="s">await</span> supabase
+  .<span class="fn">from</span>(<span class="v">'profiles'</span>)
+  .<span class="fn">upsert</span>({ id: userId, username: <span class="v">'newname'</span> })
+  .<span class="fn">select</span>();</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: Row Level Security -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">Row Level Security（RLS）</h2>
+      <p class="section-intro">RLS 是 PostgreSQL 的安全機制，讓你在資料庫層面控制「哪個使用者可以存取哪些資料列」。即使前端程式碼有漏洞，RLS 也能保護你的資料不被未授權存取。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">為什麼 RLS 很重要</div><div class="csub">在資料庫層面保護資料</div></div></div>
+        <div class="cbody">
+          <p>沒有 RLS 時，如果你的前端程式碼有一個 bug（例如忘記在查詢中加入 user_id 條件），使用者可能會看到所有人的資料。<em>RLS 是最後一道防線</em>——即使應用層的程式碼出錯，資料庫也不會回傳不屬於當前使用者的資料。</p>
+          <p>RLS Policy 的核心是一個 SQL 條件式，決定哪些資料列對當前使用者可見。Supabase 提供 <code>auth.uid()</code> 函式取得當前登入使用者的 ID，讓你可以輕鬆建立「只能看自己資料」的 Policy。</p>
+          <div class="note tip">
+            <span class="note-label">RLS 的預設行為</span>
+            啟用 RLS 後，如果沒有任何 Policy，<strong>所有使用者對所有資料的操作都會被拒絕</strong>。你必須明確建立允許操作的 Policy。Supabase Dashboard 中每個資料表都可以看到 RLS 狀態和 Policy 列表。
+          </div>
+        </div>
+      </div>
+
+      <!-- RLS Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>RLS POLICY DEMO</strong><span>模擬不同使用者查詢同一個資料表的結果</span></div>
+        <div class="demo-body">
+          <div style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);margin-bottom:.8rem;">Policy: <code style="font-size:.7rem;">SELECT USING (auth.uid() = user_id)</code> — 只能看自己的資料</div>
+          <div class="rls-demo">
+            <div class="rls-row rls-allowed">
+              <div class="rls-user" style="color:var(--teal);">User A</div>
+              <div class="rls-query">SELECT * FROM todos WHERE user_id = 'user-a-uuid'</div>
+              <div class="rls-result">回傳 3 筆（User A 的）</div>
+            </div>
+            <div class="rls-row rls-denied">
+              <div class="rls-user" style="color:var(--red);">User A</div>
+              <div class="rls-query">SELECT * FROM todos WHERE user_id = 'user-b-uuid'</div>
+              <div class="rls-result">回傳 0 筆（被 RLS 阻擋）</div>
+            </div>
+            <div class="rls-row rls-denied">
+              <div class="rls-user" style="color:var(--red);">匿名用戶</div>
+              <div class="rls-query">SELECT * FROM todos</div>
+              <div class="rls-result">回傳 0 筆（未登入）</div>
+            </div>
+            <div class="rls-row rls-allowed">
+              <div class="rls-user" style="color:var(--gold);">Admin</div>
+              <div class="rls-query">SELECT * FROM todos（Service Role Key）</div>
+              <div class="rls-result">回傳全部（繞過 RLS）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">SQL &mdash; RLS Policy 設定完整範例</div></div>
+        <pre><span class="c">-- ── 1. 啟用 RLS（必須先做）──</span>
+<span class="s">ALTER TABLE</span> todos <span class="s">ENABLE ROW LEVEL SECURITY</span>;
+
+<span class="c">-- ── 2. 建立 SELECT Policy（只能查自己的資料）──</span>
+<span class="s">CREATE POLICY</span> <span class="v">"Users can view own todos"</span>
+  <span class="s">ON</span> todos
+  <span class="s">FOR SELECT</span>
+  <span class="s">USING</span> (auth.<span class="fn">uid</span>() = user_id);
+<span class="c">-- auth.uid() 回傳當前登入使用者的 ID</span>
+<span class="c">-- USING 條件決定哪些資料列對當前使用者可見</span>
+
+<span class="c">-- ── 3. INSERT Policy（只能新增自己的資料）──</span>
+<span class="s">CREATE POLICY</span> <span class="v">"Users can insert own todos"</span>
+  <span class="s">ON</span> todos
+  <span class="s">FOR INSERT</span>
+  <span class="s">WITH CHECK</span> (auth.<span class="fn">uid</span>() = user_id);
+<span class="c">-- WITH CHECK 在寫入時驗證（INSERT/UPDATE 用）</span>
+
+<span class="c">-- ── 4. UPDATE Policy（只能更新自己的資料）──</span>
+<span class="s">CREATE POLICY</span> <span class="v">"Users can update own todos"</span>
+  <span class="s">ON</span> todos
+  <span class="s">FOR UPDATE</span>
+  <span class="s">USING</span> (auth.<span class="fn">uid</span>() = user_id)
+  <span class="s">WITH CHECK</span> (auth.<span class="fn">uid</span>() = user_id);
+
+<span class="c">-- ── 5. DELETE Policy（只能刪除自己的資料）──</span>
+<span class="s">CREATE POLICY</span> <span class="v">"Users can delete own todos"</span>
+  <span class="s">ON</span> todos
+  <span class="s">FOR DELETE</span>
+  <span class="s">USING</span> (auth.<span class="fn">uid</span>() = user_id);
+
+<span class="c">-- ── 進階：公開資料表（任何人可讀）──</span>
+<span class="s">CREATE POLICY</span> <span class="v">"Public read access"</span>
+  <span class="s">ON</span> posts
+  <span class="s">FOR SELECT</span>
+  <span class="s">USING</span> (<span class="s">true</span>);  <span class="c">-- 條件永遠為 true = 所有人可讀</span>
+
+<span class="c">-- ── 查看目前的 Policy ──</span>
+<span class="s">SELECT</span> * <span class="s">FROM</span> pg_policies <span class="s">WHERE</span> tablename = <span class="v">'todos'</span>;</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋後端與資料庫的核心概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">在 Next.js App Router 中，你想建立一個處理 <code>GET /api/todos</code> 的 API 端點，檔案應該放在哪裡？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>pages/api/todos.ts</code>（匯出 default handler 函式）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>app/api/todos/route.ts</code>（匯出 <code>GET</code> 函式）</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>app/todos/api.ts</code>（匯出 <code>GET</code> 函式）</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>src/routes/todos.ts</code>（Express 風格）</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Next.js App Router 的 API Route 需要放在 <code>app/api/</code> 目錄下，檔名固定為 <code>route.ts</code>（或 .js），匯出以 HTTP 方法命名的函式（<code>GET</code>、<code>POST</code> 等）。選項 A 是舊版 Pages Router 的寫法，在 App Router 中不適用。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>注意 App Router 的特殊命名慣例：特定功能的檔案有固定名稱（page.tsx、route.ts、layout.tsx），且必須放在 app/ 目錄下。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">執行 Supabase 查詢後，以下哪個錯誤處理方式是正確的？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>const data = await supabase.from('todos').select('*'); console.log(data);</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>const { data } = await supabase.from('todos').select('*'); if (!data) throw new Error();</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>const { data, error } = await supabase.from('todos').select('*'); if (error) throw error;</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>try { const data = await supabase.from('todos').select('*'); } catch(e) { console.error(e); }</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Supabase SDK 永遠回傳 <code>{'{'} data, error {'}'}</code> 物件，不會 throw exception（除非網路完全失敗）。正確做法是解構取出 <code>data</code> 和 <code>error</code>，先檢查 <code>error</code>。選項 B 不夠安全——data 在查詢成功但結果為空時是空陣列（truthy），不是 null；選項 D 無法捕捉 Supabase 層級的錯誤。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Supabase SDK 的設計哲學：不拋出 exception，而是在回傳物件中包含 error。你需要解構 { data, error } 並主動檢查。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">你在 Supabase 啟用了 todos 資料表的 RLS，但還沒建立任何 Policy。此時一個已登入的使用者呼叫 <code>supabase.from('todos').select('*')</code>，結果是？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>回傳所有 todos 資料（RLS 不影響已登入使用者）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>回傳空陣列（RLS 啟用但無 Policy = 全部拒絕）</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>回傳 403 Forbidden 錯誤</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>回傳只屬於當前使用者的 todos</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>RLS 啟用後，預設行為是「拒絕所有操作」——除非有明確的 Policy 允許。沒有 Policy 的 RLS 就像一道完全關閉的大門，即使你已登入也無法進入。這也是為什麼啟用 RLS 後，要立刻為每種操作（SELECT/INSERT/UPDATE/DELETE）建立對應的 Policy。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>想想 RLS 的「預設拒絕」原則——沒有明確允許就是拒絕，這是安全系統的基本設計哲學。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q"><code>SUPABASE_SERVICE_ROLE_KEY</code> 和 <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> 的主要差異是？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>兩者功能相同，只是命名不同</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>ANON_KEY 只能讀資料，SERVICE_ROLE_KEY 才能寫入資料</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>SERVICE_ROLE_KEY 速度更快，適合生產環境</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>ANON_KEY 受 RLS 保護（適合前端），SERVICE_ROLE_KEY 可繞過 RLS（只能在伺服器端使用）</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>最關鍵的區別：<code>ANON_KEY</code> 代表「匿名/登入使用者」，受 RLS Policy 保護，可以安全地在前端使用（NEXT_PUBLIC_ 前綴讓它被打包進瀏覽器程式碼）。<code>SERVICE_ROLE_KEY</code> 代表「管理員」，完全繞過 RLS，<strong>絕對不能在前端程式碼中使用</strong>——如果洩露，任何人都能存取所有資料。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>注意環境變數名稱的差異：有 <code>NEXT_PUBLIC_</code> 前綴的會被打包進前端；沒有的只在伺服器端可見。這個命名本身就是一個安全提示。</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">動手做：Next.js + Supabase 初始設定</h2>
+      <p class="section-intro">這週的任務是把 Side Project 的後端基礎架設好——建立 Next.js 專案、設定 Supabase、設計資料庫 Schema、建立基本 CRUD API。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 14 PROJECT</div>
+        <div class="project-name">Side Project<br>後端基礎建設</div>
+        <p class="project-desc">建立 Next.js + Supabase 的全端架構，完成資料庫 Schema 設計、CRUD API 建立，並從前端成功讀取和寫入資料庫。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 Next.js 專案</div>
+            <div class="step-body">執行 <code>npx create-next-app@latest my-side-project</code>，選擇：TypeScript → Yes、ESLint → Yes、Tailwind CSS → Yes、src/ directory → No、App Router → Yes、import alias → Yes（保持 @/*）。進入目錄執行 <code>npm run dev</code> 確認專案正常啟動。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 Supabase 專案並取得金鑰</div>
+            <div class="step-body">前往 <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" style="color:var(--teal);">supabase.com</a> 建立免費帳號，點擊「New Project」，選擇距離最近的資料庫區域（推薦 Southeast Asia）。等待專案建立後，前往 Settings → API，複製 Project URL、anon public key 和 service_role key（小心保管！）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">安裝 Supabase SDK 並設定環境變數</div>
+            <div class="step-body">執行 <code>npm install @supabase/supabase-js @supabase/ssr</code>。建立 <code>.env.local</code>，填入三個環境變數（URL、anon key、service_role key）。建立 <code>lib/supabase/client.ts</code> 和 <code>lib/supabase/server.ts</code>，參考概念 03 的程式碼。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">在 Supabase 建立資料表</div>
+            <div class="step-body">前往 Supabase Dashboard → SQL Editor，根據你的 Side Project 設計的 Schema（Week 13 的 Wireframe 成果），執行 CREATE TABLE SQL。建立後在 Table Editor 確認資料表結構正確，嘗試手動插入幾筆測試資料。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">啟用 RLS 並建立 Policy</div>
+            <div class="step-body">在 Supabase Dashboard → Authentication → Policies 中，為你的主要資料表啟用 RLS，建立四條 Policy（SELECT/INSERT/UPDATE/DELETE），全部使用 <code>auth.uid() = user_id</code> 條件（若你的資料表有 user_id 欄位）。確認在 Supabase Table Editor 用普通使用者查詢時無法看到其他使用者的資料。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 CRUD API Routes</div>
+            <div class="step-body">建立 <code>app/api/[資料表名稱]/route.ts</code>，實作 GET（取得列表）和 POST（新增）。建立 <code>app/api/[資料表名稱]/[id]/route.ts</code>，實作 GET（取得單筆）、PUT（更新）、DELETE（刪除）。每個函式都要有 try-catch 和適當的 HTTP 狀態碼。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">從前端串接 API</div>
+            <div class="step-body">在一個 Client Component 中，用 <code>useEffect</code> 呼叫 <code>fetch('/api/[路徑]')</code> 取得資料並顯示。實作一個簡單的新增表單，送出時呼叫 POST API。使用 <code>useState</code> 管理 loading、error、data 三個狀態，確保使用者體驗完整。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：用 Supabase TypeScript 型別生成</div>
+            <div class="step-body">安裝 Supabase CLI：<code>npm install -g supabase</code>，登入後執行 <code>supabase gen types typescript --project-id 你的專案ID</code> 生成 TypeScript 型別定義，儲存到 <code>types/database.ts</code>。在 Supabase Client 中傳入型別參數：<code>createClient&lt;Database&gt;()</code>，所有查詢都會有完整的型別檢查。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-b);font-weight:700;font-size:1.1rem;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>Next.js 專案使用 App Router，目錄結構正確（app/、lib/supabase/、components/）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>Supabase 環境變數正確設定，Client 和 Server 端各有獨立的 Supabase 初始化函式</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>資料表 Schema 設計完整，有適當的主鍵（uuid）、外鍵、型別和預設值</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>RLS 已啟用，四條 Policy（SELECT/INSERT/UPDATE/DELETE）都已建立</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>API Routes 完整（GET、POST、PUT、DELETE），有 try-catch 和適當狀態碼</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>前端可以成功取得資料（GET）並顯示，以及新增資料（POST）後更新列表</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>loading 和 error 狀態有適當的 UI 回饋（spinner 或錯誤訊息）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）使用 Supabase CLI 生成 TypeScript 型別，所有查詢有型別安全</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">Supabase 和 Next.js 的官方文件品質都很高，強烈建議搭配官方 Quickstart 實作。</p>
+      <div class="resource-grid">
+        <a href="https://supabase.com/docs/guides/getting-started/quickstarts/nextjs" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方快速入門</div>
+          <div class="resource-name">Supabase + Next.js Quickstart</div>
+          <div class="resource-desc">官方提供的 10 分鐘快速入門，從建立 Supabase 專案到在 Next.js 中讀取資料，是最佳的入門起點。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://nextjs.org/docs/app/building-your-application/routing/route-handlers" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件</div>
+          <div class="resource-name">Next.js Route Handlers</div>
+          <div class="resource-desc">Next.js 官方 API Routes 完整說明，涵蓋 GET/POST 處理、動態路由、CORS 設定、快取控制等進階用法。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://supabase.com/docs/reference/javascript/select" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">API 參考</div>
+          <div class="resource-name">Supabase JavaScript SDK</div>
+          <div class="resource-desc">所有 Supabase 操作的完整 API 說明，含 select、insert、update、delete、upsert、filter 方法，附帶大量範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://supabase.com/docs/guides/auth/row-level-security" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">安全性指南</div>
+          <div class="resource-name">Row Level Security 指南</div>
+          <div class="resource-desc">Supabase 官方的 RLS 深度指南，從基礎 Policy 到複雜的多角色場景，含常見模式和最佳實踐。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.youtube.com/watch?v=WdA6b0jPNv4" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">影片教學</div>
+          <div class="resource-name">Supabase 完整教學（YouTube）</div>
+          <div class="resource-desc">Supabase 官方 YouTube 頻道的完整教學系列，涵蓋資料庫設計、RLS、Auth 整合，影片品質高。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://nextjs.org/docs/app/building-your-application/rendering/server-components" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">概念文件</div>
+          <div class="resource-name">Server Components 深度說明</div>
+          <div class="resource-desc">理解 React Server Components 的工作原理、何時使用 Server vs Client Component，以及如何在兩者間傳遞資料。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week13.html" class="nav-btn">&larr; Week 13：專案規劃</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week15.html" class="nav-btn">Week 15：使用者登入 &rarr;</a>
+  </div>
+</main>
+<script>
+// Progress
+window.addEventListener('scroll',()=>{
+  const p=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
+  document.getElementById('progressBar').style.width=Math.min(p,100)+'%';
+});
+// Scroll Reveal
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:.07});
+document.querySelectorAll('.section').forEach(s=>obs.observe(s));
+// TOC
+const secIds=['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls=secIds.map(id=>document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll',()=>{
+  let cur='';
+  secEls.forEach(el=>{if(window.scrollY>=el.offsetTop-130)cur=el.id;});
+  document.querySelectorAll('.toc-item').forEach(item=>{item.classList.toggle('active',item.getAttribute('href')==='#'+cur);});
+});
+
+// Architecture Diagram
+document.querySelectorAll('#archDiagram .arch-box').forEach(box=>{
+  box.addEventListener('click',()=>{
+    const info=box.dataset.info||'';
+    document.getElementById('archInfo').textContent=info;
+    document.querySelectorAll('#archDiagram .arch-box').forEach(b=>b.style.transform='');
+    box.style.transform='translateY(-4px)';
+  });
+});
+
+// Query Builder
+const codeTemplates = {
+  select: (table) => `const { data, error } = await supabase
+  .from('${table}')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+if (error) throw error;
+// data: ${table === 'todos' ? '[{id, user_id, title, is_done, ...}, ...]' : table === 'users' ? '[{id, email, ...}, ...]' : '[{id, name, color}, ...]'}`,
+
+  insert: (table) => `const { data, error } = await supabase
+  .from('${table}')
+  .insert({
+    ${table === 'todos' ? 'title: "新增的待辦事項",\n    is_done: false,\n    priority: 1,' : table === 'tags' ? 'name: "重要",\n    color: "#ff7043",' : 'email: "user@example.com",'}
+  })
+  .select()
+  .single();
+
+if (error) throw error;
+// data: 剛新增的那筆資料（單一物件）`,
+
+  update: (table) => `const { data, error } = await supabase
+  .from('${table}')
+  .update({ ${table === 'todos' ? 'is_done: true' : table === 'tags' ? 'color: "#26a69a"' : 'email: "new@example.com"'} })
+  .eq('id', targetId)
+  .select()
+  .single();
+
+if (error) throw error;
+// data: 更新後的那筆資料`,
+
+  delete: (table) => `const { error } = await supabase
+  .from('${table}')
+  .delete()
+  .eq('id', targetId);
+
+if (error) throw error;
+// 刪除成功，無回傳資料`,
+
+  'select-join': (table) => `// 關聯查詢（JOIN）
+const { data, error } = await supabase
+  .from('${table}')
+  .select(\`
+    id,
+    title,
+    is_done,
+    ${table === 'todos' ? 'tags ( id, name, color )' : 'related_data ( * )'}
+  \`)
+  .order('created_at', { ascending: false });
+
+if (error) throw error;
+// data 中的每個項目都包含關聯的 tags 陣列`,
+
+  'select-filter': (table) => `// 多條件篩選 + 分頁
+const { data, count, error } = await supabase
+  .from('${table}')
+  .select('*', { count: 'exact' })  // 取得總筆數
+  .eq('${table === 'todos' ? 'is_done' : 'active'}', false)
+  .ilike('${table === 'todos' ? 'title' : 'name'}', '%搜尋關鍵字%')
+  .order('created_at', { ascending: false })
+  .range(0, 9);  // 第 1 頁，每頁 10 筆
+
+if (error) throw error;
+// data: 符合條件的資料（最多 10 筆）
+// count: 總筆數（用於計算總頁數）`,
+};
+
+document.getElementById('qbRunBtn').addEventListener('click',()=>{
+  const op = document.getElementById('qbOperation').value;
+  const table = document.getElementById('qbTable').value;
+  const template = codeTemplates[op];
+  const result = document.getElementById('qbResult');
+  result.textContent = template ? template(table) : '// 請選擇操作類型';
+});
+
+// Quiz
+document.querySelectorAll('.quiz-block').forEach(block=>{
+  const correct=parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts=block.querySelectorAll('.quiz-opt');
+  const fbs=block.querySelectorAll('.quiz-fb');
+  let done=false;
+  opts.forEach((opt,i)=>{
+    opt.addEventListener('click',()=>{
+      if(done)return;
+      done=true;
+      opts.forEach(o=>o.style.pointerEvents='none');
+      if(i===correct){opt.classList.add('correct');fbs[0]&&fbs[0].classList.add('show');}
+      else{
+        opt.classList.add('wrong');opts[correct].classList.add('correct');
+        fbs[1]&&fbs[1].classList.add('show');
+        setTimeout(()=>{done=false;opts.forEach(o=>{o.style.pointerEvents='';o.classList.remove('wrong','correct');});fbs.forEach(f=>f.classList.remove('show'));},2800);
+      }
+    });
+  });
+});
+
+// Checklist
+function toggleCheck(el){
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent=el.classList.contains('done')?'✓':'';
+}
+</script>
+</body>
+</html>

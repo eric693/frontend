@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 15 — 使用者登入系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080610;
+  --bg2:#0e0b1c;
+  --bg3:#141028;
+  --surface:#1a1530;
+  --border:#2a2250;
+  --text:#f0eeff;
+  --muted:#635898;
+  --accent:#818cf8;
+  --accent-g:linear-gradient(135deg,#818cf8,#c084fc);
+  --accent2:#c084fc;
+  --accent3:#34d399;
+  --rose:#fb7185;
+  --amber:#fbbf24;
+  --blue:#60a5fa;
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(110px);opacity:0.09;}
+body::before{width:540px;height:540px;background:radial-gradient(circle,#818cf8,transparent);top:-160px;right:-120px;}
+body::after{width:420px;height:420px;background:radial-gradient(circle,#c084fc,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(8,6,16,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.58rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:2px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(129,140,248,.07),transparent);pointer-events:none;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-weight:900;font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);}
+.badge.hi{border-color:rgba(129,140,248,.45);color:var(--accent);background:rgba(129,140,248,.07);}
+.badge.hi2{border-color:rgba(192,132,252,.4);color:var(--accent2);background:rgba(192,132,252,.07);}
+.badge.hi3{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.07);}
+.badge.hi4{border-color:rgba(251,113,133,.4);color:var(--rose);background:rgba(251,113,133,.07);}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{font-family:var(--font-d);font-size:1.95rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.2rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:30px;height:30px;background:var(--accent-g);color:var(--bg);font-family:var(--font-m);font-size:.6rem;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#9890c8;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+.note{border-left:2px solid var(--accent);background:rgba(129,140,248,.05);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#9890c8;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent3);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--amber);background:rgba(251,191,36,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+.note.danger{border-left-color:var(--rose);background:rgba(251,113,133,.06);color:#f0a0a8;}
+.note.danger .note-label{color:var(--rose);}
+.note.info{border-left-color:var(--blue);background:rgba(96,165,250,.06);color:#90b8f0;}
+.note.info .note-label{color:var(--blue);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);}
+.kw{color:#818cf8;}
+.fn{color:#c084fc;}
+.str{color:#86efac;}
+.num{color:#fde68a;}
+.cmt{color:#181430;font-style:italic;}
+.op{color:#60a5fa;}
+.type{color:#fbbf24;}
+.prop{color:#f0abfc;}
+.bool{color:#fb7185;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+/* AUTH FLOW DIAGRAM */
+.flow-diagram{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.flow-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.5rem;}
+.flow-row{display:flex;align-items:center;gap:0;margin-bottom:.8rem;}
+.flow-row:last-child{margin-bottom:0;}
+.flow-node{padding:.5rem 1rem;font-family:var(--font-m);font-size:.68rem;border:1px solid;white-space:nowrap;text-align:center;}
+.flow-node.actor{border-color:rgba(129,140,248,.4);color:var(--accent);background:rgba(129,140,248,.07);}
+.flow-node.service{border-color:rgba(52,211,248,.35);color:var(--blue);background:rgba(52,211,248,.06);}
+.flow-node.db{border-color:rgba(52,211,153,.35);color:var(--accent3);background:rgba(52,211,153,.06);}
+.flow-node.ok{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.06);}
+.flow-node.err{border-color:rgba(251,113,133,.4);color:var(--rose);background:rgba(251,113,133,.06);}
+.flow-arrow{padding:0 .4rem;color:var(--muted);font-size:.75rem;flex-shrink:0;}
+.flow-label-inline{font-family:var(--font-m);font-size:.6rem;color:var(--muted);padding:0 .2rem;}
+.flow-branch{display:flex;flex-direction:column;gap:.4rem;}
+.flow-indent{margin-left:1.5rem;padding-left:1rem;border-left:1px dashed var(--border);}
+
+/* TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(42,34,80,.6);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* FEAT GRID */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.feat-card{background:var(--bg2);padding:1.3rem;transition:background .2s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-name{font-family:var(--font-m);font-size:.72rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent3);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(251,113,133,.07);color:var(--rose);border-bottom:1px solid rgba(251,113,133,.2);}
+.cpanel-hdr.neutral{background:rgba(129,140,248,.07);color:var(--accent);border-bottom:1px solid rgba(129,140,248,.2);}
+
+/* MIDDLEWARE DIAGRAM */
+.mw-diagram{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.mw-row{display:grid;grid-template-columns:130px 1fr;gap:1.5rem;margin-bottom:1.2rem;align-items:start;}
+.mw-row:last-child{margin-bottom:0;}
+.mw-label{font-family:var(--font-m);font-size:.65rem;color:var(--muted);padding-top:.3rem;text-align:right;}
+.mw-steps{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.mw-step{padding:.35rem .8rem;font-family:var(--font-m);font-size:.65rem;border:1px solid;white-space:nowrap;}
+.mw-step.req{border-color:rgba(129,140,248,.35);color:var(--accent);background:rgba(129,140,248,.06);}
+.mw-step.mw{border-color:rgba(192,132,252,.35);color:var(--accent2);background:rgba(192,132,252,.06);}
+.mw-step.check{border-color:rgba(251,191,36,.35);color:var(--amber);background:rgba(251,191,36,.06);}
+.mw-step.ok{border-color:rgba(52,211,153,.35);color:var(--accent3);background:rgba(52,211,153,.06);}
+.mw-step.redirect{border-color:rgba(251,113,133,.35);color:var(--rose);background:rgba(251,113,133,.06);}
+.mw-arrow{color:var(--muted);font-size:.8rem;flex-shrink:0;}
+.mw-note{font-family:var(--font-m);font-size:.6rem;color:var(--muted);margin-top:.5rem;}
+
+/* OAUTH BUTTONS */
+.oauth-demo{border:1px solid var(--border);background:var(--bg2);padding:1.5rem;margin:1.5rem 0;}
+.oauth-demo-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1rem;}
+.oauth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;}
+.oauth-btn{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.7rem;border:1px solid var(--border);background:var(--bg3);font-size:.82rem;color:var(--text);cursor:pointer;transition:border-color .2s,background .2s;}
+.oauth-btn:hover{border-color:var(--accent);background:rgba(129,140,248,.05);}
+.oauth-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;}
+.oauth-icon.google{background:#fff;color:#333;}
+.oauth-icon.github{background:#24292e;color:#fff;}
+.oauth-icon.discord{background:#5865f2;color:#fff;}
+
+/* SECURITY CHECKLIST */
+.sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.sec-item{background:var(--bg2);padding:1.2rem 1.4rem;display:flex;gap:.8rem;align-items:flex-start;transition:background .2s;}
+.sec-item:hover{background:var(--bg3);}
+.sec-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem;}
+.sec-title{font-weight:600;font-size:.85rem;color:var(--text);margin-bottom:.2rem;}
+.sec-desc{font-size:.78rem;color:var(--muted);line-height:1.5;}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(129,140,248,.05);}
+.quiz-opt.correct{border-color:var(--accent3);background:rgba(52,211,153,.06);color:var(--accent3);}
+.quiz-opt.wrong{border-color:var(--rose);background:rgba(251,113,133,.06);color:var(--rose);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent3);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+.quiz-fb.wrong-fb{border-left-color:var(--rose);background:rgba(251,113,133,.05);color:var(--rose);}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent3);border-color:var(--accent3);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .feat-grid{grid-template-columns:1fr 1fr;}
+  .compare{grid-template-columns:1fr;}
+  .sec-grid{grid-template-columns:1fr;}
+  .oauth-grid{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  .mw-row{grid-template-columns:1fr;}.mw-label{text-align:left;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 15 / 18 &mdash; Auth 系統</div>
+  <nav class="header-nav">
+    <a href="week14.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week16.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#auth-concepts">Auth 基本概念</a>
+  <a class="toc-item" href="#supabase-setup">Supabase Auth 設定</a>
+  <a class="toc-item" href="#signup-login">註冊與登入</a>
+  <a class="toc-item" href="#session">Session 管理</a>
+  <a class="toc-item" href="#middleware">Next.js Middleware</a>
+  <a class="toc-item" href="#protected-routes">保護路由</a>
+  <a class="toc-item" href="#oauth">Social Login</a>
+  <a class="toc-item" href="#security">安全性考量</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#project">本週作業</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-label">Phase 04 &mdash; Week 15 of 18</div>
+  <h1>使用者<br><span class="hi">登入系統</span></h1>
+  <p class="hero-desc">
+    整合 Supabase Auth 實作完整的使用者驗證流程：Email 註冊登入、
+    Session 管理、Next.js Middleware 保護路由，以及 Google / GitHub OAuth。
+    本週結束後，你的 Side Project 將有一個生產等級的 Auth 架構。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">Supabase Auth</span>
+    <span class="badge hi">JWT / Session</span>
+    <span class="badge hi2">Next.js Middleware</span>
+    <span class="badge hi2">Protected Routes</span>
+    <span class="badge hi3">OAuth / Social Login</span>
+    <span class="badge hi3">RLS 整合</span>
+    <span class="badge hi4">PKCE Flow</span>
+    <span class="badge hi4">安全性實踐</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- ════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">Auth 是每個 Web 應用的基礎，也是最容易出錯的部分。本週把它一次做對。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">理解 <strong>JWT、Session、Cookie</strong> 的差異，以及 Supabase Auth 在 Next.js App Router 中的運作方式</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">實作完整的 <strong>Email / Password 註冊、登入、登出、忘記密碼</strong>流程，包含表單驗證與錯誤提示</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">掌握 <strong>Server Component 與 Client Component 中讀取 Session</strong> 的不同方式</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">撰寫 <strong>Next.js Middleware</strong>，在請求到達頁面前自動驗證 Session 並處理重定向</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">整合 <strong>Google / GitHub OAuth</strong>，讓使用者可以用社群帳號一鍵登入</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">完成 Side Project 的 Auth 模組，確保 <strong>RLS Policy</strong> 與 Auth 狀態正確整合</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ AUTH CONCEPTS -->
+<section class="section" id="auth-concepts">
+  <div class="eyebrow">02 &mdash; Core Concepts</div>
+  <h2 class="section-title">Auth 基本概念釐清</h2>
+  <p class="section-intro">
+    在實作之前，先把幾個經常混淆的術語釐清。
+    理解這些差異能幫助你在遇到問題時更快找到根因。
+  </p>
+
+  <table class="ptable">
+    <thead>
+      <tr><th>概念</th><th>說明</th><th>在 Supabase 中的對應</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Authentication（認證）</td>
+        <td>確認「你是誰」——驗證身份，例如帳號密碼、生物辨識</td>
+        <td>Supabase Auth 的登入流程</td>
+      </tr>
+      <tr>
+        <td>Authorization（授權）</td>
+        <td>確認「你能做什麼」——驗證權限，例如 admin 才能刪除用戶</td>
+        <td>Row Level Security (RLS) Policy</td>
+      </tr>
+      <tr>
+        <td>JWT（JSON Web Token）</td>
+        <td>包含用戶資訊的簽名 Token，伺服器可無狀態驗證，有過期時間</td>
+        <td>Supabase 產生的 access_token（預設 1 小時）</td>
+      </tr>
+      <tr>
+        <td>Refresh Token</td>
+        <td>用來換取新的 access_token，壽命更長（數週）</td>
+        <td>Supabase 自動管理，存在 Cookie 中</td>
+      </tr>
+      <tr>
+        <td>Session</td>
+        <td>access_token + refresh_token + user 資訊的組合</td>
+        <td>supabase.auth.getSession() 回傳的物件</td>
+      </tr>
+      <tr>
+        <td>PKCE Flow</td>
+        <td>OAuth 的安全驗證流程，防止授權碼攔截攻擊</td>
+        <td>Supabase 的 OAuth 預設使用 PKCE</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">🍪</div>
+      <div>
+        <div class="ctitle">為什麼用 Cookie，而不是 localStorage？</div>
+        <div class="csub">Next.js App Router 的 Server Component 無法存取 localStorage</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <code>localStorage</code> 只存在於瀏覽器，Server Component 在伺服器端執行時無法讀取。
+        若將 Token 存在 localStorage，每次 Server Component 渲染時都無法得知用戶是否已登入，
+        造成 SSR 期間的身份識別問題。
+      </p>
+      <p>
+        <em>HttpOnly Cookie</em> 在每次請求時自動附帶（包含 SSR 請求），且
+        <strong>JavaScript 無法讀取（防 XSS）</strong>。這是現代 Web 應用儲存 Auth Token 的標準做法。
+        Supabase 的 <code>@supabase/ssr</code> 套件就是基於這個策略設計的。
+      </p>
+    </div>
+  </div>
+
+  <div class="flow-diagram">
+    <div class="flow-label">完整的 Email 登入流程</div>
+    <div class="flow-row">
+      <div class="flow-node actor">使用者</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-label-inline">填寫帳密並送出</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node service">Next.js Server Action</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node service">Supabase Auth API</div>
+    </div>
+    <div class="flow-row" style="padding-left:2rem;">
+      <div class="flow-arrow" style="transform:rotate(90deg)">→</div>
+      <div class="flow-label-inline" style="color:var(--accent3)">驗證成功</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node db">產生 JWT + Refresh Token</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node ok">寫入 HttpOnly Cookie</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node ok">redirect → /dashboard</div>
+    </div>
+    <div class="flow-row" style="padding-left:2rem;">
+      <div class="flow-arrow" style="transform:rotate(90deg)">→</div>
+      <div class="flow-label-inline" style="color:var(--rose)">驗證失敗</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node err">回傳錯誤訊息</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node err">顯示錯誤提示（停留在登入頁）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ SUPABASE SETUP -->
+<section class="section" id="supabase-setup">
+  <div class="eyebrow">03 &mdash; Supabase Auth Setup</div>
+  <h2 class="section-title">Supabase Auth 初始設定</h2>
+  <p class="section-intro">
+    Next.js App Router 需要使用 <code>@supabase/ssr</code>（而不是舊版的 <code>@supabase/auth-helpers-nextjs</code>），
+    它提供了針對 Server / Client / Middleware 三種環境分別優化的 Supabase Client 工廠函式。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">Terminal — 安裝套件</span>
+    </div>
+    <pre>npm install @supabase/supabase-js @supabase/ssr</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">.env.local — 環境變數</span>
+    </div>
+    <pre>NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+<span class="cmt"># NEXT_PUBLIC_ 前綴代表這個值在瀏覽器端也能讀取</span>
+<span class="cmt"># Anon Key 是公開金鑰，靠 RLS 控制存取，不需要隱藏</span>
+<span class="cmt"># Service Role Key 有完整權限，絕對不能放在前端或 .env.local 提交到 Git</span></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/lib/supabase/server.ts — Server Component 用 Client</span>
+    </div>
+    <pre><span class="kw">import</span> { createServerClient } <span class="kw">from</span> <span class="str">'@supabase/ssr'</span>
+<span class="kw">import</span> { cookies } <span class="kw">from</span> <span class="str">'next/headers'</span>
+
+<span class="kw">export async function</span> <span class="fn">createClient</span>() {
+  <span class="kw">const</span> cookieStore <span class="op">=</span> <span class="kw">await</span> <span class="fn">cookies</span>()
+
+  <span class="kw">return</span> <span class="fn">createServerClient</span>(
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_URL</span><span class="op">!</span>,
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_ANON_KEY</span><span class="op">!</span>,
+    {
+      cookies: {
+        <span class="fn">getAll</span>() { <span class="kw">return</span> cookieStore.<span class="fn">getAll</span>() },
+        <span class="fn">setAll</span>(cookiesToSet) {
+          <span class="kw">try</span> {
+            cookiesToSet.<span class="fn">forEach</span>(({ name, value, options }) =>
+              cookieStore.<span class="fn">set</span>(name, value, options)
+            )
+          } <span class="kw">catch</span> {
+            <span class="cmt">// Server Component 呼叫時可能拋出，可安全忽略</span>
+          }
+        },
+      },
+    }
+  )
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/lib/supabase/client.ts — Client Component 用 Client</span>
+    </div>
+    <pre><span class="kw">import</span> { createBrowserClient } <span class="kw">from</span> <span class="str">'@supabase/ssr'</span>
+
+<span class="kw">export function</span> <span class="fn">createClient</span>() {
+  <span class="kw">return</span> <span class="fn">createBrowserClient</span>(
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_URL</span><span class="op">!</span>,
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_ANON_KEY</span><span class="op">!</span>
+  )
+}
+
+<span class="cmt">// 注意：Client Component 版本是同步函式（不需要 await）</span>
+<span class="cmt">// 因為瀏覽器端的 Cookie 讀取是同步的</span></pre>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">三個 Client 的分工</span>
+    <strong>server.ts</strong>：在 Server Component、Route Handler、Server Action 中使用，能讀寫 Cookie。<br>
+    <strong>client.ts</strong>：在 <code>'use client'</code> 元件中使用，透過瀏覽器 Cookie 取得 Session。<br>
+    <strong>middleware.ts</strong>（下面會建立）：在請求進入頁面前攔截，自動刷新過期的 Token。<br>
+    三個環境使用不同的工廠函式，是 <code>@supabase/ssr</code> 的設計核心。
+  </div>
+</section>
+
+<!-- ════════════════ SIGNUP LOGIN -->
+<section class="section" id="signup-login">
+  <div class="eyebrow">04 &mdash; Signup &amp; Login</div>
+  <h2 class="section-title">註冊、登入與登出</h2>
+  <p class="section-intro">
+    Next.js App Router 推薦用 <strong>Server Actions</strong> 處理表單提交，
+    而不是建立 API Route 再從前端 fetch。Server Action 在伺服器端執行，能直接讀寫 Cookie，
+    是 Auth 操作最適合的場所。
+  </p>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/auth/actions.ts — Server Actions</span>
+    </div>
+    <pre><span class="str">'use server'</span>
+
+<span class="kw">import</span> { revalidatePath } <span class="kw">from</span> <span class="str">'next/cache'</span>
+<span class="kw">import</span> { redirect } <span class="kw">from</span> <span class="str">'next/navigation'</span>
+<span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/server'</span>
+
+<span class="cmt">// ── 註冊 ────────────────────────────────</span>
+<span class="kw">export async function</span> <span class="fn">signUp</span>(formData: <span class="type">FormData</span>) {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+
+  <span class="kw">const</span> { error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">signUp</span>({
+    email: formData.<span class="fn">get</span>(<span class="str">'email'</span>) <span class="kw">as</span> <span class="type">string</span>,
+    password: formData.<span class="fn">get</span>(<span class="str">'password'</span>) <span class="kw">as</span> <span class="type">string</span>,
+    options: {
+      emailRedirectTo: <span class="str">`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`</span>,
+    },
+  })
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> { error: error.message }
+  <span class="fn">redirect</span>(<span class="str">'/auth/verify-email'</span>)  <span class="cmt">// 提示用戶去信箱確認</span>
+}
+
+<span class="cmt">// ── 登入 ────────────────────────────────</span>
+<span class="kw">export async function</span> <span class="fn">signIn</span>(formData: <span class="type">FormData</span>) {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+
+  <span class="kw">const</span> { error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">signInWithPassword</span>({
+    email: formData.<span class="fn">get</span>(<span class="str">'email'</span>) <span class="kw">as</span> <span class="type">string</span>,
+    password: formData.<span class="fn">get</span>(<span class="str">'password'</span>) <span class="kw">as</span> <span class="type">string</span>,
+  })
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> { error: error.message }
+  <span class="fn">revalidatePath</span>(<span class="str">'/'</span>, <span class="str">'layout'</span>)  <span class="cmt">// 清除 cache，讓 Layout 重新讀取 Session</span>
+  <span class="fn">redirect</span>(<span class="str">'/dashboard'</span>)
+}
+
+<span class="cmt">// ── 登出 ────────────────────────────────</span>
+<span class="kw">export async function</span> <span class="fn">signOut</span>() {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+  <span class="kw">await</span> supabase.auth.<span class="fn">signOut</span>()
+  <span class="fn">redirect</span>(<span class="str">'/login'</span>)
+}
+
+<span class="cmt">// ── 忘記密碼：發送重設信 ────────────────</span>
+<span class="kw">export async function</span> <span class="fn">resetPassword</span>(formData: <span class="type">FormData</span>) {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+
+  <span class="kw">const</span> { error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">resetPasswordForEmail</span>(
+    formData.<span class="fn">get</span>(<span class="str">'email'</span>) <span class="kw">as</span> <span class="type">string</span>,
+    { redirectTo: <span class="str">`${process.env.NEXT_PUBLIC_SITE_URL}/auth/update-password`</span> }
+  )
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> { error: error.message }
+  <span class="kw">return</span> { success: <span class="bool">true</span> }
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/(auth)/login/page.tsx — 登入頁面</span>
+    </div>
+    <pre><span class="str">'use client'</span>
+
+<span class="kw">import</span> { useState } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { signIn } <span class="kw">from</span> <span class="str">'../actions'</span>
+
+<span class="kw">export default function</span> <span class="fn">LoginPage</span>() {
+  <span class="kw">const</span> [error, setError] <span class="op">=</span> <span class="fn">useState</span><span class="op">&lt;</span><span class="type">string</span> <span class="op">|</span> <span class="kw">null</span><span class="op">&gt;</span>(<span class="kw">null</span>)
+  <span class="kw">const</span> [loading, setLoading] <span class="op">=</span> <span class="fn">useState</span>(<span class="bool">false</span>)
+
+  <span class="kw">async function</span> <span class="fn">handleSubmit</span>(e: <span class="type">React.FormEvent&lt;HTMLFormElement&gt;</span>) {
+    e.<span class="fn">preventDefault</span>()
+    <span class="fn">setLoading</span>(<span class="bool">true</span>)
+    <span class="fn">setError</span>(<span class="kw">null</span>)
+
+    <span class="kw">const</span> formData <span class="op">=</span> <span class="kw">new</span> <span class="type">FormData</span>(e.currentTarget)
+    <span class="kw">const</span> result <span class="op">=</span> <span class="kw">await</span> <span class="fn">signIn</span>(formData)
+
+    <span class="cmt">// signIn 成功時會 redirect()，不會返回</span>
+    <span class="kw">if</span> (result?.error) {
+      <span class="fn">setError</span>(result.error)
+      <span class="fn">setLoading</span>(<span class="bool">false</span>)
+    }
+  }
+
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span><span class="type">div</span> className=<span class="str">"min-h-screen flex items-center justify-center bg-zinc-950"</span><span class="op">&gt;</span>
+      <span class="op">&lt;</span><span class="type">form</span>
+        onSubmit={handleSubmit}
+        className=<span class="str">"w-full max-w-md space-y-4 p-8 bg-zinc-900 border border-zinc-800"</span>
+      <span class="op">&gt;</span>
+        <span class="op">&lt;</span><span class="type">h1</span> className=<span class="str">"text-2xl font-bold text-white"</span><span class="op">&gt;</span>登入<span class="op">&lt;/</span><span class="type">h1</span><span class="op">&gt;</span>
+
+        {error <span class="op">&amp;&amp;</span> (
+          <span class="op">&lt;</span><span class="type">p</span> className=<span class="str">"text-sm text-red-400 bg-red-400/10 border border-red-400/30 p-3"</span><span class="op">&gt;</span>
+            {error}
+          <span class="op">&lt;/</span><span class="type">p</span><span class="op">&gt;</span>
+        )}
+
+        <span class="op">&lt;</span><span class="type">input</span>
+          name=<span class="str">"email"</span> type=<span class="str">"email"</span> required
+          placeholder=<span class="str">"Email"</span>
+          className=<span class="str">"w-full px-4 py-3 bg-zinc-800 border border-zinc-700
+                     text-white placeholder:text-zinc-500
+                     focus:outline-none focus:border-indigo-500"</span>
+        <span class="op">/&gt;</span>
+        <span class="op">&lt;</span><span class="type">input</span>
+          name=<span class="str">"password"</span> type=<span class="str">"password"</span> required
+          placeholder=<span class="str">"密碼"</span>
+          className=<span class="str">"w-full px-4 py-3 bg-zinc-800 border border-zinc-700
+                     text-white placeholder:text-zinc-500
+                     focus:outline-none focus:border-indigo-500"</span>
+        <span class="op">/&gt;</span>
+
+        <span class="op">&lt;</span><span class="type">button</span>
+          type=<span class="str">"submit"</span> disabled={loading}
+          className=<span class="str">"w-full py-3 bg-indigo-600 hover:bg-indigo-500
+                     text-white font-semibold transition-colors
+                     disabled:opacity-50 disabled:cursor-not-allowed"</span>
+        <span class="op">&gt;</span>
+          {loading ? <span class="str">'登入中...'</span> : <span class="str">'登入'</span>}
+        <span class="op">&lt;/</span><span class="type">button</span><span class="op">&gt;</span>
+      <span class="op">&lt;/</span><span class="type">form</span><span class="op">&gt;</span>
+    <span class="op">&lt;/</span><span class="type">div</span><span class="op">&gt;</span>
+  )
+}</pre>
+  </div>
+
+  <div class="note warn">
+    <span class="note-label">Email 確認信</span>
+    Supabase 預設要求新用戶點擊確認信才能登入。開發階段可以在
+    Supabase Dashboard → Authentication → Providers → Email 中
+    <strong>關閉「Confirm email」</strong>，省去測試時的麻煩。
+    上線前記得打開。
+  </div>
+</section>
+
+<!-- ════════════════ SESSION -->
+<section class="section" id="session">
+  <div class="eyebrow">05 &mdash; Session Management</div>
+  <h2 class="section-title">Session 管理</h2>
+  <p class="section-intro">
+    在 Next.js App Router 中，讀取 Session 的方式因元件類型而不同。
+    搞清楚「在哪裡用哪種方式」是避免 Bug 的關鍵。
+  </p>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Server Component（推薦）</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="cmt">// app/dashboard/page.tsx（預設是 Server Component）</span>
+<span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/server'</span>
+<span class="kw">import</span> { redirect } <span class="kw">from</span> <span class="str">'next/navigation'</span>
+
+<span class="kw">export default async function</span> <span class="fn">DashboardPage</span>() {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+  <span class="kw">const</span> { data: { user } } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">getUser</span>()
+
+  <span class="cmt">// 未登入就重定向（伺服器端，無閃爍）</span>
+  <span class="kw">if</span> (<span class="op">!</span>user) <span class="fn">redirect</span>(<span class="str">'/login'</span>)
+
+  <span class="kw">return</span> <span class="op">&lt;</span><span class="type">h1</span><span class="op">&gt;</span>Hello, {user.email}<span class="op">&lt;/</span><span class="type">h1</span><span class="op">&gt;</span>
+}
+
+<span class="cmt">// ✅ 在 Server Component 用 getUser()（不是 getSession()）</span>
+<span class="cmt">// getUser() 會向 Supabase 驗證 Token，更安全</span></pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr neutral">Client Component（即時更新）</div>
+      <pre style="font-size:.75rem;padding:1.2rem;"><span class="str">'use client'</span>
+<span class="kw">import</span> { useEffect, useState } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/client'</span>
+<span class="kw">import type</span> { User } <span class="kw">from</span> <span class="str">'@supabase/supabase-js'</span>
+
+<span class="kw">export function</span> <span class="fn">UserAvatar</span>() {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="fn">createClient</span>()  <span class="cmt">// 瀏覽器端，同步建立</span>
+  <span class="kw">const</span> [user, setUser] <span class="op">=</span> <span class="fn">useState</span><span class="op">&lt;</span><span class="type">User</span> <span class="op">|</span> <span class="kw">null</span><span class="op">&gt;</span>(<span class="kw">null</span>)
+
+  <span class="fn">useEffect</span>(() <span class="op">=&gt;</span> {
+    supabase.auth.<span class="fn">getUser</span>().<span class="fn">then</span>(({ data }) <span class="op">=&gt;</span> {
+      <span class="fn">setUser</span>(data.user)
+    })
+
+    <span class="cmt">// 監聽 Auth 狀態變化（登入 / 登出）</span>
+    <span class="kw">const</span> { data: { subscription } } <span class="op">=</span> supabase.auth.<span class="fn">onAuthStateChange</span>(
+      (event, session) <span class="op">=&gt;</span> <span class="fn">setUser</span>(session?.user <span class="op">??</span> <span class="kw">null</span>)
+    )
+    <span class="kw">return</span> () <span class="op">=&gt;</span> subscription.<span class="fn">unsubscribe</span>()
+  }, [])
+
+  <span class="kw">if</span> (<span class="op">!</span>user) <span class="kw">return</span> <span class="kw">null</span>
+  <span class="kw">return</span> <span class="op">&lt;</span><span class="type">span</span><span class="op">&gt;</span>{user.email}<span class="op">&lt;/</span><span class="type">span</span><span class="op">&gt;</span>
+}</pre>
+    </div>
+  </div>
+
+  <div class="note danger">
+    <span class="note-label">getSession() vs getUser() 的差異</span>
+    <code>getSession()</code> 只從 Cookie 中讀取 Session，<strong>不向 Supabase 驗證</strong>，有被偽造的風險。
+    <code>getUser()</code> 會向 Supabase 發送請求驗證 Token 有效性，是<strong>唯一安全</strong>的做法。
+    在需要確認身份的伺服器端邏輯（如 API Route、Server Action）中，<strong>永遠用 <code>getUser()</code></strong>。
+  </div>
+</section>
+
+<!-- ════════════════ MIDDLEWARE -->
+<section class="section" id="middleware">
+  <div class="eyebrow">06 &mdash; Next.js Middleware</div>
+  <h2 class="section-title">Next.js Middleware</h2>
+  <p class="section-intro">
+    Middleware 在請求到達任何頁面之前執行，是實作<strong>全域 Auth 保護</strong>和
+    <strong>自動刷新 Token</strong>的最佳位置。
+    它執行在 Edge Runtime，速度極快，不會阻塞頁面渲染。
+  </p>
+
+  <div class="mw-diagram">
+    <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;margin-bottom:1.5rem;">MIDDLEWARE 攔截流程</div>
+    <div class="mw-row">
+      <div class="mw-label">瀏覽器請求</div>
+      <div>
+        <div class="mw-steps">
+          <div class="mw-step req">GET /dashboard</div>
+          <div class="mw-arrow">→</div>
+          <div class="mw-step mw">middleware.ts 攔截</div>
+          <div class="mw-arrow">→</div>
+          <div class="mw-step check">讀取 Cookie 中的 Session</div>
+        </div>
+      </div>
+    </div>
+    <div class="mw-row">
+      <div class="mw-label">Session 有效</div>
+      <div>
+        <div class="mw-steps">
+          <div class="mw-step check">Token 是否過期？</div>
+          <div class="mw-arrow">→ 過期</div>
+          <div class="mw-step mw">用 Refresh Token 自動換新</div>
+          <div class="mw-arrow">→</div>
+          <div class="mw-step ok">更新 Cookie</div>
+          <div class="mw-arrow">→</div>
+          <div class="mw-step ok">繼續請求 /dashboard</div>
+        </div>
+        <div class="mw-note">→ 未過期：直接繼續請求</div>
+      </div>
+    </div>
+    <div class="mw-row">
+      <div class="mw-label">無 Session</div>
+      <div>
+        <div class="mw-steps">
+          <div class="mw-step check">路徑是否需要登入？</div>
+          <div class="mw-arrow">→ 需要</div>
+          <div class="mw-step redirect">redirect → /login</div>
+        </div>
+        <div class="mw-note">→ 不需要（/login、/signup、/）：直接放行</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">middleware.ts（放在專案根目錄）</span>
+    </div>
+    <pre><span class="kw">import</span> { createServerClient } <span class="kw">from</span> <span class="str">'@supabase/ssr'</span>
+<span class="kw">import</span> { NextResponse } <span class="kw">from</span> <span class="str">'next/server'</span>
+<span class="kw">import type</span> { NextRequest } <span class="kw">from</span> <span class="str">'next/server'</span>
+
+<span class="cmt">// 需要登入才能存取的路徑前綴</span>
+<span class="kw">const</span> PROTECTED_PATHS <span class="op">=</span> [<span class="str">'/dashboard'</span>, <span class="str">'/settings'</span>, <span class="str">'/api/protected'</span>]
+<span class="cmt">// 已登入後不應存取的頁面（例如登入頁）</span>
+<span class="kw">const</span> AUTH_PATHS <span class="op">=</span> [<span class="str">'/login'</span>, <span class="str">'/signup'</span>]
+
+<span class="kw">export async function</span> <span class="fn">middleware</span>(request: <span class="type">NextRequest</span>) {
+  <span class="kw">let</span> supabaseResponse <span class="op">=</span> NextResponse.<span class="fn">next</span>({ request })
+
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="fn">createServerClient</span>(
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_URL</span><span class="op">!</span>,
+    process.env.<span class="prop">NEXT_PUBLIC_SUPABASE_ANON_KEY</span><span class="op">!</span>,
+    {
+      cookies: {
+        <span class="fn">getAll</span>() { <span class="kw">return</span> request.cookies.<span class="fn">getAll</span>() },
+        <span class="fn">setAll</span>(cookiesToSet) {
+          <span class="cmt">// 同時更新 request 和 response 的 Cookie</span>
+          cookiesToSet.<span class="fn">forEach</span>(({ name, value }) =>
+            request.cookies.<span class="fn">set</span>(name, value)
+          )
+          supabaseResponse <span class="op">=</span> NextResponse.<span class="fn">next</span>({ request })
+          cookiesToSet.<span class="fn">forEach</span>(({ name, value, options }) =>
+            supabaseResponse.cookies.<span class="fn">set</span>(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  <span class="cmt">// 呼叫 getUser() 自動刷新過期的 Token</span>
+  <span class="kw">const</span> { data: { user } } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">getUser</span>()
+  <span class="kw">const</span> { pathname } <span class="op">=</span> request.nextUrl
+
+  <span class="cmt">// 保護路由：未登入 → 重定向到 /login</span>
+  <span class="kw">const</span> isProtected <span class="op">=</span> PROTECTED_PATHS.<span class="fn">some</span>(p <span class="op">=&gt;</span> pathname.<span class="fn">startsWith</span>(p))
+  <span class="kw">if</span> (isProtected <span class="op">&amp;&amp;</span> <span class="op">!</span>user) {
+    <span class="kw">const</span> url <span class="op">=</span> request.nextUrl.<span class="fn">clone</span>()
+    url.pathname <span class="op">=</span> <span class="str">'/login'</span>
+    url.searchParams.<span class="fn">set</span>(<span class="str">'redirectedFrom'</span>, pathname)  <span class="cmt">// 記住原本要去哪</span>
+    <span class="kw">return</span> NextResponse.<span class="fn">redirect</span>(url)
+  }
+
+  <span class="cmt">// 已登入 → 不能再訪問 /login, /signup</span>
+  <span class="kw">const</span> isAuthPage <span class="op">=</span> AUTH_PATHS.<span class="fn">some</span>(p <span class="op">=&gt;</span> pathname.<span class="fn">startsWith</span>(p))
+  <span class="kw">if</span> (isAuthPage <span class="op">&amp;&amp;</span> user) {
+    <span class="kw">return</span> NextResponse.<span class="fn">redirect</span>(<span class="kw">new</span> <span class="type">URL</span>(<span class="str">'/dashboard'</span>, request.url))
+  }
+
+  <span class="kw">return</span> supabaseResponse
+}
+
+<span class="cmt">// 設定 Middleware 作用的路徑（排除靜態資源）</span>
+<span class="kw">export const</span> config <span class="op">=</span> {
+  matcher: [<span class="str">'/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*))'</span>],
+}</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">redirectedFrom 參數的用途</span>
+    未登入用戶被導向 <code>/login?redirectedFrom=/dashboard</code> 後，
+    登入成功時可以讀取這個參數，把用戶送回原本想去的頁面，而不是固定跳到 <code>/dashboard</code>。
+    這個細節能大幅提升 UX。在 <code>signIn</code> Server Action 中加入：
+    <code>redirect(searchParams.get('redirectedFrom') ?? '/dashboard')</code>。
+  </div>
+</section>
+
+<!-- ════════════════ PROTECTED ROUTES -->
+<section class="section" id="protected-routes">
+  <div class="eyebrow">07 &mdash; Protected Routes</div>
+  <h2 class="section-title">保護路由的完整模式</h2>
+  <p class="section-intro">
+    僅靠 Middleware 並不足夠——它只能做路由層級的保護。
+    在頁面和 API 中也需要驗證，形成<strong>縱深防禦</strong>：即使 Middleware 被繞過，資料仍然安全。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">🛡</div>
+      <div>
+        <div class="ctitle">三層保護架構</div>
+        <div class="csub">Middleware → Page → Database（RLS）</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <strong>第一層：Middleware</strong>——在請求進入頁面前攔截，處理重定向。速度最快，但只能做粗粒度保護。
+      </p>
+      <p>
+        <strong>第二層：Page / Route Handler</strong>——在頁面或 API 中再次呼叫 <em>getUser()</em> 驗證。
+        這一層能做更細緻的邏輯，例如「只有帳號擁有者才能看詳細設定頁」。
+      </p>
+      <p>
+        <strong>第三層：Supabase RLS</strong>——資料庫層的最後防線。
+        即使前兩層都被繞過，RLS Policy 確保用戶只能存取自己的資料，<strong>永遠不依賴應用層做資料隔離</strong>。
+      </p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/dashboard/layout.tsx — Layout 層保護</span>
+    </div>
+    <pre><span class="cmt">// Layout 是 Server Component，每次渲染都會執行</span>
+<span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/server'</span>
+<span class="kw">import</span> { redirect } <span class="kw">from</span> <span class="str">'next/navigation'</span>
+<span class="kw">import</span> { DashboardNav } <span class="kw">from</span> <span class="str">'@/components/DashboardNav'</span>
+
+<span class="kw">export default async function</span> <span class="fn">DashboardLayout</span>({
+  children
+}: {
+  children: <span class="type">React.ReactNode</span>
+}) {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+  <span class="kw">const</span> { data: { user }, error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">getUser</span>()
+
+  <span class="cmt">// 雙重保險：Middleware 已擋一次，Layout 再擋一次</span>
+  <span class="kw">if</span> (error <span class="op">||</span> <span class="op">!</span>user) <span class="fn">redirect</span>(<span class="str">'/login'</span>)
+
+  <span class="kw">return</span> (
+    <span class="op">&lt;</span><span class="type">div</span> className=<span class="str">"flex min-h-screen"</span><span class="op">&gt;</span>
+      <span class="op">&lt;</span><span class="type">DashboardNav</span> user={user} <span class="op">/&gt;</span>
+      <span class="op">&lt;</span><span class="type">main</span> className=<span class="str">"flex-1 p-8"</span><span class="op">&gt;</span>{children}<span class="op">&lt;/</span><span class="type">main</span><span class="op">&gt;</span>
+    <span class="op">&lt;/</span><span class="type">div</span><span class="op">&gt;</span>
+  )
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/api/transactions/route.ts — API Route 保護</span>
+    </div>
+    <pre><span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/server'</span>
+<span class="kw">import</span> { NextResponse } <span class="kw">from</span> <span class="str">'next/server'</span>
+
+<span class="kw">export async function</span> <span class="fn">GET</span>() {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+  <span class="kw">const</span> { data: { user } } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">getUser</span>()
+
+  <span class="kw">if</span> (<span class="op">!</span>user) {
+    <span class="kw">return</span> NextResponse.<span class="fn">json</span>({ error: <span class="str">'Unauthorized'</span> }, { status: <span class="num">401</span> })
+  }
+
+  <span class="cmt">// RLS 確保只能查到自己的資料（即使不寫 .eq('user_id', user.id)）</span>
+  <span class="kw">const</span> { data, error } <span class="op">=</span> <span class="kw">await</span> supabase
+    .<span class="fn">from</span>(<span class="str">'transactions'</span>)
+    .<span class="fn">select</span>(<span class="str">'*, categories(name, color)'</span>)
+    .<span class="fn">order</span>(<span class="str">'date'</span>, { ascending: <span class="bool">false</span> })
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> NextResponse.<span class="fn">json</span>({ error: error.message }, { status: <span class="num">500</span> })
+  <span class="kw">return</span> NextResponse.<span class="fn">json</span>(data)
+}</pre>
+  </div>
+</section>
+
+<!-- ════════════════ OAUTH -->
+<section class="section" id="oauth">
+  <div class="eyebrow">08 &mdash; Social Login / OAuth</div>
+  <h2 class="section-title">OAuth 社群登入</h2>
+  <p class="section-intro">
+    Supabase 支援 Google、GitHub、Discord 等數十個 OAuth Provider。
+    設定只需兩個步驟：在 Provider 建立 OAuth App 取得 Client ID + Secret，
+    再到 Supabase Dashboard 填入——無需手動處理 PKCE 流程。
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">Google OAuth 設定</div>
+      <div class="feat-desc">① Google Cloud Console → API & Services → Credentials → OAuth 2.0 Client。<br>② 加入 Callback URL：<code>https://[project].supabase.co/auth/v1/callback</code>。<br>③ Supabase Dashboard → Auth → Providers → Google → 填入 Client ID 和 Secret。</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">GitHub OAuth 設定</div>
+      <div class="feat-desc">① GitHub → Settings → Developer Settings → OAuth Apps → New。<br>② Authorization callback URL 同上。<br>③ Supabase Dashboard → Auth → Providers → GitHub → 填入資訊。</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">本地開發 Callback</div>
+      <div class="feat-desc">開發時 Callback URL 填 <code>http://localhost:3000/auth/callback</code>，上線後需要在 Provider 設定中<strong>額外加入</strong>生產環境的 Callback URL。</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/auth/actions.ts — OAuth Server Action</span>
+    </div>
+    <pre><span class="kw">export async function</span> <span class="fn">signInWithOAuth</span>(provider: <span class="str">'google'</span> <span class="op">|</span> <span class="str">'github'</span>) {
+  <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+
+  <span class="kw">const</span> { data, error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">signInWithOAuth</span>({
+    provider,
+    options: {
+      redirectTo: <span class="str">`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`</span>,
+      queryParams: {
+        access_type: <span class="str">'offline'</span>,   <span class="cmt">// 取得 Refresh Token（Google 需要）</span>
+        prompt: <span class="str">'consent'</span>,         <span class="cmt">// 每次都顯示授權畫面（開發時方便切換帳號）</span>
+      },
+    },
+  })
+
+  <span class="kw">if</span> (data.url) <span class="fn">redirect</span>(data.url)  <span class="cmt">// 跳轉到 OAuth Provider 的授權頁</span>
+}
+
+<span class="cmt">// 使用方式（Client Component 表單）</span>
+<span class="op">&lt;</span><span class="type">button</span> formAction={() <span class="op">=&gt;</span> <span class="fn">signInWithOAuth</span>(<span class="str">'google'</span>)<span class="op">&gt;</span>
+  Google 登入
+<span class="op">&lt;/</span><span class="type">button</span><span class="op">&gt;</span></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">src/app/auth/callback/route.ts — OAuth Callback Handler</span>
+    </div>
+    <pre><span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="str">'@/lib/supabase/server'</span>
+<span class="kw">import</span> { NextResponse } <span class="kw">from</span> <span class="str">'next/server'</span>
+
+<span class="cmt">// OAuth Provider 授權後，會帶著 code 回來這個 URL</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>(request: <span class="type">Request</span>) {
+  <span class="kw">const</span> { searchParams, origin } <span class="op">=</span> <span class="kw">new</span> <span class="type">URL</span>(request.url)
+  <span class="kw">const</span> code <span class="op">=</span> searchParams.<span class="fn">get</span>(<span class="str">'code'</span>)
+  <span class="kw">const</span> next <span class="op">=</span> searchParams.<span class="fn">get</span>(<span class="str">'next'</span>) <span class="op">??</span> <span class="str">'/dashboard'</span>
+
+  <span class="kw">if</span> (code) {
+    <span class="kw">const</span> supabase <span class="op">=</span> <span class="kw">await</span> <span class="fn">createClient</span>()
+    <span class="cmt">// 用 code 換取 Session（PKCE 流程最後一步）</span>
+    <span class="kw">const</span> { error } <span class="op">=</span> <span class="kw">await</span> supabase.auth.<span class="fn">exchangeCodeForSession</span>(code)
+    <span class="kw">if</span> (<span class="op">!</span>error) <span class="kw">return</span> NextResponse.<span class="fn">redirect</span>(<span class="str">`${origin}${next}`</span>)
+  }
+
+  <span class="cmt">// 發生錯誤時跳回登入頁並附上錯誤訊息</span>
+  <span class="kw">return</span> NextResponse.<span class="fn">redirect</span>(<span class="str">`${origin}/login?error=auth_callback_failed`</span>)
+}</pre>
+  </div>
+
+  <div class="oauth-demo">
+    <div class="oauth-demo-label">Social Login 按鈕 UI 範例</div>
+    <div class="oauth-grid">
+      <div class="oauth-btn">
+        <div class="oauth-icon google">G</div>
+        用 Google 繼續
+      </div>
+      <div class="oauth-btn">
+        <div class="oauth-icon github">⌥</div>
+        用 GitHub 繼續
+      </div>
+      <div class="oauth-btn">
+        <div class="oauth-icon discord">⊕</div>
+        用 Discord 繼續
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ SECURITY -->
+<section class="section" id="security">
+  <div class="eyebrow">09 &mdash; Security</div>
+  <h2 class="section-title">Auth 安全性考量</h2>
+  <p class="section-intro">
+    Auth 是攻擊者最常下手的地方。以下是本課程 Side Project 必須實作的安全措施，
+    以及常見的錯誤做法。
+  </p>
+
+  <div class="sec-grid">
+    <div class="sec-item">
+      <div class="sec-icon">🔒</div>
+      <div>
+        <div class="sec-title">HttpOnly Cookie</div>
+        <div class="sec-desc">Token 存在 HttpOnly Cookie，JavaScript 無法讀取，防止 XSS 攻擊竊取 Token。<code>@supabase/ssr</code> 已預設使用。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">🛡</div>
+      <div>
+        <div class="sec-title">Row Level Security（RLS）</div>
+        <div class="sec-desc">資料庫層的最後防線，確保用戶只能存取自己的資料，不依賴應用層判斷。<strong>每張資料表都要開啟。</strong></div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">✔</div>
+      <div>
+        <div class="sec-title">永遠用 getUser() 驗證</div>
+        <div class="sec-desc">Server 端需要確認身份時，用 <code>getUser()</code> 向 Supabase 驗證，不用 <code>getSession()</code>（可被偽造）。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">🔑</div>
+      <div>
+        <div class="sec-title">環境變數管理</div>
+        <div class="sec-desc">Service Role Key（完整資料庫存取權）<strong>絕對不能</strong>放在前端或提交到 Git。只有 Anon Key 才可以是 NEXT_PUBLIC_。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">⏱</div>
+      <div>
+        <div class="sec-title">Token 自動刷新</div>
+        <div class="sec-desc">Middleware 中呼叫 <code>getUser()</code> 會自動用 Refresh Token 換取新的 Access Token，用戶不需要重新登入。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">📝</div>
+      <div>
+        <div class="sec-title">輸入驗證（Zod）</div>
+        <div class="sec-desc">Server Action 中使用 Zod 驗證所有輸入，防止惡意資料進入資料庫。不信任任何來自客戶端的資料。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">🚦</div>
+      <div>
+        <div class="sec-title">Rate Limiting（限流）</div>
+        <div class="sec-desc">Supabase 免費方案對 Auth API 有內建限流（每小時最多 30 次 Email 發送）。生產環境可透過 Supabase Dashboard 調整。</div>
+      </div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-icon">🔗</div>
+      <div>
+        <div class="sec-title">Redirect URL 白名單</div>
+        <div class="sec-desc">在 Supabase Dashboard → Auth → URL Configuration 設定允許的 Redirect URL，防止 Open Redirect 攻擊。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note danger">
+    <span class="note-label">絕對不要做的事</span>
+    ① 把 <code>service_role</code> key 放在前端程式碼或 <code>NEXT_PUBLIC_</code> 開頭的環境變數。<br>
+    ② 用 <code>localStorage</code> 儲存 JWT Token（XSS 可竊取）。<br>
+    ③ 在資料表上不開啟 RLS，靠應用層的 <code>WHERE user_id = $user_id</code> 做隔離（可被繞過）。<br>
+    ④ 用 <code>getSession()</code> 做身份驗證（內容可被偽造）。
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">10 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">在 Next.js Server Component 中需要確認用戶身份時，應該呼叫哪個函式？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','getSession() 只從 Cookie 中讀取 Token 內容，不向 Supabase 驗證，Token 可能是過期或被偽造的，不應用於安全性判斷。')">
+        <div class="quiz-key">A</div>
+        <div><code>supabase.auth.getSession()</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','getUser() 會向 Supabase Auth Server 驗證 Token 的有效性，是唯一安全的身份確認方式。在任何需要信任用戶身份的伺服器端邏輯中都應使用。')">
+        <div class="quiz-key">B</div>
+        <div><code>supabase.auth.getUser()</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','localStorage 在 Server Component 執行環境中不存在，這會直接拋出錯誤。')">
+        <div class="quiz-key">C</div>
+        <div><code>localStorage.getItem('supabase_token')</code></div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','這樣做會直接暴露 service role key（完整資料庫存取權），是嚴重的安全漏洞。')">
+        <div class="quiz-key">D</div>
+        <div>用 service role key 建立 Supabase client 並呼叫 <code>listUsers()</code></div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">Next.js Middleware 在 Auth 系統中主要負責什麼工作？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','Middleware 不負責資料庫的 CRUD，那是 Route Handler 或 Server Action 的工作。')">
+        <div class="quiz-key">A</div>
+        <div>直接查詢資料庫並回傳資料給頁面</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','密碼加密是在 Server Action 或 Supabase Auth 服務中處理，不是 Middleware 的工作。')">
+        <div class="quiz-key">B</div>
+        <div>驗證表單輸入並加密密碼</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','Middleware 在每個請求到達頁面前攔截，自動刷新過期的 Access Token（用 Refresh Token 換新），並根據 Session 狀態做路由重定向（未登入導向 /login）。')">
+        <div class="quiz-key">C</div>
+        <div>在請求到達頁面前自動刷新 Token，並根據 Session 狀態決定是否重定向</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Middleware 執行在 Edge Runtime，效能極佳，不會「降低效能」。')">
+        <div class="quiz-key">D</div>
+        <div>Middleware 會降低應用效能，只在必要時使用</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">為什麼應該把 Auth Token 存在 <strong>HttpOnly Cookie</strong>，而不是 <code>localStorage</code>？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','Cookie 本身不比 localStorage 快，這不是選擇 Cookie 的原因。')">
+        <div class="quiz-key">A</div>
+        <div>Cookie 的讀取速度比 localStorage 快</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Cookie 有大小限制（約 4KB），這是缺點而非優點。')">
+        <div class="quiz-key">B</div>
+        <div>Cookie 可以儲存更大的資料量</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','HttpOnly Cookie 的 JavaScript 無法讀取（防 XSS 竊取），且每次請求自動附帶（包含 SSR 請求，Server Component 可讀取）。localStorage 的 Token 可被 XSS 攻擊竊取，且 Server Component 無法存取。')">
+        <div class="quiz-key">C</div>
+        <div>HttpOnly Cookie 無法被 JavaScript 讀取（防 XSS），且每次請求自動附帶讓 Server Component 能讀取</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Cookie 並不會自動加密內容，HttpOnly 只是禁止 JS 存取，HTTPS 才提供傳輸加密。')">
+        <div class="quiz-key">D</div>
+        <div>Cookie 會自動加密內容，localStorage 不會</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">使用 OAuth（如 Google 登入）時，<code>/auth/callback</code> Route 的主要功能是什麼？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','OAuth 的使用者資料由 Google 提供並存入 Supabase users 表，不需要在 callback 中手動儲存。')">
+        <div class="quiz-key">A</div>
+        <div>將 Google 回傳的用戶資料（姓名、大頭照）手動儲存到資料庫</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','PKCE 流程的最後一步：Google 授權後帶著 authorization code 回來，callback Route 呼叫 exchangeCodeForSession(code) 換取 Session，並將 Token 寫入 Cookie，完成整個登入流程。')">
+        <div class="quiz-key">B</div>
+        <div>接收 OAuth Provider 回傳的 authorization code，呼叫 <code>exchangeCodeForSession()</code> 換取 Session 並寫入 Cookie</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','密碼 Hash 是 Email/Password 登入的概念，OAuth 完全不涉及密碼。')">
+        <div class="quiz-key">C</div>
+        <div>對 Google 回傳的密碼進行 Hash 並儲存</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','/auth/callback 是 OAuth 流程中 Provider 指定回來的 URL，不是登入頁面本身。')">
+        <div class="quiz-key">D</div>
+        <div>顯示一個確認頁面讓用戶選擇是否允許應用程式存取 Google 帳號</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+</section>
+
+<!-- ════════════════ PROJECT -->
+<section class="section" id="project">
+  <div class="eyebrow">11 &mdash; Weekly Project</div>
+  <h2 class="section-title">本週作業：完成 Side Project 的 Auth 模組</h2>
+  <p class="section-intro">
+    本週將完整的 Auth 系統整合進你的 Side Project。
+    完成後，使用者能夠安全地註冊、登入、登出，且所有受保護的頁面和 API 都有對應的驗證。
+  </p>
+
+  <div class="checklist">
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>安裝 <code>@supabase/ssr</code>，建立 <code>src/lib/supabase/server.ts</code> 和 <code>client.ts</code>，確認能成功連線</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>建立 <code>middleware.ts</code>，包含 Token 自動刷新、受保護路徑重定向、登入頁導回 Dashboard 邏輯</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>實作 Server Actions：<code>signUp</code>、<code>signIn</code>、<code>signOut</code>、<code>resetPassword</code></span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>完成 <code>/login</code> 和 <code>/signup</code> 頁面，包含表單驗證（Zod）和錯誤提示</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>實作忘記密碼流程：發送重設信 + <code>/auth/update-password</code> 更新密碼頁</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>在 Dashboard Layout 加入二次身份驗證（<code>getUser()</code>），確認三層保護架構完整</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>整合至少一個 OAuth Provider（Google 或 GitHub），包含 <code>/auth/callback</code> Route</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>確認所有資料表已開啟 RLS，並為每張表設定對應的 Policy（<code>auth.uid() = user_id</code>）</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>確認 <code>.env.local</code> 已加入 <code>.gitignore</code>，Service Role Key 沒有暴露在前端</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>測試完整登入流程：新用戶註冊 → 確認信 → 登入 → 存取 Dashboard → 登出 → 確認無法存取 Dashboard</span>
+    </div>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">測試建議</span>
+    Auth 邏輯最容易出錯，建議用以下場景逐一測試：<br>
+    ① 未登入直接訪問 <code>/dashboard</code> → 應跳到 <code>/login</code><br>
+    ② 登入後訪問 <code>/login</code> → 應跳到 <code>/dashboard</code><br>
+    ③ 用 DevTools 清除 Cookie 後刷新頁面 → 應跳回 <code>/login</code><br>
+    ④ 用兩個不同帳號登入，確認各自只看到自己的資料（RLS 測試）
+  </div>
+</section>
+
+<!-- ════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">12 &mdash; Resources</div>
+  <h2 class="section-title">延伸資源</h2>
+  <div class="resource-grid">
+    <a class="resource-card" href="https://supabase.com/docs/guides/auth/server-side/nextjs" target="_blank" rel="noopener">
+      <div class="resource-type">官方指南</div>
+      <div class="resource-name">Supabase + Next.js App Router</div>
+      <div class="resource-desc">官方的完整整合指南，包含 Server Component、Middleware、OAuth 的完整設定步驟，是本週最重要的參考資料。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://supabase.com/docs/guides/auth/row-level-security" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">Row Level Security</div>
+      <div class="resource-desc">Supabase RLS 完整說明，包含各種 Policy 範例（SELECT、INSERT、UPDATE、DELETE），以及如何用 SQL Editor 測試 Policy。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://nextjs.org/docs/app/building-your-application/routing/middleware" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">Next.js Middleware</div>
+      <div class="resource-desc">Next.js 官方 Middleware 說明，包含 matcher 設定語法、Edge Runtime 限制，以及與 Auth 整合的最佳實踐。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://zod.dev" target="_blank" rel="noopener">
+      <div class="resource-type">套件文件</div>
+      <div class="resource-name">Zod — TypeScript 驗證</div>
+      <div class="resource-desc">用於 Server Action 的輸入驗證。搭配 <code>safeParse()</code> 取得型別安全的錯誤訊息，整合 react-hook-form 做前端驗證。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://supabase.com/docs/guides/auth/social-login/auth-google" target="_blank" rel="noopener">
+      <div class="resource-type">官方指南</div>
+      <div class="resource-name">Google OAuth 設定指南</div>
+      <div class="resource-desc">從 Google Cloud Console 建立 OAuth App，到 Supabase 設定和本地開發測試的完整步驟說明。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://thecopenhagenbook.com" target="_blank" rel="noopener">
+      <div class="resource-type">深度資源</div>
+      <div class="resource-name">The Copenhagen Book</div>
+      <div class="resource-desc">Web Auth 的深度技術指南，涵蓋 Session 管理、OAuth、CSRF、Password Hashing 等主題，適合想深入理解原理的進階閱讀。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+  </div>
+</section>
+
+</div><!-- /content -->
+
+<nav class="bottom-nav">
+  <a href="week14.html" class="nav-btn">&larr; Week 14 — 後端串接</a>
+  <a href="index.html" class="home-link">&#8617; 返回總覽</a>
+  <a href="week16.html" class="nav-btn">Week 16 — 核心功能 &rarr;</a>
+</nav>
+
+</main>
+
+<script>
+const bar = document.getElementById('progressBar')
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100
+  bar.style.width = pct + '%'
+})
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+document.querySelectorAll('.section').forEach(s => obs.observe(s))
+
+const sections = document.querySelectorAll('.section[id]')
+const tocObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const link = document.querySelector(`.toc-item[href="#${e.target.id}"]`)
+    if (link) link.classList.toggle('active', e.isIntersecting)
+  })
+}, { threshold: 0.2, rootMargin: '-60px 0px -40% 0px' })
+sections.forEach(s => tocObs.observe(s))
+
+let answered = []
+function answer(el, type, feedback) {
+  const block = el.closest('.quiz-block')
+  const idx = [...document.querySelectorAll('.quiz-block')].indexOf(block)
+  if (answered.includes(idx)) return
+  answered.push(idx)
+  block.querySelectorAll('.quiz-opt').forEach(o => o.style.pointerEvents = 'none')
+  el.classList.add(type)
+  const fb = block.querySelector('.quiz-fb')
+  fb.textContent = feedback
+  fb.classList.add('show')
+  if (type === 'wrong') fb.classList.add('wrong-fb')
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('done')
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : ''
+}
+</script>
+</body>
+</html>
