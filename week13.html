@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 13 — 專案規劃與設計</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070510;
+  --bg2:#0e0b1a;
+  --bg3:#141022;
+  --surface:#1a162c;
+  --border:#2d2650;
+  --text:#ede9ff;
+  --muted:#6b5fa8;
+  --accent:#a78bfa;
+  --accent-g:linear-gradient(135deg,#a78bfa,#e879f9);
+  --accent2:#e879f9;
+  --accent3:#34d399;
+  --blue:#60a5fa;
+  --amber:#fbbf24;
+  --red:#f87171;
+  --font-d:'Playfair Display',serif;
+  --font-b:'Outfit',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(110px);opacity:0.09;}
+body::before{width:540px;height:540px;background:radial-gradient(circle,#a78bfa,transparent);top:-160px;right:-120px;}
+body::after{width:420px;height:420px;background:radial-gradient(circle,#e879f9,transparent);bottom:-100px;left:-80px;}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:var(--accent-g);box-shadow:0 0 10px var(--accent);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2.5rem;background:rgba(7,5,16,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:var(--font-m);font-size:.75rem;color:var(--accent);letter-spacing:.12em;text-decoration:none;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border);color:var(--muted);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--accent);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.58rem;color:var(--muted);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s,width .2s,border-radius .15s;}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--accent);width:14px;border-radius:2px;box-shadow:0 0 6px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+.hero{padding:5rem 3.5rem 4.5rem;border-bottom:1px solid var(--border);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(167,139,250,.07),transparent);pointer-events:none;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-weight:900;font-size:clamp(2.8rem,6vw,5.5rem);line-height:1.02;letter-spacing:-.02em;margin-bottom:1.5rem;max-width:820px;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{background:var(--accent-g);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-badges{display:flex;flex-wrap:wrap;gap:.6rem;opacity:0;animation:fadeUp .5s .5s forwards;}
+.badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;padding:.28rem .8rem;border:1px solid var(--border);color:var(--muted);background:var(--bg2);}
+.badge.hi{border-color:rgba(167,139,250,.45);color:var(--accent);background:rgba(167,139,250,.07);}
+.badge.hi2{border-color:rgba(232,121,249,.4);color:var(--accent2);background:rgba(232,121,249,.07);}
+.badge.hi3{border-color:rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.07);}
+.badge.hi4{border-color:rgba(251,191,36,.4);color:var(--amber);background:rgba(251,191,36,.07);}
+
+/* PHASE BANNER */
+.phase-banner{background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(232,121,249,.05));border:1px solid rgba(167,139,250,.2);padding:1.2rem 1.8rem;display:flex;align-items:center;gap:1.2rem;margin-bottom:3rem;}
+.phase-tag{font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;background:var(--accent-g);color:var(--bg);font-weight:500;white-space:nowrap;}
+.phase-text{font-size:.88rem;color:var(--muted);line-height:1.5;}
+.phase-text strong{color:var(--text);}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.6;}
+.section-title{font-family:var(--font-d);font-size:1.95rem;font-weight:700;color:var(--text);margin-bottom:1.8rem;line-height:1.2;letter-spacing:-.015em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;}
+.obj-text{font-size:.86rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border);overflow:hidden;}
+.cblock-head{padding:1.2rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.cicon{width:30px;height:30px;background:var(--accent-g);color:var(--bg);font-family:var(--font-m);font-size:.6rem;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:700;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#a895d8;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:500;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:500;}
+
+.note{border-left:2px solid var(--accent);background:rgba(167,139,250,.05);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#a895d8;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent3);background:rgba(52,211,153,.06);color:#7dcfb8;}
+.note.tip .note-label{color:var(--accent3);}
+.note.info{border-left-color:var(--blue);background:rgba(96,165,250,.06);color:#90b8f0;}
+.note.info .note-label{color:var(--blue);}
+.note.warn{border-left-color:var(--amber);background:rgba(251,191,36,.07);color:#d4b896;}
+.note.warn .note-label{color:var(--amber);}
+
+.code-block{border:1px solid var(--border);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+pre{background:var(--bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--text);}
+.kw{color:#a78bfa;}
+.fn{color:#e879f9;}
+.str{color:#86efac;}
+.num{color:#fde68a;}
+.cmt{color:#1e1535;font-style:italic;}
+.op{color:#60a5fa;}
+.type{color:#fbbf24;}
+.prop{color:#f0abfc;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--accent);padding:.1em .4em;border:1px solid var(--border);}
+
+/* TOPIC CARDS */
+.topic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.topic-card{background:var(--bg2);padding:1.5rem;transition:background .2s;position:relative;overflow:hidden;}
+.topic-card:hover{background:var(--bg3);}
+.topic-card::after{content:attr(data-score);position:absolute;right:.8rem;bottom:-.2rem;font-family:var(--font-m);font-size:3.5rem;opacity:.04;color:var(--accent);line-height:1;}
+.topic-score{font-family:var(--font-m);font-size:.6rem;padding:.2rem .5rem;margin-bottom:.8rem;display:inline-block;}
+.topic-score.high{border:1px solid rgba(52,211,153,.4);color:var(--accent3);background:rgba(52,211,153,.06);}
+.topic-score.mid{border:1px solid rgba(251,191,36,.4);color:var(--amber);background:rgba(251,191,36,.06);}
+.topic-score.low{border:1px solid rgba(248,113,113,.4);color:var(--red);background:rgba(248,113,113,.06);}
+.topic-name{font-family:var(--font-d);font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.4rem;}
+.topic-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* FEATURE TABLE */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.72rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(45,38,80,.7);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);}
+.ptable td:nth-child(2){color:var(--text);}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* PRIORITY TAG */
+.tag{font-family:var(--font-m);font-size:.6rem;padding:.15rem .5rem;white-space:nowrap;border:1px solid;}
+.tag.mvp{color:var(--accent3);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.06);}
+.tag.v2{color:var(--amber);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06);}
+.tag.wont{color:var(--muted);border-color:var(--border);background:var(--bg3);}
+
+/* USER STORY */
+.story-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.story-row{background:var(--bg2);padding:1.1rem 1.5rem;display:grid;grid-template-columns:90px 1fr auto;gap:1.2rem;align-items:start;transition:background .2s;}
+.story-row:hover{background:var(--bg3);}
+.story-role{font-family:var(--font-m);font-size:.62rem;color:var(--accent);border:1px solid rgba(167,139,250,.3);padding:.2rem .5rem;text-align:center;background:rgba(167,139,250,.06);}
+.story-text{font-size:.85rem;color:var(--text);line-height:1.55;}
+.story-text span{color:var(--muted);}
+.story-priority{align-self:start;margin-top:.1rem;}
+
+/* WIREFRAME DIAGRAM */
+.wireframe{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.wf-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.5rem;}
+.wf-screen{border:1px solid var(--border);background:var(--bg2);overflow:hidden;}
+.wf-topbar{height:32px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:.8rem;}
+.wf-dot{width:7px;height:7px;border-radius:50%;background:var(--border);}
+.wf-dot.active{background:var(--accent);}
+.wf-url{flex:1;height:14px;background:var(--border);border-radius:2px;max-width:200px;}
+.wf-body{display:grid;gap:1px;background:var(--border);}
+.wf-nav{height:44px;background:var(--bg3);display:flex;align-items:center;padding:0 1.5rem;gap:1.5rem;}
+.wf-nav-logo{width:60px;height:10px;background:var(--accent);opacity:.4;border-radius:1px;}
+.wf-nav-items{display:flex;gap:.8rem;margin-left:auto;}
+.wf-nav-item{width:40px;height:8px;background:var(--border);border-radius:1px;}
+.wf-hero{height:160px;background:var(--bg);display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:1.5rem;gap:1rem;}
+.wf-hero-text{display:flex;flex-direction:column;gap:.5rem;}
+.wf-line{height:8px;background:var(--border);border-radius:1px;}
+.wf-line.title{height:20px;background:rgba(167,139,250,.2);width:80%;}
+.wf-line.sub{width:100%;}
+.wf-line.sm{width:60%;}
+.wf-btn{height:28px;width:90px;background:rgba(167,139,250,.2);border:1px solid rgba(167,139,250,.3);border-radius:2px;}
+.wf-hero-img{height:100%;background:var(--bg3);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.58rem;color:var(--border);}
+.wf-grid-section{padding:1.2rem;background:var(--bg);}
+.wf-section-label{height:10px;width:120px;background:rgba(167,139,250,.15);border-radius:1px;margin-bottom:.8rem;}
+.wf-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;}
+.wf-card{background:var(--bg2);border:1px solid var(--border);padding:.7rem;}
+.wf-card-img{height:50px;background:var(--bg3);margin-bottom:.5rem;}
+.wf-card-line{height:7px;background:var(--border);border-radius:1px;margin-bottom:.3rem;}
+.wf-screens{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.wf-screen-label{font-family:var(--font-m);font-size:.58rem;color:var(--muted);margin-top:.5rem;text-align:center;letter-spacing:.06em;}
+
+/* ER DIAGRAM */
+.er-diagram{border:1px solid var(--border);background:var(--bg);padding:2rem;margin:1.5rem 0;}
+.er-grid{display:flex;gap:2rem;flex-wrap:wrap;}
+.er-table{border:1px solid var(--border);min-width:200px;overflow:hidden;}
+.er-table-head{padding:.6rem 1rem;font-family:var(--font-m);font-size:.68rem;color:var(--bg);font-weight:500;letter-spacing:.06em;}
+.er-table-head.users{background:rgba(167,139,250,.7);}
+.er-table-head.projects{background:rgba(232,121,249,.6);}
+.er-table-head.tags{background:rgba(52,211,153,.5);color:var(--bg);}
+.er-table-head.comments{background:rgba(96,165,250,.5);}
+.er-field{padding:.4rem 1rem;font-family:var(--font-m);font-size:.68rem;border-bottom:1px solid rgba(45,38,80,.5);display:flex;justify-content:space-between;align-items:center;}
+.er-field:last-child{border-bottom:none;}
+.er-field-name{color:var(--text);}
+.er-field-type{color:var(--muted);font-size:.6rem;}
+.er-pk{color:var(--amber);font-size:.58rem;margin-left:.4rem;}
+.er-fk{color:var(--accent3);font-size:.58rem;margin-left:.4rem;}
+.er-relations{display:flex;flex-direction:column;gap:.5rem;padding:1rem 0;}
+.er-rel{font-family:var(--font-m);font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.5rem;}
+.er-rel::before{content:'';width:20px;height:1px;background:var(--border);}
+
+/* TECH STACK */
+.stack-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.stack-layer{background:var(--bg2);padding:1.4rem;}
+.stack-layer-title{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
+.stack-item{display:flex;align-items:center;gap:.8rem;padding:.5rem 0;border-bottom:1px solid rgba(45,38,80,.4);}
+.stack-item:last-child{border-bottom:none;}
+.stack-name{font-weight:500;font-size:.85rem;color:var(--text);min-width:100px;}
+.stack-why{font-size:.78rem;color:var(--muted);line-height:1.5;}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:0;position:relative;margin:1.5rem 0;}
+.timeline::before{content:'';position:absolute;left:18px;top:0;bottom:0;width:1px;background:var(--border);}
+.tl-item{display:grid;grid-template-columns:40px 1fr;gap:1.2rem;padding-bottom:1.8rem;position:relative;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{width:36px;height:36px;border:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65rem;color:var(--accent);z-index:1;flex-shrink:0;}
+.tl-dot.done{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);}
+.tl-content{padding-top:.3rem;}
+.tl-week{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.3rem;}
+.tl-title{font-weight:600;font-size:.92rem;color:var(--text);margin-bottom:.3rem;}
+.tl-body{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.tl-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem;}
+.tl-tag{font-family:var(--font-m);font-size:.58rem;padding:.15rem .5rem;border:1px solid var(--border);color:var(--muted);}
+
+/* FEAT GRID */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.feat-card{background:var(--bg2);padding:1.3rem;transition:background .2s;}
+.feat-card:hover{background:var(--bg3);}
+.feat-name{font-family:var(--font-m);font-size:.72rem;color:var(--accent);margin-bottom:.4rem;letter-spacing:.06em;}
+.feat-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+
+/* COMPARE */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:rgba(52,211,153,.07);color:var(--accent3);border-bottom:1px solid rgba(52,211,153,.2);}
+.cpanel-hdr.bad{background:rgba(248,113,113,.07);color:#f87171;border-bottom:1px solid rgba(248,113,113,.2);}
+
+/* QUIZ */
+.quiz-block{background:var(--bg2);border:1px solid var(--border);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:700;margin-bottom:1.2rem;color:var(--text);line-height:1.4;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:rgba(167,139,250,.05);}
+.quiz-opt.correct{border-color:var(--accent3);background:rgba(52,211,153,.06);color:var(--accent3);}
+.quiz-opt.wrong{border-color:#f87171;background:rgba(248,113,113,.06);color:#f87171;}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.12rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;border-left:2px solid var(--accent3);background:rgba(52,211,153,.05);color:#7dcfb8;}
+.quiz-fb.show{display:block;}
+.quiz-fb.wrong-fb{border-left-color:var(--red);background:rgba(248,113,113,.05);color:#f87171;}
+
+/* DELIVERABLE */
+.deliverable{border:1px solid rgba(167,139,250,.25);background:rgba(167,139,250,.04);padding:2rem;margin:2rem 0;}
+.deliverable-title{font-family:var(--font-m);font-size:.65rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:1.2rem;display:flex;align-items:center;gap:.7rem;}
+.deliverable-title::after{content:'';height:1px;flex:1;background:linear-gradient(to right,rgba(167,139,250,.3),transparent);}
+.deliverable-items{display:flex;flex-direction:column;gap:.7rem;}
+.d-item{display:flex;gap:.8rem;align-items:flex-start;font-size:.87rem;padding:.7rem 1rem;background:var(--bg2);border:1px solid var(--border);}
+.d-num{font-family:var(--font-m);font-size:.6rem;color:var(--accent);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);padding:.1rem .4rem;flex-shrink:0;margin-top:.15rem;}
+.d-text{line-height:1.6;}
+.d-text strong{color:var(--text);}
+.d-text span{color:var(--muted);font-size:.82rem;}
+
+/* CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.3);}
+.check-item.done .check-box{background:var(--accent3);border-color:var(--accent3);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* RESOURCES */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.9rem;font-weight:700;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .topic-grid{grid-template-columns:1fr 1fr;}
+  .feat-grid{grid-template-columns:1fr 1fr;}
+  .stack-grid{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .er-grid{gap:1rem;}
+  .wf-screens{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  .story-row{grid-template-columns:1fr;}.story-role{width:fit-content;}
+  pre{font-size:.72rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 13 / 18 &mdash; 專案規劃</div>
+  <nav class="header-nav">
+    <a href="week12.html">&larr; 上一週</a>
+    <a href="index.html">總覽</a>
+    <a href="week14.html">下一週 &rarr;</a>
+  </nav>
+</header>
+
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#topic">選題策略</a>
+  <a class="toc-item" href="#features">功能定義</a>
+  <a class="toc-item" href="#user-stories">User Stories</a>
+  <a class="toc-item" href="#wireframe">Wireframe</a>
+  <a class="toc-item" href="#data-model">資料結構</a>
+  <a class="toc-item" href="#tech-stack">技術選型</a>
+  <a class="toc-item" href="#roadmap">開發時程</a>
+  <a class="toc-item" href="#quiz">隨堂測驗</a>
+  <a class="toc-item" href="#deliverable">本週交付物</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+
+<main>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-label">Phase 04 &mdash; Week 13 of 18</div>
+  <h1>Side Project<br><span class="hi">規劃與設計</span></h1>
+  <p class="hero-desc">
+    從零開始規劃屬於你自己的 Side Project：選題、定義 MVP 功能、撰寫 User Stories、
+    設計 Wireframe，到資料庫 Schema 與技術選型——本週結束前，完成一份完整的規劃文件。
+  </p>
+  <div class="hero-badges">
+    <span class="badge hi">選題策略</span>
+    <span class="badge hi">MVP 定義</span>
+    <span class="badge hi2">User Stories</span>
+    <span class="badge hi2">Wireframe</span>
+    <span class="badge hi3">資料模型</span>
+    <span class="badge hi3">ERD 設計</span>
+    <span class="badge hi4">技術選型</span>
+    <span class="badge hi4">開發時程</span>
+  </div>
+</section>
+
+<div class="content">
+
+<!-- PHASE BANNER -->
+<div class="phase-banner" style="margin-top:3rem;">
+  <span class="phase-tag">PHASE 04</span>
+  <div class="phase-text">
+    <strong>Side Project 實戰（第 13–18 週）</strong><br>
+    從規劃到部署，完整走過一個真實產品的開發流程。本週是最關鍵的起點——
+    規劃做得好，後續六週的開發會事半功倍；倉促動工，往往在第 15 週遇到根本性問題而推倒重來。
+  </div>
+</div>
+
+<!-- ════════════════ OBJECTIVES -->
+<section class="section" id="objectives">
+  <div class="eyebrow">01 &mdash; Learning Goals</div>
+  <h2 class="section-title">本週學習目標</h2>
+  <p class="section-intro">好的規劃不是浪費時間，而是節省時間。本週的產出將指引接下來五週的開發。</p>
+  <div class="objectives">
+    <div class="obj-item">
+      <span class="obj-num">01</span>
+      <span class="obj-text">能評估 Side Project 選題的<strong>可行性</strong>，選出技術難度適中、有實際用途的題目</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">02</span>
+      <span class="obj-text">掌握 <strong>MVP（最小可行產品）</strong>思維，能區分「必要功能」與「錦上添花」</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">03</span>
+      <span class="obj-text">以使用者視角撰寫 <strong>User Stories</strong>，並依照優先順序排列（MoSCoW 法則）</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">04</span>
+      <span class="obj-text">用低保真 <strong>Wireframe</strong> 規劃主要頁面的佈局與使用者流程，不需要設計軟體</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">05</span>
+      <span class="obj-text">設計應用程式的<strong>資料模型</strong>（Entity-Relationship Diagram），定義資料表與欄位</span>
+    </div>
+    <div class="obj-item">
+      <span class="obj-num">06</span>
+      <span class="obj-text">完成一份包含選題、功能清單、Wireframe、ERD 與開發時程的完整<strong>規劃文件</strong></span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ TOPIC -->
+<section class="section" id="topic">
+  <div class="eyebrow">02 &mdash; Topic Selection</div>
+  <h2 class="section-title">選題策略</h2>
+  <p class="section-intro">
+    好的 Side Project 題目需要平衡三件事：<strong>你的技術能力範圍</strong>、
+    <strong>能在六週內完成</strong>，以及<strong>有實際的使用價值</strong>。
+    以下是評估一個題目的三個維度。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">3V</div>
+      <div>
+        <div class="ctitle">三維評估框架</div>
+        <div class="csub">Viability × Value × Velocity</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <strong>Viability（可行性）</strong>——技術上是否可行？六週的時間夠嗎？需要用到課程尚未教到的技術嗎？
+        建議用你已經掌握的 Next.js + Supabase 堆疊，聚焦在「做出完整可用的東西」而非「嘗試最新技術」。
+      </p>
+      <p>
+        <strong>Value（價值性）</strong>——這個專案解決了什麼問題？
+        不需要是全新的想法，「把 Notion / Airtable 的某個功能做得更好用」就是很好的切入點。
+        <em>使用者不會在乎你用什麼技術，他們只在乎這個東西有沒有用</em>。
+      </p>
+      <p>
+        <strong>Velocity（展示性）</strong>——完成後能清楚展示給別人看嗎？
+        對面試官和潛在雇主而言，一個「能 live demo、有真實資料、視覺精美」的專案，
+        遠比一個技術複雜但難以展示的專案更有說服力。
+      </p>
+    </div>
+  </div>
+
+  <div class="topic-grid">
+    <div class="topic-card" data-score="A">
+      <span class="topic-score high">推薦</span>
+      <div class="topic-name">個人書籤 / 閱讀清單</div>
+      <div class="topic-desc">儲存連結、分類標籤、閱讀狀態追蹤。CRUD 完整、auth 必要、資料結構簡單清晰。</div>
+    </div>
+    <div class="topic-card" data-score="A">
+      <span class="topic-score high">推薦</span>
+      <div class="topic-name">習慣追蹤器</div>
+      <div class="topic-desc">記錄每日習慣打卡、連續天數、週報圖表。資料視覺化展示效果佳，面試亮點高。</div>
+    </div>
+    <div class="topic-card" data-score="A">
+      <span class="topic-score high">推薦</span>
+      <div class="topic-name">個人記帳本</div>
+      <div class="topic-desc">收支記錄、分類統計、月報圖表。有真實需求、功能邊界清晰、可加入預算提醒。</div>
+    </div>
+    <div class="topic-card" data-score="B">
+      <span class="topic-score mid">可行</span>
+      <div class="topic-name">食譜收藏平台</div>
+      <div class="topic-desc">新增食譜、材料清單、步驟圖文、搜尋過濾。圖片上傳需整合 Supabase Storage。</div>
+    </div>
+    <div class="topic-card" data-score="B">
+      <span class="topic-score mid">可行</span>
+      <div class="topic-name">技能學習路線圖</div>
+      <div class="topic-desc">自訂學習目標、拆解子任務、進度追蹤。適合做成公開分享頁面增加曝光度。</div>
+    </div>
+    <div class="topic-card" data-score="C">
+      <span class="topic-score low">謹慎</span>
+      <div class="topic-name">社群 / 論壇系統</div>
+      <div class="topic-desc">按讚、回覆、通知、追蹤——這些功能每個都有複雜的即時性需求，六週很容易做不完。</div>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="cpanel">
+      <div class="cpanel-hdr bad">常見失敗模式</div>
+      <pre style="font-size:.78rem;padding:1.2rem;line-height:1.8;"><span class="fn">❌</span> 想做「下一個 Notion」
+<span class="fn">❌</span> 功能清單超過 20 項
+<span class="fn">❌</span> 需要即時推播 / WebSocket
+<span class="fn">❌</span> 依賴付費第三方 API 才能運作
+<span class="fn">❌</span> 沒有明確的使用者（自己不用）
+<span class="fn">❌</span> 先做介面，不知道資料長什麼樣</pre>
+    </div>
+    <div class="cpanel">
+      <div class="cpanel-hdr good">成功特徵</div>
+      <pre style="font-size:.78rem;padding:1.2rem;line-height:1.8;"><span class="str">✅</span> 自己或朋友有真實使用需求
+<span class="str">✅</span> MVP 功能在 3 週內能完成
+<span class="str">✅</span> 資料模型不超過 5 張資料表
+<span class="str">✅</span> 有登入系統（展示 auth 能力）
+<span class="str">✅</span> 有圖表或視覺化（展示效果）
+<span class="str">✅</span> 能用一句話解釋這個產品做什麼</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ FEATURES -->
+<section class="section" id="features">
+  <div class="eyebrow">03 &mdash; Feature Definition</div>
+  <h2 class="section-title">功能定義與 MVP 範疇</h2>
+  <p class="section-intro">
+    MVP（Minimum Viable Product）不是「做最少的東西」，而是「用最少的功能驗證核心價值」。
+    用 <strong>MoSCoW 法則</strong>為所有功能排優先序，讓你清楚知道哪些是本次 Side Project 必須完成的範疇。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">MV</div>
+      <div>
+        <div class="ctitle">MoSCoW 優先順序法則</div>
+        <div class="csub">Must / Should / Could / Won't</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <strong>Must Have</strong> — 沒有這個功能，產品就沒有意義。這是 MVP 的核心範疇，六週必須完成。<br>
+        <strong>Should Have</strong> — 重要但不是核心，若時間允許（第 16–17 週）再加入。<br>
+        <strong>Could Have</strong> — 錦上添花的功能，可以做為第二版本的迭代方向。<br>
+        <strong>Won't Have（this time）</strong> — 本次刻意排除，減少範疇蔓延（Scope Creep）。
+      </p>
+    </div>
+  </div>
+
+  <p style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem;">範例：個人記帳本 App 功能清單</p>
+  <table class="ptable">
+    <thead>
+      <tr>
+        <th>功能</th>
+        <th>說明</th>
+        <th>優先級</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>使用者註冊 / 登入</td>
+        <td>Email + Password，使用 Supabase Auth</td>
+        <td><span class="tag mvp">Must Have</span></td>
+      </tr>
+      <tr>
+        <td>新增收支記錄</td>
+        <td>金額、分類、日期、備註欄位</td>
+        <td><span class="tag mvp">Must Have</span></td>
+      </tr>
+      <tr>
+        <td>收支列表</td>
+        <td>依日期排序，可依月份篩選</td>
+        <td><span class="tag mvp">Must Have</span></td>
+      </tr>
+      <tr>
+        <td>編輯 / 刪除記錄</td>
+        <td>完整的 CRUD 操作</td>
+        <td><span class="tag mvp">Must Have</span></td>
+      </tr>
+      <tr>
+        <td>月度支出圖表</td>
+        <td>使用 Recharts 呈現圓餅圖或長條圖</td>
+        <td><span class="tag mvp">Must Have</span></td>
+      </tr>
+      <tr>
+        <td>分類管理</td>
+        <td>自訂分類名稱與顏色</td>
+        <td><span class="tag v2">Should Have</span></td>
+      </tr>
+      <tr>
+        <td>預算設定與警告</td>
+        <td>設定月預算，超出時顯示警告</td>
+        <td><span class="tag v2">Should Have</span></td>
+      </tr>
+      <tr>
+        <td>CSV 匯出</td>
+        <td>將記錄匯出為 Excel 可讀的 CSV</td>
+        <td><span class="tag v2">Could Have</span></td>
+      </tr>
+      <tr>
+        <td>多帳本（家庭 / 個人）</td>
+        <td>不同帳本分開計算</td>
+        <td><span class="tag wont">Won't Have</span></td>
+      </tr>
+      <tr>
+        <td>收據 OCR 辨識</td>
+        <td>拍照自動填入金額</td>
+        <td><span class="tag wont">Won't Have</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note warn">
+    <span class="note-label">SCOPE CREEP WARNING</span>
+    「範疇蔓延」是 Side Project 最大的殺手。每次你說「這個功能應該不難，順便做一下」，
+    就是在為自己增加不確定性。在規劃文件中白紙黑字寫下 <strong>Won't Have</strong>，
+    是對自己的承諾，也是避免拖延完成的紀律。
+  </div>
+</section>
+
+<!-- ════════════════ USER STORIES -->
+<section class="section" id="user-stories">
+  <div class="eyebrow">04 &mdash; User Stories</div>
+  <h2 class="section-title">User Stories 撰寫</h2>
+  <p class="section-intro">
+    User Story 是從<strong>使用者視角</strong>描述功能需求的最小單位。
+    格式固定為：<em>「身為一個 [角色]，我想要 [行動]，以便 [目的]。」</em>
+    這個格式迫使你思考「為什麼需要這個功能」，而不只是「做什麼」。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">3C</div>
+      <div>
+        <div class="ctitle">好的 User Story 三個特徵（3C）</div>
+        <div class="csub">Card × Conversation × Confirmation</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <strong>Card</strong>——簡短到可以寫在一張便利貼上，通常不超過兩行。
+        如果需要很多字才能說清楚，代表這個 Story 太大，應該拆分。
+      </p>
+      <p>
+        <strong>Conversation</strong>——Story 是對話的起點，不是規格的終點。
+        每個 Story 後面應該有「驗收條件（Acceptance Criteria）」，
+        描述什麼狀況下才算「完成」。
+      </p>
+      <p>
+        <strong>Confirmation</strong>——驗收條件必須可以被<em>客觀驗證</em>，
+        不能是「操作起來要流暢」這種主觀描述，
+        而是「點擊儲存後，記錄出現在列表中且金額正確」。
+      </p>
+    </div>
+  </div>
+
+  <p style="font-family:var(--font-m);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.8rem;">範例 User Stories — 個人記帳本</p>
+  <div class="story-list">
+    <div class="story-row">
+      <span class="story-role">訪客</span>
+      <div class="story-text">
+        身為一個<span>訪客</span>，我想要用 Email 和密碼<span>註冊帳號</span>，
+        以便我的記帳資料能夠安全地儲存並在不同裝置上存取。
+        <br><em style="font-size:.78rem;color:var(--muted);font-style:normal;">驗收：送出表單後自動登入並導向 Dashboard；Email 已存在時顯示錯誤訊息。</em>
+      </div>
+      <span class="story-priority"><span class="tag mvp">Must</span></span>
+    </div>
+    <div class="story-row">
+      <span class="story-role">登入用戶</span>
+      <div class="story-text">
+        身為一個<span>登入用戶</span>，我想要<span>新增一筆支出記錄</span>（含金額、分類、日期、備註），
+        以便追蹤我的每日消費。
+        <br><em style="font-size:.78rem;color:var(--muted);font-style:normal;">驗收：儲存後記錄立即出現在列表中，當月支出總計即時更新。</em>
+      </div>
+      <span class="story-priority"><span class="tag mvp">Must</span></span>
+    </div>
+    <div class="story-row">
+      <span class="story-role">登入用戶</span>
+      <div class="story-text">
+        身為一個<span>登入用戶</span>，我想要<span>查看當月各分類的支出比例圓餅圖</span>，
+        以便了解自己的消費結構。
+        <br><em style="font-size:.78rem;color:var(--muted);font-style:normal;">驗收：圖表依當月資料即時計算；沒有記錄時顯示空狀態提示。</em>
+      </div>
+      <span class="story-priority"><span class="tag mvp">Must</span></span>
+    </div>
+    <div class="story-row">
+      <span class="story-role">登入用戶</span>
+      <div class="story-text">
+        身為一個<span>登入用戶</span>，我想要<span>編輯或刪除</span>之前的記錄，
+        以便修正輸入錯誤。
+        <br><em style="font-size:.78rem;color:var(--muted);font-style:normal;">驗收：刪除前顯示確認對話框；刪除後從列表中移除且統計數字更新。</em>
+      </div>
+      <span class="story-priority"><span class="tag mvp">Must</span></span>
+    </div>
+    <div class="story-row">
+      <span class="story-role">登入用戶</span>
+      <div class="story-text">
+        身為一個<span>登入用戶</span>，我想要<span>設定每月預算上限</span>，
+        以便在快要超支時收到警告。
+        <br><em style="font-size:.78rem;color:var(--muted);font-style:normal;">驗收：支出超過預算 80% 時進度條變黃；超過 100% 時變紅並顯示警告文字。</em>
+      </div>
+      <span class="story-priority"><span class="tag v2">Should</span></span>
+    </div>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">INVEST CRITERIA</span>
+    好的 User Story 應符合 <strong>INVEST</strong> 原則：Independent（獨立）、Negotiable（可協商）、
+    Valuable（有價值）、Estimable（可估算）、Small（夠小）、Testable（可測試）。
+    每次寫完 Story，用這六個字過一遍，確保它是可執行的工作單位。
+  </div>
+</section>
+
+<!-- ════════════════ WIREFRAME -->
+<section class="section" id="wireframe">
+  <div class="eyebrow">05 &mdash; Wireframe</div>
+  <h2 class="section-title">Wireframe 低保真設計</h2>
+  <p class="section-intro">
+    Wireframe 的目的是<strong>快速驗證佈局和流程</strong>，而不是做出精美的設計稿。
+    在這個階段，用方塊和線條代表元素，把精力放在「使用者怎麼操作」，而不是「顏色和字型」。
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">低保真（Lo-Fi）</div>
+      <div class="feat-desc">手繪或方塊圖，快速溝通佈局想法，不討論視覺細節。<strong>本週目標</strong>。</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">中保真（Mid-Fi）</div>
+      <div class="feat-desc">用 Figma 的框架元件精確定義 grid、間距與元件層級，但不套用顏色。</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">高保真（Hi-Fi）</div>
+      <div class="feat-desc">完整的設計稿，含顏色、字型、圖示。通常在第 16 週視覺完善階段才需要。</div>
+    </div>
+  </div>
+
+  <div class="wireframe">
+    <div class="wf-label">Wireframe 示意 — 個人記帳本（Dashboard 頁）</div>
+    <div class="wf-screen">
+      <div class="wf-topbar">
+        <div class="wf-dot active"></div><div class="wf-dot"></div><div class="wf-dot"></div>
+        <div class="wf-url"></div>
+      </div>
+      <div class="wf-body">
+        <div class="wf-nav">
+          <div class="wf-nav-logo"></div>
+          <div class="wf-nav-items">
+            <div class="wf-nav-item"></div>
+            <div class="wf-nav-item"></div>
+            <div class="wf-nav-item"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);padding:0;">
+          <div style="background:var(--bg);padding:1rem;">
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);margin-bottom:.4rem;">本月支出</div>
+            <div style="height:24px;width:80%;background:rgba(167,139,250,.2);margin-bottom:.3rem;"></div>
+            <div style="height:8px;width:50%;background:var(--border);"></div>
+          </div>
+          <div style="background:var(--bg);padding:1rem;">
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);margin-bottom:.4rem;">本月收入</div>
+            <div style="height:24px;width:70%;background:rgba(52,211,153,.15);margin-bottom:.3rem;"></div>
+            <div style="height:8px;width:50%;background:var(--border);"></div>
+          </div>
+          <div style="background:var(--bg);padding:1rem;">
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);margin-bottom:.4rem;">預算進度</div>
+            <div style="height:8px;background:var(--border);border-radius:4px;margin-bottom:.4rem;"><div style="height:100%;width:65%;background:rgba(167,139,250,.5);border-radius:4px;"></div></div>
+            <div style="height:8px;width:40%;background:var(--border);"></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">
+          <div style="background:var(--bg);padding:1.2rem;">
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);margin-bottom:.8rem;">分類圖表（圓餅）</div>
+            <div style="width:80px;height:80px;border-radius:50%;background:conic-gradient(rgba(167,139,250,.4) 0 40%,rgba(232,121,249,.4) 40% 65%,rgba(52,211,153,.4) 65% 80%,rgba(251,191,36,.3) 80% 100%);margin:0 auto 1rem;"></div>
+            <div style="display:flex;flex-direction:column;gap:.3rem;">
+              <div style="display:flex;align-items:center;gap:.5rem;"><div style="width:8px;height:8px;background:rgba(167,139,250,.6);"></div><div style="height:6px;flex:1;background:var(--border);"></div></div>
+              <div style="display:flex;align-items:center;gap:.5rem;"><div style="width:8px;height:8px;background:rgba(232,121,249,.6);"></div><div style="height:6px;flex:1;background:var(--border);"></div></div>
+              <div style="display:flex;align-items:center;gap:.5rem;"><div style="width:8px;height:8px;background:rgba(52,211,153,.5);"></div><div style="height:6px;flex:1;background:var(--border);"></div></div>
+            </div>
+          </div>
+          <div style="background:var(--bg);padding:1.2rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;">
+              <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);">最近記錄</div>
+              <div style="width:50px;height:18px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.25);"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.4rem;">
+              <div style="height:28px;background:var(--bg2);border:1px solid var(--border);"></div>
+              <div style="height:28px;background:var(--bg2);border:1px solid var(--border);"></div>
+              <div style="height:28px;background:var(--bg2);border:1px solid var(--border);"></div>
+              <div style="height:28px;background:var(--bg2);border:1px solid var(--border);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note-label">WIREFRAME 工具推薦</span>
+    <strong>免費選項</strong>：Excalidraw（手繪風格，協作友好）、Figma（免費版足夠）、draw.io。
+    <strong>最快的方式</strong>：用鉛筆在 A4 紙上畫，拍照存到規劃文件。
+    重點是速度和溝通，不是工具本身。
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.1rem;color:var(--text);margin:2rem 0 .8rem;">需要 Wireframe 的頁面清單</h3>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-name">Auth 頁面</div>
+      <div class="feat-desc">登入 / 註冊表單、錯誤提示、社群登入按鈕位置</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">Dashboard / 首頁</div>
+      <div class="feat-desc">核心資料概覽、最近記錄、主要 CTA 按鈕</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">列表頁</div>
+      <div class="feat-desc">篩選器、排序、分頁或無限捲動，空狀態設計</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">新增 / 編輯表單</div>
+      <div class="feat-desc">欄位佈局、驗證提示位置、送出 / 取消按鈕</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">詳細頁（若有）</div>
+      <div class="feat-desc">單筆資料的完整資訊展示、操作按鈕（編輯、刪除）</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-name">手機版佈局</div>
+      <div class="feat-desc">底部導覽列 vs 漢堡選單、卡片單欄排列</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ DATA MODEL -->
+<section class="section" id="data-model">
+  <div class="eyebrow">06 &mdash; Data Modeling</div>
+  <h2 class="section-title">資料結構設計（ERD）</h2>
+  <p class="section-intro">
+    在寫任何程式碼之前，先設計好資料庫的 Schema 是最省時的做法。
+    <strong>Entity-Relationship Diagram（ERD）</strong> 幫助你思清楚：有哪些資料表、欄位是什麼型別、
+    資料表之間的關係是一對多還是多對多。
+  </p>
+
+  <div class="cblock">
+    <div class="cblock-head">
+      <div class="cicon">🔑</div>
+      <div>
+        <div class="ctitle">關係型資料庫核心概念</div>
+        <div class="csub">PK / FK / 一對多 / 多對多</div>
+      </div>
+    </div>
+    <div class="cbody">
+      <p>
+        <strong>Primary Key（PK）</strong>——每張資料表都需要唯一識別每筆記錄的欄位。
+        Supabase 預設使用 <em>UUID</em>（<code>gen_random_uuid()</code>），比自增 ID 更安全。
+      </p>
+      <p>
+        <strong>Foreign Key（FK）</strong>——用來建立表與表之間的關係。
+        例如 <code>transactions</code> 表的 <code>user_id</code> 欄位參照 <code>users</code> 表的 <code>id</code>，
+        建立「一個用戶有多筆交易記錄」的一對多關係。
+      </p>
+      <p>
+        <strong>多對多關係</strong>——需要一張<em>中間表（Junction Table）</em>來實現。
+        例如「一篇文章有多個標籤、一個標籤有多篇文章」，就需要 <code>article_tags</code> 中間表。
+      </p>
+    </div>
+  </div>
+
+  <div class="er-diagram">
+    <div style="font-family:var(--font-m);font-size:.62rem;color:var(--muted);letter-spacing:.1em;margin-bottom:1.5rem;">ERD 範例 — 個人記帳本</div>
+    <div class="er-grid">
+      <div class="er-table">
+        <div class="er-table-head users">users（Supabase Auth）</div>
+        <div class="er-field"><span class="er-field-name">id <span class="er-pk">PK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">email</span><span class="er-field-type">text</span></div>
+        <div class="er-field"><span class="er-field-name">created_at</span><span class="er-field-type">timestamptz</span></div>
+      </div>
+      <div class="er-table">
+        <div class="er-table-head projects">transactions（交易記錄）</div>
+        <div class="er-field"><span class="er-field-name">id <span class="er-pk">PK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">user_id <span class="er-fk">FK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">category_id <span class="er-fk">FK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">amount</span><span class="er-field-type">numeric(12,2)</span></div>
+        <div class="er-field"><span class="er-field-name">type</span><span class="er-field-type">enum('income','expense')</span></div>
+        <div class="er-field"><span class="er-field-name">note</span><span class="er-field-type">text</span></div>
+        <div class="er-field"><span class="er-field-name">date</span><span class="er-field-type">date</span></div>
+        <div class="er-field"><span class="er-field-name">created_at</span><span class="er-field-type">timestamptz</span></div>
+      </div>
+      <div class="er-table">
+        <div class="er-table-head tags">categories（分類）</div>
+        <div class="er-field"><span class="er-field-name">id <span class="er-pk">PK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">user_id <span class="er-fk">FK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">name</span><span class="er-field-type">text</span></div>
+        <div class="er-field"><span class="er-field-name">color</span><span class="er-field-type">varchar(7)</span></div>
+        <div class="er-field"><span class="er-field-name">icon</span><span class="er-field-type">text</span></div>
+      </div>
+      <div class="er-table">
+        <div class="er-table-head comments">budgets（預算）</div>
+        <div class="er-field"><span class="er-field-name">id <span class="er-pk">PK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">user_id <span class="er-fk">FK</span></span><span class="er-field-type">uuid</span></div>
+        <div class="er-field"><span class="er-field-name">month</span><span class="er-field-type">varchar(7)（YYYY-MM）</span></div>
+        <div class="er-field"><span class="er-field-name">amount</span><span class="er-field-type">numeric(12,2)</span></div>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <div style="font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.8rem;">TABLE RELATIONSHIPS</div>
+      <div class="er-rel">users <span style="color:var(--accent)">1</span> → <span style="color:var(--accent2)">N</span> transactions（一個用戶有多筆交易）</div>
+      <div class="er-rel">users <span style="color:var(--accent)">1</span> → <span style="color:var(--accent2)">N</span> categories（一個用戶有多個分類）</div>
+      <div class="er-rel">categories <span style="color:var(--accent)">1</span> → <span style="color:var(--accent2)">N</span> transactions（一個分類有多筆交易）</div>
+      <div class="er-rel">users <span style="color:var(--accent)">1</span> → <span style="color:var(--accent2)">N</span> budgets（一個用戶每月有一筆預算設定）</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-hdr">
+      <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+      <span class="code-lang">SQL — Supabase Schema 建立語法</span>
+    </div>
+    <pre><span class="cmt">-- 啟用 UUID 擴充（Supabase 預設已啟用）</span>
+<span class="kw">CREATE EXTENSION IF NOT EXISTS</span> <span class="str">"uuid-ossp"</span>;
+
+<span class="cmt">-- 分類表</span>
+<span class="kw">CREATE TABLE</span> categories (
+  id          <span class="type">UUID</span> <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  user_id     <span class="type">UUID</span> <span class="kw">REFERENCES</span> auth.users(<span class="prop">id</span>) <span class="kw">ON DELETE CASCADE</span>,
+  name        <span class="type">TEXT</span> <span class="kw">NOT NULL</span>,
+  color       <span class="type">VARCHAR(7)</span> <span class="kw">NOT NULL DEFAULT</span> <span class="str">'#a78bfa'</span>,
+  icon        <span class="type">TEXT</span>,
+  created_at  <span class="type">TIMESTAMPTZ</span> <span class="kw">DEFAULT</span> now()
+);
+
+<span class="cmt">-- 交易記錄表</span>
+<span class="kw">CREATE TABLE</span> transactions (
+  id          <span class="type">UUID</span> <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  user_id     <span class="type">UUID</span> <span class="kw">REFERENCES</span> auth.users(<span class="prop">id</span>) <span class="kw">ON DELETE CASCADE</span>,
+  category_id <span class="type">UUID</span> <span class="kw">REFERENCES</span> categories(<span class="prop">id</span>) <span class="kw">ON DELETE SET NULL</span>,
+  amount      <span class="type">NUMERIC(12, 2)</span> <span class="kw">NOT NULL CHECK</span> (amount <span class="op">&gt;</span> <span class="num">0</span>),
+  type        <span class="type">TEXT</span> <span class="kw">NOT NULL CHECK</span> (type <span class="kw">IN</span> (<span class="str">'income'</span>, <span class="str">'expense'</span>)),
+  note        <span class="type">TEXT</span>,
+  date        <span class="type">DATE</span> <span class="kw">NOT NULL DEFAULT</span> current_date,
+  created_at  <span class="type">TIMESTAMPTZ</span> <span class="kw">DEFAULT</span> now()
+);
+
+<span class="cmt">-- Row Level Security：每個用戶只能存取自己的資料</span>
+<span class="kw">ALTER TABLE</span> transactions <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">CREATE POLICY</span> <span class="str">"Users own their transactions"</span>
+  <span class="kw">ON</span> transactions <span class="kw">FOR ALL</span>
+  <span class="kw">USING</span> (auth.uid() <span class="op">=</span> user_id);</pre>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">RLS 很重要</span>
+    Supabase 的 <strong>Row Level Security（RLS）</strong> 是資料隔離的關鍵。
+    忘記開啟 RLS 的話，所有登入用戶都能讀取彼此的資料。
+    建議在建立每張資料表後，立即設定對應的 Policy，不要留到最後才補。
+  </div>
+</section>
+
+<!-- ════════════════ TECH STACK -->
+<section class="section" id="tech-stack">
+  <div class="eyebrow">07 &mdash; Tech Stack</div>
+  <h2 class="section-title">技術選型</h2>
+  <p class="section-intro">
+    本課程的 Side Project 使用固定的技術堆疊，降低學習成本，聚焦在「把產品做出來」。
+    每個選擇都有明確的理由，而不是「因為流行」。
+  </p>
+
+  <div class="stack-grid">
+    <div class="stack-layer">
+      <div class="stack-layer-title">前端框架</div>
+      <div class="stack-item">
+        <div class="stack-name">Next.js 14</div>
+        <div class="stack-why">App Router + Server Components，同時支援 SSR 和 Client 元件。SEO 友好，Vercel 一鍵部署。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">React 18</div>
+        <div class="stack-why">第 8–12 週已熟練，直接沿用。Next.js 的底層就是 React，過渡自然。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">Tailwind CSS</div>
+        <div class="stack-why">第 11 週已完整學習，快速打造響應式 UI，無需在 CSS 和 JSX 之間切換。</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-layer-title">後端 / 資料庫</div>
+      <div class="stack-item">
+        <div class="stack-name">Supabase</div>
+        <div class="stack-why">PostgreSQL 資料庫 + Auth + Storage + 即時訂閱，免費方案足以應付 Side Project 的流量。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">Next.js API Routes</div>
+        <div class="stack-why">輕量的 BFF（Backend for Frontend），處理敏感邏輯（如 Webhook），避免 API Key 暴露在前端。</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-layer-title">UI 元件</div>
+      <div class="stack-item">
+        <div class="stack-name">shadcn/ui</div>
+        <div class="stack-why">基於 Radix UI + Tailwind，複製原始碼到專案中，完全可自訂，無樣式侵入。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">Recharts</div>
+        <div class="stack-why">React 原生的圖表庫，API 直觀，文件完整，適合做 Dashboard 類的資料視覺化。</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-layer-title">開發工具</div>
+      <div class="stack-item">
+        <div class="stack-name">TypeScript</div>
+        <div class="stack-why">Supabase 可自動生成型別定義，搭配 TS 能在開發時發現大多數資料型別錯誤。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">Zod</div>
+        <div class="stack-why">表單驗證與 API 回應的 Runtime 型別驗證，搭配 react-hook-form 使用。</div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-name">Vercel</div>
+        <div class="stack-why">GitHub 整合後每次 push 自動部署，免費方案，Preview URL 方便展示給面試官。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note info">
+    <span class="note-label">為什麼不用 Redux / Zustand？</span>
+    Supabase 本身就提供了資料層（資料庫）和 Auth 狀態，配合 Next.js 的 Server Components，
+    大多數 Side Project 不需要額外的全域狀態管理庫。
+    若你的應用有複雜的客戶端狀態（如多步驟表單、拖曳排序），再考慮加入 Zustand。
+    過早引入狀態管理反而增加複雜度。
+  </div>
+</section>
+
+<!-- ════════════════ ROADMAP -->
+<section class="section" id="roadmap">
+  <div class="eyebrow">08 &mdash; Development Roadmap</div>
+  <h2 class="section-title">六週開發時程規劃</h2>
+  <p class="section-intro">
+    有了明確的時程，每週知道自己應該完成什麼，才能在第 18 週如期部署上線。
+    時程的重點是「有緩衝、可調整」，而不是把每天都排滿。
+  </p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot done">13</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 13 — 本週</div>
+        <div class="tl-title">規劃與設計</div>
+        <div class="tl-body">確定選題、完成功能清單（MoSCoW）、撰寫 User Stories、畫 Wireframe、設計 ERD、建立 Supabase 專案並建立資料表。</div>
+        <div class="tl-tags"><span class="tl-tag">規劃文件</span><span class="tl-tag">ERD</span><span class="tl-tag">Supabase 初始化</span></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot">14</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 14</div>
+        <div class="tl-title">後端基礎與資料庫串接</div>
+        <div class="tl-body">建立 Next.js 專案、設定 Supabase Client、實作基本的 CRUD API Routes，驗證資料寫入與讀取正常運作。</div>
+        <div class="tl-tags"><span class="tl-tag">Next.js 初始化</span><span class="tl-tag">Supabase SDK</span><span class="tl-tag">API Routes</span></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot">15</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 15</div>
+        <div class="tl-title">使用者登入系統</div>
+        <div class="tl-body">整合 Supabase Auth、實作登入 / 註冊頁面、設定 Protected Routes（未登入導向 /login），完成 RLS Policy。</div>
+        <div class="tl-tags"><span class="tl-tag">Auth</span><span class="tl-tag">Protected Routes</span><span class="tl-tag">RLS</span></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot">16</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 16</div>
+        <div class="tl-title">核心功能開發</div>
+        <div class="tl-body">完成所有 Must Have 功能的前後端實作，包含新增、列表、編輯、刪除與資料視覺化（圖表）。</div>
+        <div class="tl-tags"><span class="tl-tag">CRUD 完整</span><span class="tl-tag">圖表</span><span class="tl-tag">表單驗證</span></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot">17</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 17</div>
+        <div class="tl-title">UI 完善與錯誤處理</div>
+        <div class="tl-body">加入 Loading 骨架屏、錯誤提示、空狀態設計、RWD 調整（手機版）。若時間允許，實作 Should Have 功能。</div>
+        <div class="tl-tags"><span class="tl-tag">Loading UI</span><span class="tl-tag">Error Handling</span><span class="tl-tag">RWD</span></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot">18</div>
+      <div class="tl-content">
+        <div class="tl-week">WEEK 18</div>
+        <div class="tl-title">部署上線與成果展示</div>
+        <div class="tl-body">Vercel 部署、環境變數設定、撰寫 README（含 Demo 連結、功能截圖、技術說明），準備 Demo 展示。</div>
+        <div class="tl-tags"><span class="tl-tag">Vercel Deploy</span><span class="tl-tag">README</span><span class="tl-tag">Demo</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note-label">BUFFER 很重要</span>
+    每週的預估工作量應控制在實際可用時間的 <strong>70%</strong>。
+    剩下 30% 是緩衝，用來應對：功能比想像中難、踩到環境問題、期中考等不可預見的事情。
+    如果一切順利，就把這 30% 用在打磨 UI 細節或提前做下週的工作。
+  </div>
+</section>
+
+<!-- ════════════════ QUIZ -->
+<section class="section" id="quiz">
+  <div class="eyebrow">09 &mdash; Quiz</div>
+  <h2 class="section-title">隨堂測驗</h2>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 01 / 04</div>
+    <div class="quiz-q">MoSCoW 法則中，<strong>Should Have</strong> 代表什麼意思？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','Must Have 才是「沒有就無法運作」的功能，Should Have 是重要但非核心。')">
+        <div class="quiz-key">A</div>
+        <div>沒有這個功能，產品就無法正常運作，是核心功能</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','Should Have 是「高度期望但非必要」的功能，MVP 完成後若有餘力再加入，不影響核心體驗。')">
+        <div class="quiz-key">B</div>
+        <div>重要但非核心，MVP 完成後若有餘力再加入</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','這是 Could Have 的定義，Should Have 的優先級高於 Could Have。')">
+        <div class="quiz-key">C</div>
+        <div>可以有也可以沒有，純粹是錦上添花的功能</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','Won\'t Have 才是刻意排除的功能，Should Have 在未來版本是有機會被實作的。')">
+        <div class="quiz-key">D</div>
+        <div>本次版本刻意排除，未來也不打算實作</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 02 / 04</div>
+    <div class="quiz-q">User Story 的標準格式是什麼？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','這是技術規格的寫法，User Story 應該聚焦在使用者行為和目的，而不是實作細節。')">
+        <div class="quiz-key">A</div>
+        <div>「系統應該要能夠接受使用者輸入，並儲存到資料庫。」</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','這是功能描述，不是 User Story。User Story 需要明確的角色和目的（以便...）。')">
+        <div class="quiz-key">B</div>
+        <div>「新增一個表單讓使用者填寫支出金額和分類。」</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','標準格式：「身為一個 [角色]，我想要 [行動]，以便 [目的]。」這個格式迫使你同時考慮使用者是誰、做什麼，以及為什麼。')">
+        <div class="quiz-key">C</div>
+        <div>「身為一個登入用戶，我想要新增支出記錄，以便追蹤我的消費。」</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','這只說明了目的，沒有角色（誰）和行動（做什麼），不是完整的 User Story 格式。')">
+        <div class="quiz-key">D</div>
+        <div>「我需要追蹤每日消費，了解我的支出結構。」</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 03 / 04</div>
+    <div class="quiz-q">關於 Supabase 的 <strong>Row Level Security（RLS）</strong>，下列何者正確？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','RLS 是 PostgreSQL 的資料庫層安全機制，和前端授權邏輯是獨立的，兩者都需要。')">
+        <div class="quiz-key">A</div>
+        <div>只要在前端做好路由保護，就不需要開啟 RLS</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','RLS 開啟後不影響效能表現，它是資料庫的原生功能，不是應用層的查詢過濾。')">
+        <div class="quiz-key">B</div>
+        <div>開啟 RLS 會大幅降低資料庫查詢效能，應避免使用</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','Supabase 的資料表預設關閉 RLS，開啟後若沒有設定任何 Policy，所有查詢都會被拒絕（預設拒絕原則）。建立資料表後應立即設定 RLS 和 Policy。')">
+        <div class="quiz-key">C</div>
+        <div>開啟 RLS 後若沒有設定 Policy，所有查詢都會被拒絕；必須明確建立 Policy 允許操作</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','RLS 是 Supabase 的重要功能，也是 PostgreSQL 的標準特性，完全應該使用。')">
+        <div class="quiz-key">D</div>
+        <div>RLS 是 Supabase 特有的付費功能，免費方案無法使用</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+
+  <div class="quiz-block">
+    <div class="quiz-eye">QUESTION 04 / 04</div>
+    <div class="quiz-q">以下哪個 Side Project 選題最適合在六週內完成？</div>
+    <div class="quiz-options">
+      <div class="quiz-opt" onclick="answer(this,'wrong','「像 Twitter 一樣的平台」涉及即時推播、關注系統、通知、Feed 演算法等複雜功能，六週根本完成不了 MVP。')">
+        <div class="quiz-key">A</div>
+        <div>類似 Twitter 的微網誌平台，支援追蹤、按讚、轉推和即時通知</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','完整的電商平台需要金流串接、庫存管理、訂單系統等，工程量遠超六週。')">
+        <div class="quiz-key">B</div>
+        <div>完整的電商購物網站，含商品管理、購物車、金流串接和後台</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'correct','個人習慣追蹤器功能邊界清晰（打卡 + 統計 + Auth），資料模型簡單（users、habits、records），六週可以做到完整可用的狀態，且視覺效果展示性強。')">
+        <div class="quiz-key">C</div>
+        <div>個人習慣追蹤器，支援每日打卡、連續天數統計和簡單圖表</div>
+      </div>
+      <div class="quiz-opt" onclick="answer(this,'wrong','AI 推薦系統需要機器學習或第三方 AI API，遠超出本課程的技術範圍。')">
+        <div class="quiz-key">D</div>
+        <div>帶有 AI 個人化推薦的閱讀清單，能根據使用者行為自動推薦文章</div>
+      </div>
+    </div>
+    <div class="quiz-fb"></div>
+  </div>
+</section>
+
+<!-- ════════════════ DELIVERABLE -->
+<section class="section" id="deliverable">
+  <div class="eyebrow">10 &mdash; This Week's Deliverable</div>
+  <h2 class="section-title">本週交付物</h2>
+  <p class="section-intro">
+    本週不寫任何功能程式碼，只產出一份<strong>規劃文件</strong>。
+    這份文件是後續五週開發的基礎，請認真對待。
+    用 Notion、Markdown 或 Google Docs 撰寫皆可。
+  </p>
+
+  <div class="deliverable">
+    <div class="deliverable-title">規劃文件必要內容</div>
+    <div class="deliverable-items">
+      <div class="d-item">
+        <span class="d-num">01</span>
+        <div class="d-text">
+          <strong>產品簡介（一段話）</strong><br>
+          <span>這個 Side Project 是什麼？解決誰的什麼問題？目標用戶是誰？用一到兩句話說清楚。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">02</span>
+        <div class="d-text">
+          <strong>功能清單（MoSCoW 分類）</strong><br>
+          <span>列出所有功能點，標記 Must / Should / Could / Won't，並標示哪些屬於 MVP 範疇。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">03</span>
+        <div class="d-text">
+          <strong>User Stories（至少 6 則）</strong><br>
+          <span>標準格式：「身為... 我想要... 以便...」，每則 Story 附上驗收條件（Acceptance Criteria）。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">04</span>
+        <div class="d-text">
+          <strong>Wireframe（主要頁面，至少 4 頁）</strong><br>
+          <span>手繪掃描、Excalidraw 截圖、Figma 截圖皆可。必須包含 Auth 頁、Dashboard / 首頁、列表頁、表單頁。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">05</span>
+        <div class="d-text">
+          <strong>資料模型 ERD</strong><br>
+          <span>列出所有資料表名稱、欄位（名稱 + 型別 + 必填與否）、Primary Key、Foreign Key，以及表與表的關係。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">06</span>
+        <div class="d-text">
+          <strong>技術選型說明</strong><br>
+          <span>列出使用的技術堆疊並簡要說明選擇理由。若有使用課程範圍外的套件，說明為什麼需要它。</span>
+        </div>
+      </div>
+      <div class="d-item">
+        <span class="d-num">07</span>
+        <div class="d-text">
+          <strong>週次時程規劃（14–18 週）</strong><br>
+          <span>每週預計完成什麼里程碑，哪些功能在哪週完成。建議包含每週的「最低完成標準」作為 check-in 基準。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-d);font-size:1.1rem;color:var(--text);margin:2.5rem 0 1rem;">本週結束前完成清單</h3>
+  <div class="checklist">
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>確定 Side Project 選題，能用一句話清楚說明「這是什麼、解決誰的問題」</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>完成 MoSCoW 功能清單，MVP 範疇（Must Have）不超過 6 個功能點</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>撰寫至少 6 則 User Stories，每則附驗收條件</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>完成至少 4 個主要頁面的 Wireframe（Auth、Dashboard、列表、表單）</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>設計 ERD，標明所有資料表的欄位與關係</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>在 Supabase 建立專案，並依 ERD 建立所有資料表（含 RLS 設定）</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>建立 GitHub 私有 repo，初始化 Next.js 專案並推上去</span>
+    </div>
+    <div class="check-item" onclick="toggleCheck(this)">
+      <div class="check-box"></div>
+      <span>完成第 14–18 週的時程規劃，每週有明確的里程碑</span>
+    </div>
+  </div>
+
+  <div class="note tip">
+    <span class="note-label">PEER REVIEW</span>
+    完成規劃文件後，找另一位同學互相 review。重點問題：
+    「這個功能的 MVP 範疇你覺得六週能完成嗎？」
+    「有沒有哪個功能你認為應該從 Must 移到 Should？」
+    旁觀者往往能看到你因為太投入而忽略的盲點。
+  </div>
+</section>
+
+<!-- ════════════════ RESOURCES -->
+<section class="section" id="resources">
+  <div class="eyebrow">11 &mdash; Resources</div>
+  <h2 class="section-title">延伸資源</h2>
+  <div class="resource-grid">
+    <a class="resource-card" href="https://supabase.com/docs" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">Supabase Docs</div>
+      <div class="resource-desc">資料庫、Auth、Storage 的完整文件。從 Quick Start 開始，先跑通一個基本的 CRUD 範例。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://excalidraw.com" target="_blank" rel="noopener">
+      <div class="resource-type">設計工具</div>
+      <div class="resource-name">Excalidraw</div>
+      <div class="resource-desc">免費線上手繪風格白板，適合快速畫 Wireframe 和系統架構圖。支援協作，可直接分享連結。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://dbdiagram.io" target="_blank" rel="noopener">
+      <div class="resource-type">設計工具</div>
+      <div class="resource-name">dbdiagram.io</div>
+      <div class="resource-desc">線上 ERD 繪製工具，用 DSL 語法描述資料表和關係，自動產生視覺化圖表，可匯出 SQL。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://nextjs.org/docs" target="_blank" rel="noopener">
+      <div class="resource-type">官方文件</div>
+      <div class="resource-name">Next.js 14 Docs</div>
+      <div class="resource-desc">App Router 架構、Server Components、Route Handlers 的完整說明，是本課程後半段的核心參考。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://www.mountaingoatsoftware.com/agile/user-stories" target="_blank" rel="noopener">
+      <div class="resource-type">方法論</div>
+      <div class="resource-name">User Stories — Mike Cohn</div>
+      <div class="resource-desc">User Stories 概念的權威來源，Mike Cohn 的系列文章，解釋如何寫出好的 Story 和驗收條件。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+    <a class="resource-card" href="https://recharts.org" target="_blank" rel="noopener">
+      <div class="resource-type">套件文件</div>
+      <div class="resource-name">Recharts</div>
+      <div class="resource-desc">本課程推薦的 React 圖表庫，文件含大量範例，LineChart、BarChart、PieChart 都有完整示範。</div>
+      <div class="resource-arrow">&#8594;</div>
+    </a>
+  </div>
+</section>
+
+</div><!-- /content -->
+
+<nav class="bottom-nav">
+  <a href="week12.html" class="nav-btn">&larr; Week 12 — 部署上線</a>
+  <a href="index.html" class="home-link">&#8617; 返回總覽</a>
+  <a href="week14.html" class="nav-btn">Week 14 — 資料庫串接 &rarr;</a>
+</nav>
+
+</main>
+
+<script>
+// Progress bar
+const bar = document.getElementById('progressBar')
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100
+  bar.style.width = pct + '%'
+})
+
+// Scroll-in sections
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') })
+}, { threshold: 0.08 })
+document.querySelectorAll('.section').forEach(s => obs.observe(s))
+
+// TOC active
+const sections = document.querySelectorAll('.section[id]')
+const tocObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const link = document.querySelector(`.toc-item[href="#${e.target.id}"]`)
+    if (link) link.classList.toggle('active', e.isIntersecting)
+  })
+}, { threshold: 0.25, rootMargin: '-60px 0px -40% 0px' })
+sections.forEach(s => tocObs.observe(s))
+
+// Quiz
+let answered = []
+function answer(el, type, feedback) {
+  const block = el.closest('.quiz-block')
+  const idx = [...document.querySelectorAll('.quiz-block')].indexOf(block)
+  if (answered.includes(idx)) return
+  answered.push(idx)
+  block.querySelectorAll('.quiz-opt').forEach(o => o.style.pointerEvents = 'none')
+  el.classList.add(type)
+  const fb = block.querySelector('.quiz-fb')
+  fb.textContent = feedback
+  fb.classList.add('show')
+  if (type === 'wrong') fb.classList.add('wrong-fb')
+}
+
+// Checklist
+function toggleCheck(el) {
+  el.classList.toggle('done')
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : ''
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 12 — 部署上線：Vercel / GitHub Pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,600;0,700;1,300&family=Rajdhani:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050a05;--bg2:#081008;--bg3:#0d180d;--surface:#102010;
+  --border:#1a3a1a;--border2:#245024;
+  --text:#c8f0c8;--muted:#5a8a5a;--faint:#2a5a2a;
+  --accent:#39ff14;--accent-dim:rgba(57,255,20,.1);--accent-border:rgba(57,255,20,.3);
+  --accent2:#ffdd57;--accent2-dim:rgba(255,221,87,.1);
+  --accent3:#57c8ff;--accent3-dim:rgba(87,200,255,.1);
+  --red:#ff4444;--red-dim:rgba(255,68,68,.1);
+  --orange:#ff8c00;
+  --code-bg:#020802;--code-text:#a0f0a0;
+  --scan:rgba(0,255,0,.03);
+  --font-d:'Exo 2',sans-serif;
+  --font-b:'Rajdhani',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-b);font-weight:300;line-height:1.75;
+  overflow-x:hidden;letter-spacing:.02em;
+}
+
+/* CRT scanlines effect */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 2px,var(--scan) 2px,var(--scan) 4px
+  );
+}
+/* subtle green glow vignette */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 50%,transparent 60%,rgba(0,0,0,.6));
+}
+
+/* blinking cursor animation */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+@keyframes glitch{0%,100%{text-shadow:0 0 8px var(--accent)}50%{text-shadow:2px 0 0 var(--red),-2px 0 0 var(--accent3),0 0 8px var(--accent)}}
+@keyframes boot{from{width:0}to{width:100%}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 4px var(--accent)}50%{box-shadow:0 0 16px var(--accent),0 0 32px rgba(57,255,20,.3)}}
+
+.progress-bar{
+  position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;
+  background:var(--accent);
+  box-shadow:0 0 10px var(--accent),0 0 20px rgba(57,255,20,.5);
+  transition:width .08s linear;
+}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 2.5rem;
+  background:rgba(5,10,5,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border2);
+}
+.logo{
+  font-family:var(--font-m);font-size:.75rem;color:var(--accent);
+  letter-spacing:.15em;text-decoration:none;font-weight:600;
+  text-shadow:0 0 8px var(--accent);
+}
+.header-badge{
+  font-family:var(--font-m);font-size:.62rem;letter-spacing:.12em;
+  padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);
+  background:var(--bg2);
+}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{
+  font-family:var(--font-m);font-size:.7rem;color:var(--muted);
+  text-decoration:none;transition:color .2s,text-shadow .2s;letter-spacing:.06em;
+}
+.header-nav a:hover{color:var(--accent);text-shadow:0 0 6px var(--accent);}
+
+/* TOC with mission phases look */
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{
+  display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;
+  font-family:var(--font-m);font-size:.57rem;color:var(--faint);
+  text-decoration:none;letter-spacing:.1em;white-space:nowrap;transition:color .2s;
+}
+.toc-item::before{
+  content:'>';width:10px;font-size:.55rem;color:var(--faint);
+  transition:color .2s;font-style:normal;
+}
+.toc-item:hover,.toc-item.active{color:var(--accent);}
+.toc-item:hover::before,.toc-item.active::before{color:var(--accent);text-shadow:0 0 4px var(--accent);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO - mission control style */
+.hero{
+  padding:5rem 3.5rem 4rem;border-bottom:1px solid var(--border2);
+  position:relative;overflow:hidden;min-height:480px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+/* countdown decoration */
+.hero-terminal{
+  position:absolute;top:2rem;right:3rem;
+  font-family:var(--font-m);font-size:.68rem;color:var(--muted);
+  line-height:2;text-align:right;
+  opacity:0;animation:fadeUp .5s .8s forwards;
+}
+.hero-terminal .hi{color:var(--accent);text-shadow:0 0 4px var(--accent);}
+
+.hero-label{
+  font-family:var(--font-m);font-size:.65rem;color:var(--accent);
+  letter-spacing:.25em;text-transform:uppercase;margin-bottom:1rem;
+  text-shadow:0 0 6px var(--accent);
+  opacity:0;animation:fadeUp .5s .1s forwards;
+}
+.hero h1{
+  font-family:var(--font-d);font-size:clamp(2.8rem,5.5vw,5rem);
+  font-weight:700;line-height:1.02;letter-spacing:.04em;
+  margin-bottom:1.4rem;max-width:720px;
+  opacity:0;animation:fadeUp .5s .25s forwards;
+}
+.hero h1 .hi{color:var(--accent);text-shadow:0 0 12px var(--accent);}
+.hero h1 .hi2{color:var(--accent2);text-shadow:0 0 8px var(--accent2);}
+.hero-desc{
+  font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;
+  opacity:0;animation:fadeUp .5s .38s forwards;
+}
+.hero-meta{
+  display:flex;gap:0;border:1px solid var(--border2);width:fit-content;
+  opacity:0;animation:fadeUp .5s .5s forwards;
+}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border2);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{
+  font-family:var(--font-m);font-size:.58rem;color:var(--faint);
+  letter-spacing:.15em;text-transform:uppercase;margin-bottom:.25rem;
+}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--accent);font-weight:600;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{
+  padding:4rem 0;border-bottom:1px solid var(--border);
+  opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;
+}
+.section.visible{opacity:1;transform:none;}
+
+.eyebrow{
+  font-family:var(--font-m);font-size:.63rem;color:var(--accent);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.7rem;text-shadow:0 0 4px var(--accent);
+}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--accent),transparent);opacity:.7;}
+.section-title{
+  font-family:var(--font-d);font-size:2rem;font-weight:700;letter-spacing:.05em;
+  color:var(--text);margin-bottom:1.8rem;line-height:1.1;
+}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);}
+.obj-item{
+  background:var(--bg2);padding:1.3rem 1.5rem;
+  display:flex;gap:1rem;align-items:flex-start;transition:background .2s;
+}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{
+  font-family:var(--font-m);font-size:.6rem;color:var(--accent);font-weight:600;
+  background:var(--accent-dim);border:1px solid var(--accent-border);
+  padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;
+}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+/* concept blocks - terminal panel style */
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border2);overflow:hidden;}
+.cblock-head{
+  padding:1.1rem 1.8rem;background:var(--bg2);
+  border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;gap:1rem;
+}
+.cicon{
+  width:28px;height:28px;background:var(--accent);color:var(--bg);
+  font-family:var(--font-m);font-size:.65rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:600;margin-bottom:.1rem;letter-spacing:.05em;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#8ab08a;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:600;}
+.cbody em{color:var(--accent);font-style:normal;font-weight:600;text-shadow:0 0 4px var(--accent);}
+
+.note{border-left:2px solid var(--accent2);background:var(--accent2-dim);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#c8a830;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--accent2);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--accent);background:var(--accent-dim);color:#8ad88a;}
+.note.tip .note-label{color:var(--accent);}
+.note.info{border-left-color:var(--accent3);background:var(--accent3-dim);color:#8ac8e8;}
+.note.info .note-label{color:var(--accent3);}
+.note.warn{border-left-color:var(--red);background:var(--red-dim);color:#e88888;}
+.note.warn .note-label{color:var(--red);}
+
+/* code blocks - terminal style */
+.code-block{border:1px solid var(--border2);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border2);
+}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;}
+pre{
+  background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);
+}
+.t{color:#57ff97;}   /* command/tag */
+.p{color:#57d4ff;}   /* flag/option */
+.v{color:#ffd657;}   /* value/string */
+.c{color:#2a4a2a;font-style:italic;} /* comment */
+.s{color:#ff9f57;}   /* keyword */
+.fn{color:#c4a6f0;}  /* function */
+.ok{color:var(--accent);}  /* success */
+.err{color:var(--red);}   /* error */
+.warn-c{color:var(--accent2);} /* warning */
+code{
+  font-family:var(--font-m);font-size:.82em;background:var(--bg3);
+  color:var(--accent);padding:.1em .4em;border:1px solid var(--border2);
+}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border2);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border2);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(26,58,26,.5);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--accent);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* DEMO AREAS */
+.demo-wrap{border:1px solid var(--border2);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border2);
+  font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;
+}
+.demo-bar strong{color:var(--accent);text-shadow:0 0 4px var(--accent);}
+.demo-body{padding:1.8rem;background:var(--bg);}
+
+/* ── TERMINAL SIMULATOR ── */
+.terminal{
+  background:var(--code-bg);border:1px solid var(--border2);
+  font-family:var(--font-m);font-size:.78rem;padding:0;overflow:hidden;
+}
+.terminal-bar{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.5rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border2);
+}
+.terminal-title{font-size:.65rem;color:var(--muted);letter-spacing:.08em;margin-left:.5rem;}
+.terminal-body{padding:1.2rem 1.5rem;min-height:200px;position:relative;}
+.term-line{display:flex;gap:.5rem;margin-bottom:.3rem;line-height:1.6;}
+.term-prompt{color:var(--accent);flex-shrink:0;}
+.term-cmd{color:var(--text);}
+.term-out{color:var(--muted);margin-bottom:.3rem;padding-left:1.2rem;}
+.term-ok{color:var(--accent);}
+.term-err{color:var(--red);}
+.term-warn{color:var(--accent2);}
+.term-cursor{
+  display:inline-block;width:8px;height:14px;
+  background:var(--accent);margin-left:2px;vertical-align:text-bottom;
+  animation:blink .9s step-end infinite;
+}
+
+/* ── DEPLOY PIPELINE VISUAL ── */
+.pipeline{display:flex;align-items:center;gap:0;position:relative;margin:1.5rem 0;overflow-x:auto;}
+.pipeline-stage{
+  flex:1;min-width:100px;text-align:center;position:relative;
+}
+.stage-circle{
+  width:48px;height:48px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-m);font-size:.7rem;font-weight:600;
+  margin:0 auto .6rem;border:2px solid var(--border2);background:var(--bg2);
+  color:var(--muted);transition:all .3s;cursor:pointer;position:relative;z-index:1;
+}
+.stage-circle.active{
+  border-color:var(--accent);color:var(--accent);background:var(--accent-dim);
+  box-shadow:0 0 12px var(--accent),0 0 24px rgba(57,255,20,.2);
+  animation:pulse-glow 2s ease-in-out infinite;
+}
+.stage-circle.done{border-color:var(--accent);color:var(--bg);background:var(--accent);}
+.stage-circle.fail{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+.stage-label{font-family:var(--font-m);font-size:.58rem;color:var(--muted);letter-spacing:.08em;line-height:1.4;}
+.stage-label.active-l{color:var(--accent);}
+.pipeline-connector{
+  height:2px;background:var(--border2);flex:0 0 40px;margin-top:-22px;
+  transition:background .5s;
+}
+.pipeline-connector.done{background:var(--accent);box-shadow:0 0 4px var(--accent);}
+
+/* ── GIT FLOW VISUAL ── */
+.git-flow{position:relative;padding:1rem 0;font-family:var(--font-m);font-size:.72rem;}
+.git-branch{display:flex;align-items:center;gap:0;margin-bottom:.6rem;}
+.git-commit{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--bg3);border:2px solid var(--border2);
+  flex-shrink:0;cursor:pointer;transition:all .2s;position:relative;z-index:1;
+}
+.git-commit:hover{border-color:var(--accent);background:var(--accent-dim);}
+.git-commit.head{border-color:var(--accent);background:var(--accent);}
+.git-commit.origin{border-color:var(--accent2);background:var(--accent2);}
+.git-line{height:2px;background:var(--border2);flex:1;}
+.git-label{color:var(--muted);padding:0 .6rem;white-space:nowrap;font-size:.65rem;}
+.git-tag{
+  padding:.15rem .5rem;border:1px solid;font-size:.6rem;letter-spacing:.06em;margin-left:.4rem;
+}
+.git-tag.main{border-color:var(--accent);color:var(--accent);}
+.git-tag.origin{border-color:var(--accent2);color:var(--accent2);}
+.git-tag.head{border-color:var(--accent3);color:var(--accent3);}
+
+/* ── ENV VAR MANAGER ── */
+.env-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.8rem 0;}
+.env-row{display:flex;gap:0;border:1px solid var(--border2);margin-bottom:1px;overflow:hidden;}
+.env-key{
+  padding:.6rem 1rem;font-family:var(--font-m);font-size:.75rem;color:var(--accent);
+  background:var(--bg2);min-width:200px;flex-shrink:0;border-right:1px solid var(--border2);
+}
+.env-val{
+  padding:.6rem 1rem;font-family:var(--font-m);font-size:.75rem;color:var(--muted);
+  background:var(--bg);flex:1;cursor:pointer;user-select:none;transition:background .15s;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.env-val:hover{background:var(--bg2);}
+.env-val .masked{letter-spacing:.12em;}
+.env-val .revealed{color:var(--accent2);}
+.env-badge{font-size:.58rem;padding:.1rem .4rem;border:1px solid;letter-spacing:.06em;}
+.env-badge.pub{border-color:var(--accent3);color:var(--accent3);}
+.env-badge.secret{border-color:var(--red);color:var(--red);}
+
+/* ── DEPLOY STATUS BOARD ── */
+.status-board{
+  background:var(--bg2);border:1px solid var(--border2);
+  padding:1.2rem;font-family:var(--font-m);font-size:.75rem;
+}
+.status-header{
+  display:flex;justify-content:space-between;margin-bottom:.8rem;
+  border-bottom:1px solid var(--border);padding-bottom:.6rem;
+}
+.status-title{color:var(--accent);font-size:.7rem;letter-spacing:.12em;}
+.status-time{color:var(--faint);font-size:.65rem;}
+.status-row{
+  display:flex;align-items:center;gap:.8rem;
+  padding:.5rem .6rem;border-bottom:1px solid rgba(26,58,26,.3);
+}
+.status-row:last-child{border-bottom:none;}
+.status-indicator{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.si-ok{background:var(--accent);box-shadow:0 0 4px var(--accent);}
+.si-warn{background:var(--accent2);box-shadow:0 0 4px var(--accent2);}
+.si-err{background:var(--red);box-shadow:0 0 4px var(--red);}
+.si-run{background:var(--accent3);box-shadow:0 0 4px var(--accent3);animation:pulse-glow 1.5s ease-in-out infinite;}
+.status-step{flex:1;color:var(--text);}
+.status-dur{color:var(--faint);font-size:.65rem;white-space:nowrap;}
+
+/* ── COMPARE ── */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:var(--accent-dim);color:var(--accent);border-bottom:1px solid var(--accent-border);}
+.cpanel-hdr.bad{background:var(--red-dim);color:var(--red);border-bottom:1px solid rgba(255,68,68,.3);}
+.cpanel-hdr.info{background:var(--accent3-dim);color:var(--accent3);border-bottom:1px solid rgba(87,200,255,.3);}
+
+/* quiz */
+.quiz-block{background:var(--bg2);border:1px solid var(--border2);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;text-shadow:0 0 4px var(--accent);}
+.quiz-q{font-family:var(--font-d);font-size:1.05rem;font-weight:600;margin-bottom:1.2rem;color:var(--text);line-height:1.3;letter-spacing:.03em;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border2);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--accent);background:var(--accent-dim);}
+.quiz-opt.correct{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-dim);color:var(--red);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* checklist */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border2);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:var(--accent-dim);border-color:var(--accent-border);}
+.check-item.done .check-box{background:var(--accent);border-color:var(--accent);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* project */
+.project-hero{background:var(--bg2);border:1px solid var(--border2);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'$ vercel --prod';position:absolute;right:1.5rem;bottom:-.5rem;font-family:var(--font-m);font-size:2.5rem;color:var(--accent);opacity:.06;pointer-events:none;white-space:nowrap;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;text-shadow:0 0 4px var(--accent);}
+.project-name{font-family:var(--font-d);font-size:2rem;font-weight:700;color:var(--text);margin-bottom:.8rem;line-height:1.15;letter-spacing:.04em;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border2);border:1px solid var(--border2);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--accent);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;letter-spacing:.03em;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* resources */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.88rem;font-weight:600;color:var(--text);letter-spacing:.03em;}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--accent);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border2);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border2);background:var(--bg2);transition:border-color .2s,color .2s,text-shadow .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);text-shadow:0 0 4px var(--accent);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--accent);}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-terminal{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border2);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+  .pipeline{gap:.3rem;}
+  .pipeline-connector{flex:0 0 20px;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / COURSE</a>
+  <div class="header-badge">WEEK 12 / 18 &mdash; DEPLOY</div>
+  <nav class="header-nav">
+    <a href="week11.html">&larr; Week 11</a>
+    <a href="index.html">總覽</a>
+    <a href="week13.html">Week 13 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">任務目標</a>
+  <a class="toc-item" href="#concept-1">Git 版本控制</a>
+  <a class="toc-item" href="#concept-2">GitHub 遠端倉庫</a>
+  <a class="toc-item" href="#concept-3">Vercel 部署</a>
+  <a class="toc-item" href="#concept-4">環境變數</a>
+  <a class="toc-item" href="#concept-5">GitHub Pages</a>
+  <a class="toc-item" href="#concept-6">自訂網域</a>
+  <a class="toc-item" href="#quiz">任務測驗</a>
+  <a class="toc-item" href="#project">部署任務</a>
+  <a class="toc-item" href="#resources">資源補給</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-terminal">
+      <div><span class="hi">SYSTEM</span> READY</div>
+      <div>GIT v2.43.0 LOADED</div>
+      <div>NODE v20.11.0 LOADED</div>
+      <div>VERCEL CLI v33.0.0</div>
+      <div class="hi">LAUNCH SEQUENCE ARMED</div>
+    </div>
+    <div class="hero-label">PHASE 03 &mdash; 現代框架 / WEEK 12</div>
+    <h1>部署<span class="hi">上線</span><br>VERCEL <span class="hi2">GITHUB</span></h1>
+    <p class="hero-desc">把你的作品從本地開發環境送上太空。這週你將掌握 Git 版本控制的完整工作流程，並透過 Vercel 和 GitHub Pages 讓全世界都能存取你的作品。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 03 — 現代框架</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">8–10 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">本週目標</div><div class="meta-cell-value">作品集上線</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置知識</div><div class="meta-cell-value">Week 11 作品集</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">任務目標</div>
+      <h2 class="section-title">任務完成條件</h2>
+      <p class="section-intro">六個核心目標，完成後你的作品就能在網路上被任何人存取。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">理解 Git 的核心概念——工作區、暫存區、本地倉庫的三層結構，以及 commit 的意義</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">使用 <code>git init</code>、<code>add</code>、<code>commit</code>、<code>push</code> 完成本地開發到推送到 GitHub 的完整流程</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">將 GitHub 倉庫連接到 Vercel，完成第一次自動化部署，並理解每次 push 後自動重新部署的機制</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">在 Vercel 控制台正確設定環境變數，區分在 <code>.env.local</code> 的本地變數與部署環境的差異</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">理解 <code>.gitignore</code> 的作用，確保 <code>node_modules</code>、<code>.env</code> 等不應提交的檔案被正確排除</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">撰寫清楚的 <code>README.md</code>，包含專案說明、技術 Stack、安裝步驟和 Demo 連結</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: Git -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">Git 版本控制</h2>
+      <p class="section-intro">Git 是目前最廣泛使用的版本控制系統。它讓你可以追蹤程式碼的每一次變更、回到任何歷史版本、與他人協作開發——是現代開發者的必備工具。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">三個工作區域</div><div class="csub">Working Directory / Staging Area / Repository</div></div></div>
+        <div class="cbody">
+          <p>Git 把你的檔案分成三個區域：<em>工作目錄（Working Directory）</em>是你實際編輯檔案的地方，修改發生在這裡。<em>暫存區（Staging Area / Index）</em>是一個準備區，你用 <code>git add</code> 把想要提交的變更放進來——這讓你可以只提交部分修改的檔案。<em>本地倉庫（Local Repository）</em>存放所有提交的歷史記錄，用 <code>git commit</code> 把暫存區的內容永久記錄下來。</p>
+          <p>理解這三層是掌握 Git 最關鍵的一步。很多人搞不清楚「為什麼 add 之後還要 commit」——因為<strong>add 只是把變更標記為「準備提交」，commit 才是真正把它存入歷史</strong>。</p>
+          <div class="note info">
+            <span class="note-label">Git vs GitHub</span>
+            Git 是在你電腦上運行的版本控制<strong>軟體</strong>。GitHub 是一個儲存 Git 倉庫的<strong>雲端平台</strong>，提供協作功能。用 <code>git push</code> 把本地的 commit 同步到 GitHub；用 <code>git pull</code> 把 GitHub 的更新下載到本地。它們是不同的工具，但常常一起用。
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>INTERACTIVE TERMINAL</strong><span>點擊命令逐步執行，觀察 Git 工作流程</span></div>
+        <div class="demo-body" style="padding:0;">
+          <div style="display:flex;gap:.6rem;padding:1rem 1.5rem;background:var(--bg2);border-bottom:1px solid var(--border2);flex-wrap:wrap;">
+            <button class="term-run-btn" data-step="0" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git init</button>
+            <button class="term-run-btn" data-step="1" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git status</button>
+            <button class="term-run-btn" data-step="2" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git add .</button>
+            <button class="term-run-btn" data-step="3" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git commit</button>
+            <button class="term-run-btn" data-step="4" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git log</button>
+            <button class="term-run-btn" data-step="5" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--border2);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em;">git push</button>
+            <button id="termReset" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--red);background:var(--red-dim);color:var(--red);cursor:pointer;letter-spacing:.06em;margin-left:auto;">重置</button>
+          </div>
+          <div class="terminal">
+            <div class="terminal-body" id="termBody">
+              <div class="term-line"><span class="term-prompt">~/my-project $</span><span class="term-cursor"></span></div>
+            </div>
+          </div>
+          <div style="padding:.8rem 1.5rem;background:var(--bg2);border-top:1px solid var(--border2);font-family:var(--font-m);font-size:.65rem;color:var(--muted);display:flex;gap:2rem;flex-wrap:wrap;" id="termState">
+            <span>工作區: <span id="stateWT" style="color:var(--accent2);">未修改</span></span>
+            <span>暫存區: <span id="stateStage" style="color:var(--faint);">空</span></span>
+            <span>倉庫: <span id="stateRepo" style="color:var(--faint);">0 commits</span></span>
+            <span>遠端: <span id="stateRemote" style="color:var(--faint);">未推送</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TERMINAL &mdash; Git 完整工作流程</div></div>
+        <pre><span class="c"># ── 初始化新專案 ──</span>
+<span class="t">git init</span>                     <span class="c"># 在當前目錄建立 .git 資料夾</span>
+<span class="t">git init</span> <span class="v">my-project</span>          <span class="c"># 建立新資料夾並初始化</span>
+
+<span class="c"># ── 設定身份（第一次用 Git 必做）──</span>
+<span class="t">git config</span> <span class="p">--global</span> user.name <span class="v">"你的名字"</span>
+<span class="t">git config</span> <span class="p">--global</span> user.email <span class="v">"你@email.com"</span>
+
+<span class="c"># ── 查看狀態 ──</span>
+<span class="t">git status</span>                   <span class="c"># 查看哪些檔案有修改</span>
+
+<span class="c"># ── 暫存（Staging）──</span>
+<span class="t">git add</span> <span class="v">.</span>                    <span class="c"># 暫存所有修改的檔案</span>
+<span class="t">git add</span> <span class="v">src/App.jsx</span>          <span class="c"># 只暫存特定檔案</span>
+<span class="t">git add</span> <span class="v">src/</span>                 <span class="c"># 暫存整個目錄</span>
+<span class="t">git restore</span> <span class="p">--staged</span> <span class="v">file.js</span> <span class="c"># 從暫存區移除（不改變檔案內容）</span>
+
+<span class="c"># ── 提交（Commit）──</span>
+<span class="t">git commit</span> <span class="p">-m</span> <span class="v">"feat: 新增使用者登入功能"</span>
+<span class="t">git commit</span> <span class="p">-m</span> <span class="v">"fix: 修正手機版導覽列樣式"</span>
+<span class="t">git commit</span> <span class="p">-m</span> <span class="v">"docs: 更新 README 安裝說明"</span>
+
+<span class="c"># ── 查看歷史 ──</span>
+<span class="t">git log</span>                      <span class="c"># 完整歷史</span>
+<span class="t">git log</span> <span class="p">--oneline</span>            <span class="c"># 每個 commit 一行</span>
+<span class="t">git log</span> <span class="p">--oneline --graph</span>    <span class="c"># 含分支圖形</span>
+
+<span class="c"># ── 回退與還原 ──</span>
+<span class="t">git restore</span> <span class="v">src/App.jsx</span>      <span class="c"># 丟棄工作區修改（慎用！）</span>
+<span class="t">git reset</span> <span class="p">--soft</span> HEAD~1      <span class="c"># 撤銷最後一個 commit，保留修改在暫存區</span>
+<span class="t">git reset</span> <span class="p">--mixed</span> HEAD~1     <span class="c"># 撤銷 commit，修改回到工作區（預設）</span>
+<span class="t">git revert</span> <span class="v">&lt;commit-hash&gt;</span>     <span class="c"># 建立新 commit 反轉某個 commit（推薦用於已推送的 commit）</span></pre>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">.gitignore — 忽略不需要追蹤的檔案</div><div class="csub">永遠不要提交這些東西</div></div></div>
+        <div class="cbody">
+          <p><code>.gitignore</code> 列出 Git 應該<strong>忽略（不追蹤）</strong>的檔案和目錄。這些檔案不會被 <code>git add</code> 加入，也不會出現在 <code>git status</code> 中。</p>
+          <p>最重要的三類需要忽略的東西：<em>node_modules/</em>（可以從 package.json 重新安裝，上傳是浪費）、<em>.env / .env.local</em>（包含 API 金鑰等敏感資訊，絕對不能公開）、<em>build 產物</em>（dist/、.next/ 等，可以重新 build）。</p>
+          <div class="note warn">
+            <span class="note-label">已提交的敏感資訊無法真正刪除</span>
+            如果你不小心把 API 金鑰提交到 GitHub，即使之後用 <code>git rm</code> 刪除，那個 commit 的歷史記錄中還是有它。<strong>立即去 API 服務商撤銷並重新產生金鑰</strong>。這就是 .gitignore 必須在第一個 commit 前就設定好的原因。
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">.gitignore &mdash; 前端專案標準範本</div></div>
+        <pre><span class="c"># 依賴套件（可從 package.json 還原）</span>
+<span class="t">node_modules/</span>
+<span class="t">.pnp</span>
+<span class="t">.pnp.js</span>
+
+<span class="c"># 環境變數（敏感資訊！）</span>
+<span class="err">.env</span>
+<span class="err">.env.local</span>
+<span class="err">.env.development.local</span>
+<span class="err">.env.test.local</span>
+<span class="err">.env.production.local</span>
+
+<span class="c"># Build 產物（可以重新 build）</span>
+<span class="t">dist/</span>
+<span class="t">build/</span>
+<span class="t">.next/</span>
+<span class="t">out/</span>
+
+<span class="c"># 系統與編輯器檔案</span>
+<span class="t">.DS_Store</span>           <span class="c"># macOS 系統檔</span>
+<span class="t">Thumbs.db</span>           <span class="c"># Windows 縮圖快取</span>
+<span class="t">.vscode/settings.json</span> <span class="c"># VS Code 個人設定（非必要）</span>
+
+<span class="c"># Vite 快取</span>
+<span class="t">.vite/</span>
+
+<span class="c"># 測試覆蓋率報告</span>
+<span class="t">coverage/</span>
+
+<span class="c"># 常見 .gitignore 模板：github.com/github/gitignore</span></pre>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">Commit 訊息規範</div><div class="csub">Conventional Commits</div></div></div>
+        <div class="cbody">
+          <p>好的 commit 訊息讓團隊協作更順暢，也讓你幾個月後看到歷史時能快速理解每個變更的意圖。業界廣泛採用 <em>Conventional Commits</em> 規範：<code>type: 簡短描述（50字以內）</code>。</p>
+          <p>常用的 type：<strong>feat</strong>（新功能）、<strong>fix</strong>（修 bug）、<strong>docs</strong>（文件）、<strong>style</strong>（格式，不影響邏輯）、<strong>refactor</strong>（重構）、<strong>test</strong>（測試）、<strong>chore</strong>（雜項，如更新依賴）。</p>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr bad">❌ 糟糕的 commit 訊息</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:2;"><span class="err">git commit -m "fix"</span>
+<span class="err">git commit -m "update"</span>
+<span class="err">git commit -m "asdfgh"</span>
+<span class="err">git commit -m "改了一些東西"</span>
+<span class="err">git commit -m "WIP"</span>
+<span class="c"># 看到這些訊息你無法知道
+# 這個 commit 做了什麼</span></pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">✅ 清晰的 commit 訊息</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:2;"><span class="ok">git commit -m "feat: 新增暗色模式切換功能"</span>
+<span class="ok">git commit -m "fix: 修正 Safari 上 flex 排版問題"</span>
+<span class="ok">git commit -m "docs: 新增 API 端點說明到 README"</span>
+<span class="ok">git commit -m "refactor: 將 Header 拆分為子元件"</span>
+<span class="ok">git commit -m "chore: 升級 React 至 18.3.0"</span>
+<span class="c"># 一眼就能理解每個變更的目的</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: GitHub -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">GitHub 遠端倉庫</h2>
+      <p class="section-intro">GitHub 是全球最大的程式碼托管平台，也是你作品集的展示舞台。把程式碼推上 GitHub，不只是備份，更是讓潛在雇主和合作夥伴看見你的能力。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">本地倉庫連接到 GitHub</div><div class="csub">remote add origin → push</div></div></div>
+        <div class="cbody">
+          <p><strong>流程</strong>：在 GitHub 建立空白倉庫 → 複製倉庫的 URL → 在本地用 <code>git remote add origin &lt;URL&gt;</code> 關聯 → 用 <code>git push -u origin main</code> 推送。<code>-u</code> 設定追蹤關係，之後只需 <code>git push</code>。</p>
+          <p><em>main vs master</em>：GitHub 的預設主分支名稱現在是 <code>main</code>（舊版是 <code>master</code>）。如果你的本地是 <code>master</code>，用 <code>git branch -M main</code> 改名。</p>
+          <p>每次 <code>git push</code> 後，GitHub 上的程式碼就同步了。如果連接了 Vercel，這會自動觸發重新部署。這就是 <strong>CI/CD（持續整合/持續部署）</strong>的最簡單形式。</p>
+        </div>
+      </div>
+
+      <!-- Git Flow Visual -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>GIT PUSH 流程視覺化</strong><span>點擊 commit 節點查看說明</span></div>
+        <div class="demo-body">
+          <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">LOCAL REPOSITORY</div>
+          <div class="git-flow">
+            <div class="git-branch" id="gitBranch">
+              <div class="git-commit" title="Initial commit" data-msg="Initial commit: 初始化 React + Vite 專案"></div>
+              <div class="git-line"></div>
+              <div class="git-commit" title="feat: 新增 Header" data-msg="feat: 新增 Header 元件與導覽列"></div>
+              <div class="git-line"></div>
+              <div class="git-commit" title="feat: 首頁內容" data-msg="feat: 完成首頁 Hero 區塊與技能卡片"></div>
+              <div class="git-line"></div>
+              <div class="git-commit done" title="HEAD (local)" data-msg="fix: 修正手機版導覽列樣式問題 ← HEAD（最新本地 commit）"></div>
+              <span class="git-tag head">HEAD</span>
+              <span class="git-tag main">main</span>
+            </div>
+          </div>
+          <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;margin:.8rem 0 .5rem;">GITHUB REMOTE (origin/main)</div>
+          <div class="git-flow">
+            <div class="git-branch" id="gitRemoteBranch">
+              <div class="git-commit" title="Initial commit（已推送）" data-msg="Initial commit：已推送到 GitHub"></div>
+              <div class="git-line"></div>
+              <div class="git-commit" title="feat: 新增 Header（已推送）" data-msg="feat: 新增 Header（已推送到 GitHub）"></div>
+              <div class="git-line"></div>
+              <div class="git-commit" title="feat: 首頁內容（已推送）" data-msg="feat: 完成首頁（已推送到 GitHub）"></div>
+              <div class="git-line origin" style="background:var(--faint);flex:1;height:2px;"></div>
+              <span style="font-family:var(--font-m);font-size:.62rem;color:var(--accent2);padding:0 .5rem;">← 尚未推送</span>
+              <span class="git-tag origin">origin/main</span>
+            </div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:.6rem;">
+            <button id="gitPushBtn" style="font-family:var(--font-m);font-size:.7rem;padding:.4rem 1rem;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;transition:all .2s;">git push → 同步到 GitHub</button>
+            <button id="gitResetBtn" style="font-family:var(--font-m);font-size:.7rem;padding:.4rem 1rem;border:1px solid var(--border2);background:var(--bg2);color:var(--muted);cursor:pointer;">重置</button>
+          </div>
+          <div style="margin-top:.8rem;font-family:var(--font-m);font-size:.72rem;color:var(--muted);min-height:1.5rem;" id="gitMsg"></div>
+          <div style="margin-top:.5rem;font-family:var(--font-m);font-size:.7rem;color:var(--faint);line-height:1.8;">點擊 commit 節點查看說明</div>
+          <div style="margin-top:.3rem;font-family:var(--font-m);font-size:.72rem;color:var(--accent2);min-height:1.4rem;" id="commitMsg"></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TERMINAL &mdash; 本地連接 GitHub 完整流程</div></div>
+        <pre><span class="c"># ── 步驟一：在 GitHub 建立倉庫後，複製倉庫 URL ──</span>
+<span class="c"># 格式：https://github.com/你的帳號/倉庫名稱.git</span>
+
+<span class="c"># ── 步驟二：本地初始化並推送 ──</span>
+<span class="t">git init</span>
+<span class="t">git add</span> .
+<span class="t">git commit</span> <span class="p">-m</span> <span class="v">"feat: 初始化專案"</span>
+
+<span class="c"># 設定主分支名稱為 main（GitHub 預設）</span>
+<span class="t">git branch</span> <span class="p">-M</span> main
+
+<span class="c"># 連結遠端倉庫</span>
+<span class="t">git remote add</span> origin https://github.com/your-name/my-portfolio.git
+
+<span class="c"># 第一次推送（-u 設定追蹤，之後只需 git push）</span>
+<span class="t">git push</span> <span class="p">-u</span> origin main
+
+<span class="c"># ── 之後的日常工作流程 ──</span>
+<span class="t">git add</span> .
+<span class="t">git commit</span> <span class="p">-m</span> <span class="v">"feat: 新增聯絡頁面"</span>
+<span class="t">git push</span>                        <span class="c"># 自動觸發 Vercel 重新部署</span>
+
+<span class="c"># ── 常用遠端操作 ──</span>
+<span class="t">git remote</span> <span class="p">-v</span>                  <span class="c"># 查看已連結的遠端倉庫</span>
+<span class="t">git pull</span>                        <span class="c"># 拉取遠端最新程式碼</span>
+<span class="t">git fetch</span>                       <span class="c"># 下載遠端更新但不合併</span>
+<span class="t">git clone</span> <span class="v">&lt;URL&gt;</span>                 <span class="c"># 複製別人的倉庫到本地</span>
+
+<span class="c"># ── SSH vs HTTPS ──</span>
+<span class="c"># HTTPS：每次 push 需要輸入帳號密碼（或 Token）</span>
+<span class="c"># SSH：設定一次 SSH Key 後，push 不需要輸入密碼</span>
+<span class="t">git remote set-url</span> origin git@github.com:your-name/repo.git</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: Vercel -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">Vercel 部署</h2>
+      <p class="section-intro">Vercel 是目前最適合前端專案的部署平台——零設定支援 React、Next.js 等框架，連接 GitHub 後每次 push 自動部署，免費方案足夠個人作品集使用。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">Vercel 部署架構</div><div class="csub">Git → Build → CDN Edge Network</div></div></div>
+        <div class="cbody">
+          <p>Vercel 的工作流程：你 push 程式碼到 GitHub → Vercel 偵測到新 commit → 自動拉取程式碼 → 執行 <code>npm run build</code> → 把 build 產物部署到全球 CDN 節點 → 你的用戶從離他們最近的節點取得資源。</p>
+          <p>Vercel 的免費方案（Hobby Plan）提供：<em>無限個人專案</em>、<em>自動 HTTPS</em>、<em>全球 CDN</em>、<em>自訂網域</em>、<em>預覽部署</em>（每個 Pull Request 都有獨立的預覽 URL）。對個人作品集和學習用途完全足夠。</p>
+          <div class="note tip">
+            <span class="note-label">Preview 部署</span>
+            Vercel 的一大亮點：當你推送到非主分支時，Vercel 會為每個 commit 建立一個獨立的預覽 URL（如 <code>my-app-git-feat-login-yourname.vercel.app</code>）。這讓你在合併到主分支前可以先在真實環境測試新功能，也可以把預覽連結分享給別人審查。
+          </div>
+        </div>
+      </div>
+
+      <!-- Deploy Pipeline -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>DEPLOY PIPELINE</strong><span>點擊各階段查看詳情，點擊「啟動部署」模擬流程</span></div>
+        <div class="demo-body">
+          <div class="pipeline" id="deployPipeline">
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-trigger" data-info="觸發條件&#10;git push 到 main 分支&#10;或手動在 Vercel 控制台觸發">PUSH</div>
+              <div class="stage-label">Git Push<br>觸發</div>
+            </div>
+            <div class="pipeline-connector" id="conn-0"></div>
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-clone" data-info="克隆程式碼&#10;Vercel 從 GitHub 拉取最新 commit&#10;通常在 5 秒內完成">CLONE</div>
+              <div class="stage-label">拉取<br>程式碼</div>
+            </div>
+            <div class="pipeline-connector" id="conn-1"></div>
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-install" data-info="安裝依賴&#10;npm install&#10;通常 15–60 秒（有快取更快）">NPM</div>
+              <div class="stage-label">npm install<br>安裝依賴</div>
+            </div>
+            <div class="pipeline-connector" id="conn-2"></div>
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-build" data-info="Build 專案&#10;npm run build&#10;Vite 打包 React 應用&#10;通常 10–30 秒">BUILD</div>
+              <div class="stage-label">npm run<br>build</div>
+            </div>
+            <div class="pipeline-connector" id="conn-3"></div>
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-deploy" data-info="部署到 CDN&#10;把 dist/ 靜態檔案部署到&#10;全球 30+ 個 Edge 節點">CDN</div>
+              <div class="stage-label">部署到<br>全球 CDN</div>
+            </div>
+            <div class="pipeline-connector" id="conn-4"></div>
+            <div class="pipeline-stage">
+              <div class="stage-circle" id="stage-live" data-info="部署完成！&#10;你的網站上線了&#10;URL: your-app.vercel.app">LIVE</div>
+              <div class="stage-label">上線<br>完成</div>
+            </div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:.6rem;align-items:center;">
+            <button id="deployBtn" style="font-family:var(--font-m);font-size:.7rem;padding:.4rem 1.2rem;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);cursor:pointer;">▶ 啟動部署</button>
+            <button id="deployFailBtn" style="font-family:var(--font-m);font-size:.7rem;padding:.4rem 1rem;border:1px solid var(--accent2);background:var(--accent2-dim);color:var(--accent2);cursor:pointer;">模擬 Build 失敗</button>
+            <button id="deployReset" style="font-family:var(--font-m);font-size:.7rem;padding:.4rem 1rem;border:1px solid var(--border2);background:var(--bg2);color:var(--muted);cursor:pointer;">重置</button>
+          </div>
+          <div id="deployInfo" style="margin-top:.8rem;font-family:var(--font-m);font-size:.72rem;color:var(--muted);min-height:2rem;line-height:1.6;"></div>
+          <!-- Build Log -->
+          <div class="status-board" id="buildLog" style="display:none;margin-top:1rem;">
+            <div class="status-header">
+              <div class="status-title">BUILD LOG</div>
+              <div class="status-time" id="logTime">00:00:00</div>
+            </div>
+            <div id="buildLogBody"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TERMINAL &mdash; Vercel CLI（選用）</div></div>
+        <pre><span class="c"># ── Vercel CLI 安裝與登入 ──</span>
+<span class="t">npm install -g vercel</span>
+<span class="t">vercel login</span>              <span class="c"># 用 GitHub 帳號授權</span>
+
+<span class="c"># ── 首次部署（在專案目錄執行）──</span>
+<span class="t">vercel</span>                    <span class="c"># 互動式設定，會問幾個問題</span>
+
+<span class="c"># ── 部署到生產環境 ──</span>
+<span class="t">vercel --prod</span>
+
+<span class="c"># ── 常用 CLI 指令 ──</span>
+<span class="t">vercel dev</span>                <span class="c"># 本地模擬 Vercel 環境（測試 API Routes）</span>
+<span class="t">vercel ls</span>                 <span class="c"># 列出所有部署</span>
+<span class="t">vercel logs</span>               <span class="c"># 查看部署日誌</span>
+<span class="t">vercel env pull</span>           <span class="c"># 把 Vercel 的環境變數下載到 .env.local</span>
+<span class="t">vercel rollback</span>           <span class="c"># 回滾到上一個版本</span>
+
+<span class="c"># ── 在 package.json 中加入部署指令 ──</span>
+<span class="s">"scripts"</span>: {
+  <span class="v">"dev"</span>: <span class="v">"vite"</span>,
+  <span class="v">"build"</span>: <span class="v">"vite build"</span>,
+  <span class="v">"preview"</span>: <span class="v">"vite preview"</span>,
+  <span class="v">"deploy"</span>: <span class="v">"vercel --prod"</span>      <span class="c">// 快速部署捷徑</span>
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: 環境變數 -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">環境變數管理</h2>
+      <p class="section-intro">API 金鑰、資料庫密碼、第三方服務憑證——這些敏感資訊絕對不能寫在程式碼中。環境變數讓你在不同環境（本地開發/部署）使用不同的設定，同時保護敏感資訊。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">Vite 中的環境變數</div><div class="csub">.env.local / import.meta.env</div></div></div>
+        <div class="cbody">
+          <p>Vite 使用 <code>.env</code> 系列檔案管理環境變數。<strong>只有以 <code>VITE_</code> 開頭的變數才會暴露給瀏覽器端程式碼</strong>（其他變數只在 Node.js 環境可見）。在程式碼中用 <code>import.meta.env.VITE_API_KEY</code> 存取。</p>
+          <p>檔案優先順序（高→低）：<em>.env.local</em>（最高優先，不應提交到 Git）→ <em>.env.development</em> / <em>.env.production</em> → <em>.env</em>（最低，可提交）。</p>
+          <div class="note warn">
+            <span class="note-label">前端環境變數是公開的！</span>
+            <code>VITE_</code> 開頭的變數會被打包進 JS bundle，任何人都能在瀏覽器 DevTools 中看到。<strong>不要把真正的私密資訊（如資料庫密碼、完整 API 密鑰）放在 VITE_ 變數</strong>。需要保護的操作應該在後端 API 處理，前端只存取公開 API。
+          </div>
+        </div>
+      </div>
+
+      <!-- ENV Manager Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>ENV VARIABLE MANAGER</strong><span>點擊機密值切換顯示 / 隱藏</span></div>
+        <div class="demo-body">
+          <div style="font-family:var(--font-m);font-size:.62rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.8rem;">本地 .env.local</div>
+          <div class="env-row">
+            <div class="env-key">VITE_API_BASE_URL</div>
+            <div class="env-val"><span class="revealed">https://api.example.com/v1</span><span class="env-badge pub">PUBLIC</span></div>
+          </div>
+          <div class="env-row">
+            <div class="env-key">VITE_APP_NAME</div>
+            <div class="env-val"><span class="revealed">My Portfolio</span><span class="env-badge pub">PUBLIC</span></div>
+          </div>
+          <div class="env-row">
+            <div class="env-key">VITE_TMDB_API_KEY</div>
+            <div class="env-val env-toggle" data-secret="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secret_key_here"><span class="masked">●●●●●●●●●●●●●●●●</span><span class="env-badge secret">SECRET</span></div>
+          </div>
+          <div class="env-row">
+            <div class="env-key">SUPABASE_SERVICE_KEY</div>
+            <div class="env-val env-toggle" data-secret="sb-project-anon-key-very-long-string-here-123456"><span class="masked">●●●●●●●●●●●●●●●●</span><span class="env-badge secret">SECRET</span></div>
+          </div>
+          <div style="margin-top:1rem;font-family:var(--font-m);font-size:.62rem;color:var(--faint);letter-spacing:.1em;margin-bottom:.5rem;">⬆ .gitignore 中排除，Vercel 需手動設定</div>
+          <div style="font-family:var(--font-m);font-size:.62rem;color:var(--faint);letter-spacing:.1em;margin-top:.8rem;margin-bottom:.5rem;">Vercel 部署環境（在控制台設定）</div>
+          <div class="env-row">
+            <div class="env-key">VITE_API_BASE_URL</div>
+            <div class="env-val"><span class="revealed">https://api.production.example.com/v1</span><span class="env-badge pub">PUBLIC</span></div>
+          </div>
+          <div class="env-row">
+            <div class="env-key">VITE_TMDB_API_KEY</div>
+            <div class="env-val env-toggle" data-secret="production-api-key-abcdefghijklmn"><span class="masked">●●●●●●●●●●●●●●●●</span><span class="env-badge secret">SECRET</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">JavaScript &mdash; Vite 環境變數使用</div></div>
+        <pre><span class="c">// ── .env.local（本地，不提交）──</span>
+<span class="t">VITE_API_BASE_URL</span>=https://api.example.com
+<span class="t">VITE_TMDB_API_KEY</span>=your_api_key_here
+<span class="c"># 沒有 VITE_ 前綴的變數只在 Node.js 可見</span>
+<span class="t">DATABASE_URL</span>=postgres://...  <span class="c"># 不會暴露給前端</span>
+
+<span class="c">// ── 在程式碼中使用 ──</span>
+<span class="s">const</span> apiUrl = import.meta.env.<span class="t">VITE_API_BASE_URL</span>;
+<span class="s">const</span> apiKey = import.meta.env.<span class="t">VITE_TMDB_API_KEY</span>;
+
+<span class="c">// 判斷目前環境</span>
+<span class="s">if</span> (import.meta.env.<span class="t">DEV</span>) {
+  console.<span class="fn">log</span>(<span class="v">'開發模式'</span>);
+}
+<span class="s">if</span> (import.meta.env.<span class="t">PROD</span>) {
+  <span class="c">// 生產環境才執行的程式碼</span>
+}
+<span class="s">const</span> mode = import.meta.env.<span class="t">MODE</span>; <span class="c">// 'development' 或 'production'</span>
+
+<span class="c">// ── 建議：集中管理環境變數 ──</span>
+<span class="c">// src/config/env.js</span>
+<span class="s">export const</span> config = {
+  apiUrl: import.meta.env.VITE_API_BASE_URL,
+  tmdbKey: import.meta.env.VITE_TMDB_API_KEY,
+  isDev: import.meta.env.DEV,
+};
+
+<span class="c">// 使用時：</span>
+<span class="s">import</span> { config } <span class="s">from</span> <span class="v">'../config/env'</span>;
+<span class="fn">fetch</span>(<span class="v">`${config.apiUrl}/movies`</span>);</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: GitHub Pages -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">GitHub Pages 部署</h2>
+      <p class="section-intro">GitHub Pages 是 GitHub 提供的免費靜態網站托管服務，適合部署不需要伺服器端渲染的純前端應用。設定比 Vercel 複雜一些，但完全免費且穩定。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">GitHub Pages vs Vercel</div><div class="csub">選哪個適合你的情境</div></div></div>
+        <div class="cbody">
+          <p><em>GitHub Pages</em>：免費、直接從 GitHub 倉庫部署、URL 是 <code>username.github.io/repo-name</code>。限制：只能托管靜態檔案（HTML/CSS/JS），不支援 Node.js 後端、Serverless Functions。React Router 需要額外設定（因為所有路由都要回傳 index.html）。</p>
+          <p><em>Vercel</em>：同樣免費（個人方案）、支援 Serverless Functions、零設定自動檢測框架、每個 PR 有預覽 URL、自訂網域更簡單。唯一缺點是不在 GitHub 的生態系中（但可以連接 GitHub）。</p>
+          <p><strong>建議</strong>：React 應用優先選 Vercel；只有靜態 HTML/CSS 專案或需要在 GitHub 生態中展示的選 GitHub Pages。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">TERMINAL &mdash; Vite + GitHub Pages 部署設定</div></div>
+        <pre><span class="c"># ── 步驟一：安裝 gh-pages ──</span>
+<span class="t">npm install --save-dev gh-pages</span>
+
+<span class="c"># ── 步驟二：修改 vite.config.js ──</span>
+<span class="s">export default</span> {
+  <span class="t">base</span>: <span class="v">'/你的倉庫名稱/'</span>,  <span class="c">// 重要！GitHub Pages 的子路徑</span>
+}
+
+<span class="c"># ── 步驟三：在 package.json 加入 scripts ──</span>
+<span class="s">"scripts"</span>: {
+  <span class="v">"predeploy"</span>: <span class="v">"npm run build"</span>,         <span class="c">// deploy 前自動 build</span>
+  <span class="v">"deploy"</span>: <span class="v">"gh-pages -d dist"</span>           <span class="c">// 把 dist/ 推到 gh-pages 分支</span>
+}
+
+<span class="c"># ── 步驟四：執行部署 ──</span>
+<span class="t">npm run deploy</span>
+<span class="c"># 自動 build 並把 dist/ 推到 gh-pages 分支</span>
+
+<span class="c"># ── 步驟五：在 GitHub 設定 Pages 來源 ──</span>
+<span class="c"># Repository Settings → Pages → Branch: gh-pages → / (root)</span>
+<span class="c"># 幾分鐘後訪問：https://你的帳號.github.io/倉庫名稱/</span>
+
+<span class="c"># ── React Router SPA 的 404 問題 ──</span>
+<span class="c"># 訪問 /about 時 GitHub Pages 回傳 404（沒有這個實際檔案）</span>
+<span class="c"># 解法：建立 public/404.html，把所有請求重導向 index.html</span>
+<span class="c"># 參考：github.com/rafgraph/spa-github-pages</span></pre>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr info">GitHub Pages 適合</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:2;"><span class="ok">✓ 純靜態網站（HTML/CSS/JS）</span>
+<span class="ok">✓ 個人部落格（Hugo/Jekyll）</span>
+<span class="ok">✓ 文件網站</span>
+<span class="ok">✓ 無需伺服器端功能的作品集</span>
+<span class="ok">✓ 預算為零的個人專案</span>
+<span class="warn-c">△ React SPA（需額外設定路由）</span></pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">Vercel 適合</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:2;"><span class="ok">✓ React / Next.js / Vite 專案</span>
+<span class="ok">✓ 需要 Serverless Functions</span>
+<span class="ok">✓ 希望每個 PR 有預覽 URL</span>
+<span class="ok">✓ 需要自訂網域（簡單設定）</span>
+<span class="ok">✓ 需要進階分析和監控</span>
+<span class="ok">✓ 需要 Edge Functions</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: 自訂網域與 README -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">自訂網域與 README</h2>
+      <p class="section-intro">讓你的作品集看起來更專業——自訂網域（可選）和完整的 README 是在 GitHub 上展示自己的重要工具。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">在 Vercel 設定自訂網域</div><div class="csub">3 步驟設定</div></div></div>
+        <div class="cbody">
+          <p>購買網域（Namecheap、Cloudflare、GoDaddy 等）後，在 Vercel 控制台「Settings → Domains」加入你的網域，Vercel 會給你 DNS 設定值（通常是一個 CNAME 或 A Record）。</p>
+          <p>在你的網域服務商 DNS 設定中加入這些記錄，等待 DNS 傳播（通常幾分鐘到幾小時）。Vercel 會自動為你的自訂網域申請並續約 <em>Let's Encrypt SSL 憑證</em>——你的網站會自動有 HTTPS，完全不需要手動操作。</p>
+          <div class="note info">
+            <span class="note-label">免費網域選項</span>
+            如果還沒準備好買網域，<code>your-name.vercel.app</code> 其實已經相當專業。另一個選項：<code>.is-a.dev</code> 提供免費的 <code>yourname.is-a.dev</code> 子網域給開發者（需 GitHub 申請）。
+          </div>
+        </div>
+      </div>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">撰寫專業的 README.md</div><div class="csub">讓你的倉庫說話</div></div></div>
+        <div class="cbody">
+          <p>README 是任何人進到你 GitHub 倉庫看到的第一個頁面。一個好的 README 展示了你<strong>不只會寫程式，也懂得溝通</strong>——這對找工作非常有幫助。</p>
+          <p>必要元素：<em>專案名稱和一行描述</em>、<em>Live Demo 連結</em>（最重要！讓人直接看到成果）、<em>螢幕截圖或 GIF</em>、<em>功能列表</em>、<em>技術 Stack</em>（連結到各官網）、<em>本地安裝和執行步驟</em>。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">Markdown &mdash; 作品集 README 模板</div></div>
+        <pre><span class="c"># 專案名稱</span>
+
+<span class="ok">[![Live Demo](https://img.shields.io/badge/LIVE-Demo-brightgreen)](https://your-app.vercel.app)</span>
+<span class="ok">[![GitHub](https://img.shields.io/badge/GitHub-Repo-black)](https://github.com/you/repo)</span>
+
+一句話描述這個專案在做什麼。
+
+<span class="t">## 功能特色</span>
+
+- ✅ 功能一：描述
+- ✅ 功能二：描述
+- ✅ 功能三：描述
+
+<span class="t">## 技術 Stack</span>
+
+| 類別 | 技術 |
+|------|------|
+| 框架 | React 18 + Vite |
+| 路由 | React Router v6 |
+| 樣式 | Tailwind CSS |
+| 資料庫 | Supabase |
+| 部署 | Vercel |
+
+<span class="t">## 快速開始</span>
+
+<span class="fn">```bash</span>
+<span class="c"># 1. 克隆倉庫</span>
+<span class="t">git clone</span> https://github.com/you/my-portfolio
+
+<span class="c"># 2. 安裝依賴</span>
+<span class="t">cd</span> my-portfolio
+<span class="t">npm install</span>
+
+<span class="c"># 3. 設定環境變數</span>
+<span class="t">cp</span> .env.example .env.local
+<span class="c"># 編輯 .env.local 填入你的 API 金鑰</span>
+
+<span class="c"># 4. 啟動開發伺服器</span>
+<span class="t">npm run dev</span>
+<span class="fn">```</span>
+
+<span class="t">## 環境變數</span>
+
+建立 `.env.local` 並填入以下變數：
+
+<span class="fn">```</span>
+<span class="t">VITE_API_BASE_URL</span>=你的 API 基礎 URL
+<span class="t">VITE_TMDB_API_KEY</span>=你的 TMDB API 金鑰
+<span class="fn">```</span>
+
+<span class="t">## 授權</span>
+
+MIT © 2025 你的名字</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">任務測驗</div>
+      <h2 class="section-title">任務知識確認</h2>
+      <p class="section-intro">四道測驗，確認你準備好執行部署任務。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">你執行 <code>git add .</code> 之後，這些檔案變更的狀態是？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>已提交到本地倉庫，可以直接 push 到 GitHub</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>已加入暫存區（Staging Area），等待 <code>git commit</code> 才真正記錄</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>已備份到雲端，GitHub 上已經可以看到</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>已儲存到遠端倉庫的草稿（Draft）</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>git add</code> 只是把變更放進「暫存區（Staging Area）」，告訴 Git「這些變更我準備要提交了」。真正把變更永久記錄進本地倉庫歷史的動作是 <code>git commit</code>。最後還需要 <code>git push</code> 才能同步到 GitHub。這三個步驟缺一不可。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>回想 Git 的三層結構：工作目錄 → 暫存區 → 本地倉庫 → 遠端。<code>git add</code> 是哪個箭頭的動作？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">你在 <code>.env.local</code> 定義了 <code>MY_SECRET_KEY=abc123</code>（沒有 VITE_ 前綴）。在 Vite 的 React 元件中，<code>import.meta.env.MY_SECRET_KEY</code> 的值是？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>"abc123"</code>——環境變數正常被讀取</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>null</code>——表示未定義</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>undefined</code>——沒有 VITE_ 前綴的變數不會暴露給瀏覽器端程式碼</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>拋出錯誤——需要先在 vite.config.js 聲明</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Vite 的安全機制：只有 <code>VITE_</code> 開頭的環境變數才會被打包進瀏覽器端的 JS bundle。沒有前綴的變數只在 Node.js 環境（如 vite.config.js 或 Node.js 伺服器端）可見，在瀏覽器端讀取會得到 <code>undefined</code>。這防止了開發者不小心把伺服器端的機密暴露給用戶。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>注意 Vite 環境變數的命名規則——哪種前綴的變數才會被打包進瀏覽器可見的程式碼？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">你在 Vercel 連接了 GitHub 倉庫並完成第一次部署。之後每次執行 <code>git push</code> 時，Vercel 會如何反應？</div>
+        <div class="quiz-options" data-answer="0">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>自動偵測到新 commit，拉取程式碼、執行 build、重新部署，無需任何手動操作</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>需要在 Vercel 控制台手動點擊「Redeploy」才會更新</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>需要執行 <code>vercel --prod</code> 命令才會重新部署</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>每次部署前需要先執行 <code>npm run build</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Vercel 透過 GitHub Webhooks 監聽你的倉庫變化。當你 push 到主分支時，GitHub 自動通知 Vercel，Vercel 隨即觸發自動部署流程：克隆程式碼 → <code>npm install</code> → <code>npm run build</code> → 部署到 CDN。這就是 CI/CD 最基本的形式——<strong>推送即部署</strong>，通常在 1–3 分鐘內完成。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>想想你為什麼要把 GitHub 連接到 Vercel——這個連接的目的是什麼？Vercel 如何知道你有新的程式碼？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">以下哪個檔案/目錄不應該被加入 <code>.gitignore</code>？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span><code>node_modules/</code></div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span><code>.env.local</code></div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span><code>dist/</code></div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span><code>src/</code></div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>src/</code> 包含你的原始程式碼——這正是 Git 應該追蹤和管理的核心內容，絕對不能忽略！其他三個應該忽略：<code>node_modules/</code>（太大且可以重裝）、<code>.env.local</code>（含敏感金鑰）、<code>dist/</code>（build 產物，可以重新生成）。記住：Git 追蹤的是「創作」，不是「機密」和「可還原的產物」。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>思考 .gitignore 的原則：哪些東西「可以重新生成」或「包含敏感資訊」需要排除，哪些是你的「原創程式碼」必須追蹤？</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">部署任務</div>
+      <h2 class="section-title">任務：把作品集送上太空</h2>
+      <p class="section-intro">將前幾週建立的個人作品集網站部署到 Vercel，讓全世界都能看到。完成後你將擁有一個可以加入履歷的線上作品連結。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 12 MISSION</div>
+        <div class="project-name">個人作品集<br>部署上線</div>
+        <p class="project-desc">從零開始設定 Git，連接 GitHub，部署到 Vercel，設定環境變數，撰寫 README，最終獲得一個可分享的 your-name.vercel.app 網址。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:600;font-size:1.1rem;margin-bottom:1.2rem;color:var(--text);letter-spacing:.04em;">任務執行步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 .gitignore 並初始化 Git</div>
+            <div class="step-body">在專案根目錄建立 <code>.gitignore</code>（內容參考概念 01 的範本），確保 <code>node_modules/</code> 和 <code>.env.local</code> 都在裡面。然後執行 <code>git init</code>、<code>git add .</code>、<code>git commit -m "feat: 初始化作品集專案"</code>。用 <code>git log --oneline</code> 確認 commit 已成功建立。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">在 GitHub 建立倉庫並推送</div>
+            <div class="step-body">登入 GitHub，點擊右上角「+」→「New repository」，倉庫名稱如 <code>my-portfolio</code>，選 Public（方便展示），不要勾選任何初始化選項（因為本地已有 commit）。按照 GitHub 給的指令執行 <code>git remote add origin ...</code> 和 <code>git push -u origin main</code>。重整 GitHub 頁面確認程式碼上傳成功。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">連接 Vercel 並完成第一次部署</div>
+            <div class="step-body">前往 <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">vercel.com</a>，用 GitHub 帳號登入，點擊「New Project」，選擇剛建立的倉庫，Framework Preset 選 Vite，確認 Build Command 是 <code>npm run build</code>，Output Directory 是 <code>dist</code>。點擊 Deploy，等待約 1–2 分鐘，看到「Congratulations!」即成功。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">設定環境變數（若有使用 API）</div>
+            <div class="step-body">進入 Vercel 專案控制台 → Settings → Environment Variables，逐一加入你在 <code>.env.local</code> 中定義的變數（如 <code>VITE_TMDB_API_KEY</code>）。加入後觸發一次 Redeploy（Deployments → 點三點選單 → Redeploy），確認線上版本能正常使用 API。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">測試自動部署流程</div>
+            <div class="step-body">在本地修改任意一個小地方（如 Hero 標題），執行 <code>git add . && git commit -m "feat: 更新首頁標題" && git push</code>。前往 Vercel 控制台 Deployments 頁面，觀察部署是否自動觸發並完成。訪問你的 Vercel URL 確認修改已生效。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">撰寫完整的 README.md</div>
+            <div class="step-body">在專案根目錄建立 <code>README.md</code>，參考概念 06 的模板，至少包含：Live Demo 連結、螢幕截圖（可用 macOS 的 <kbd>Cmd+Shift+4</kbd> 截圖）、功能列表、技術 Stack 表格、本地安裝步驟。完成後 commit 並 push 到 GitHub，在瀏覽器確認 README 顯示正常。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 .env.example 供他人參考</div>
+            <div class="step-body">建立 <code>.env.example</code>（這個可以提交到 Git），列出所有需要的環境變數但不填入實際值：<code>VITE_API_KEY=your_api_key_here</code>。這樣別人 clone 你的專案時知道需要設定哪些變數。在 README 的安裝步驟中加入 <code>cp .env.example .env.local</code> 的說明。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：設定自訂網域或 GitHub Profile</div>
+            <div class="step-body">（選一）<strong>自訂網域</strong>：在 Vercel 的 Domains 設定自訂網域（若已購買）。<strong>GitHub Profile README</strong>：建立與 GitHub 帳號同名的倉庫（如 <code>your-username/your-username</code>），裡面的 README.md 會顯示在你的 GitHub 個人頁面——這是展示自己的重要機會，加入技能徽章、作品連結、聯絡方式。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:600;font-size:1.1rem;margin:2rem 0 1rem;color:var(--text);letter-spacing:.04em;">任務完成確認</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span><code>.gitignore</code> 正確排除 <code>node_modules/</code>、<code>.env.local</code>、<code>dist/</code></span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>程式碼已推送到 GitHub，倉庫為 Public，可正常在瀏覽器訪問</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>Vercel 部署成功，取得 <code>*.vercel.app</code> URL，網站正常顯示</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>若有 API，環境變數已在 Vercel 控制台設定，線上版功能正常</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>測試自動部署：push 後 Vercel 自動重新部署，修改上線</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>README.md 完整，包含 Live Demo 連結、截圖、技術 Stack、安裝步驟</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>建立了 <code>.env.example</code> 並提交到 Git（不含實際值）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）設定自訂網域，或更新 GitHub Profile README 加入作品連結</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">資源補給</div>
+      <h2 class="section-title">延伸資源</h2>
+      <p class="section-intro">部署完成後，這些資源幫助你深入了解每個工具。</p>
+      <div class="resource-grid">
+        <a href="https://git-scm.com/book/zh-tw/v2" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方書籍 / 中文</div>
+          <div class="resource-name">Pro Git 書（繁中）</div>
+          <div class="resource-desc">Git 官方出版的免費電子書，完整涵蓋 Git 所有概念，有繁體中文版。不需要全部讀完，前三章就足夠日常使用。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://vercel.com/docs" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件</div>
+          <div class="resource-name">Vercel 文件</div>
+          <div class="resource-desc">涵蓋所有 Vercel 功能的完整說明，包括環境變數、自訂網域、Serverless Functions、Edge Functions 等進階功能。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://learngitbranching.js.org/?locale=zh_TW" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">互動遊戲 / 中文</div>
+          <div class="resource-name">Learn Git Branching</div>
+          <div class="resource-desc">用動畫遊戲方式學習 Git 分支、merge、rebase 等進階操作，有中文介面，強烈推薦給想深入 Git 的學習者。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.conventionalcommits.org/zh-hant/v1.0.0/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">規範文件 / 中文</div>
+          <div class="resource-name">Conventional Commits</div>
+          <div class="resource-desc">業界廣泛採用的 commit 訊息規範，完整說明 feat、fix、chore 等類型的使用方式，有繁體中文版。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://github.com/othneildrew/Best-README-Template" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">模板</div>
+          <div class="resource-name">Best README Template</div>
+          <div class="resource-desc">GitHub 上最受歡迎的 README 模板，有完整的章節結構和徽章（badge）用法說明，直接 fork 來修改。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://docs.github.com/zh/pages" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件 / 中文</div>
+          <div class="resource-name">GitHub Pages 文件</div>
+          <div class="resource-desc">GitHub Pages 的完整說明，包括自訂網域設定、Jekyll 整合、GitHub Actions 自動部署等進階功能，有中文版。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week11.html" class="nav-btn">&larr; Week 11：Tailwind CSS</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week13.html" class="nav-btn">Week 13：專案規劃 &rarr;</a>
+  </div>
+</main>
+<script>
+// ── Progress ──
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  document.getElementById('progressBar').style.width = Math.min(p,100) + '%';
+});
+
+// ── Scroll Reveal ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.07 });
+document.querySelectorAll('.section').forEach(s => obs.observe(s));
+
+// ── TOC ──
+const secIds=['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const secEls=secIds.map(id=>document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll',()=>{
+  let cur='';
+  secEls.forEach(el=>{if(window.scrollY>=el.offsetTop-130) cur=el.id;});
+  document.querySelectorAll('.toc-item').forEach(item=>{
+    item.classList.toggle('active',item.getAttribute('href')==='#'+cur);
+  });
+});
+
+// ── TERMINAL SIMULATOR ──
+const terminalSteps = [
+  {
+    cmd: 'git init',
+    out: ['Initialized empty Git repository in /my-project/.git/'],
+    state: { wt: '新檔案（未追蹤）', stage: '空', repo: '0 commits', remote: '未連接' },
+    color: 'ok'
+  },
+  {
+    cmd: 'git status',
+    out: [
+      'On branch main',
+      '',
+      'No commits yet',
+      '',
+      'Untracked files:',
+      '  (use "git add <file>..." to include)',
+      '        src/',
+      '        package.json',
+      '        index.html',
+      '',
+      'nothing added to commit but untracked files present'
+    ],
+    state: { wt: '有未追蹤檔案', stage: '空', repo: '0 commits', remote: '未連接' },
+    color: 'warn'
+  },
+  {
+    cmd: 'git add .',
+    out: [''],
+    state: { wt: '已暫存', stage: '12 個檔案已暫存', repo: '0 commits', remote: '未連接' },
+    color: 'ok'
+  },
+  {
+    cmd: 'git commit -m "feat: 初始化作品集專案"',
+    out: [
+      '[main (root-commit) 3f2a1b8] feat: 初始化作品集專案',
+      ' 12 files changed, 342 insertions(+)',
+      ' create mode 100644 index.html',
+      ' create mode 100644 src/App.jsx',
+      ' ...'
+    ],
+    state: { wt: '乾淨', stage: '空', repo: '1 commit', remote: '未推送' },
+    color: 'ok'
+  },
+  {
+    cmd: 'git log --oneline',
+    out: [
+      '3f2a1b8 (HEAD -> main) feat: 初始化作品集專案'
+    ],
+    state: { wt: '乾淨', stage: '空', repo: '1 commit', remote: '未推送' },
+    color: 'ok'
+  },
+  {
+    cmd: 'git push -u origin main',
+    out: [
+      'Enumerating objects: 15, done.',
+      'Counting objects: 100% (15/15), done.',
+      'Delta compression using up to 8 threads',
+      'Compressing objects: 100% (12/12), done.',
+      'Writing objects: 100% (15/15), 18.42 KiB | 6.14 MiB/s, done.',
+      'Total 15 (delta 1), reused 0 (delta 0)',
+      'To https://github.com/you/my-portfolio.git',
+      ' * [new branch]      main -> main',
+      "Branch 'main' set up to track remote branch 'main' from 'origin'."
+    ],
+    state: { wt: '乾淨', stage: '空', repo: '1 commit', remote: '已同步 ✓' },
+    color: 'ok'
+  }
+];
+
+let termStep = -1;
+const termBody = document.getElementById('termBody');
+
+function addTermLine(content, cls='') {
+  const div = document.createElement('div');
+  div.className = 'term-out';
+  if(cls) div.style.color = cls === 'ok' ? 'var(--accent)' : cls === 'warn' ? 'var(--accent2)' : cls === 'err' ? 'var(--red)' : 'var(--muted)';
+  div.textContent = content;
+  termBody.appendChild(div);
+}
+
+function runTermStep(stepIdx) {
+  if(stepIdx >= terminalSteps.length) return;
+  const step = terminalSteps[stepIdx];
+
+  // Remove cursor
+  const oldCursor = termBody.querySelector('.term-cursor');
+  if(oldCursor) oldCursor.remove();
+
+  // Add command line
+  const cmdLine = document.createElement('div');
+  cmdLine.className = 'term-line';
+  cmdLine.innerHTML = `<span class="term-prompt">~/my-project $</span><span class="term-cmd"> ${step.cmd}</span>`;
+  termBody.appendChild(cmdLine);
+
+  // Add output
+  setTimeout(() => {
+    step.out.forEach(line => {
+      const out = document.createElement('div');
+      out.className = 'term-out';
+      out.style.color = step.color === 'ok' ? 'var(--ok,var(--accent))' : step.color === 'warn' ? 'var(--accent2)' : 'var(--muted)';
+      if(line === '') { out.innerHTML = '&nbsp;'; out.style.color = ''; }
+      else out.textContent = line;
+      termBody.appendChild(out);
+    });
+
+    // Update state
+    const s = step.state;
+    document.getElementById('stateWT').textContent = s.wt;
+    document.getElementById('stateStage').textContent = s.stage;
+    document.getElementById('stateRepo').textContent = s.repo;
+    document.getElementById('stateRemote').textContent = s.remote;
+
+    // Add new prompt + cursor
+    const newPrompt = document.createElement('div');
+    newPrompt.className = 'term-line';
+    newPrompt.innerHTML = '<span class="term-prompt">~/my-project $</span><span class="term-cursor"></span>';
+    termBody.appendChild(newPrompt);
+    termBody.scrollTop = termBody.scrollHeight;
+
+    // Update button styles
+    document.querySelectorAll('.term-run-btn').forEach((btn, i) => {
+      if(i <= stepIdx) {
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+      }
+    });
+  }, 200);
+}
+
+document.querySelectorAll('.term-run-btn').forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    if(i !== termStep + 1) return;
+    termStep = i;
+    runTermStep(i);
+  });
+  btn.addEventListener('mouseover', () => { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; });
+  btn.addEventListener('mouseleave', () => {
+    if(parseInt(btn.dataset.step) <= termStep) return;
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.color = 'var(--muted)';
+  });
+});
+
+document.getElementById('termReset').addEventListener('click', () => {
+  termStep = -1;
+  termBody.innerHTML = '<div class="term-line"><span class="term-prompt">~/my-project $</span><span class="term-cursor"></span></div>';
+  document.getElementById('stateWT').textContent = '未修改';
+  document.getElementById('stateStage').textContent = '空';
+  document.getElementById('stateRepo').textContent = '0 commits';
+  document.getElementById('stateRemote').textContent = '未推送';
+  document.querySelectorAll('.term-run-btn').forEach(btn => {
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.color = 'var(--muted)';
+  });
+});
+
+// ── GIT FLOW VISUAL ──
+let pushed = false;
+
+document.querySelectorAll('#gitBranch .git-commit, #gitRemoteBranch .git-commit').forEach(c => {
+  c.addEventListener('click', () => {
+    const msg = c.dataset.msg;
+    if(msg) document.getElementById('commitMsg').textContent = '→ ' + msg;
+  });
+});
+
+document.getElementById('gitPushBtn').addEventListener('click', () => {
+  if(pushed) return;
+  pushed = true;
+  const btn = document.getElementById('gitPushBtn');
+  btn.textContent = '正在推送...';
+  btn.style.pointerEvents = 'none';
+
+  setTimeout(() => {
+    // Add the missing commit to remote
+    const remoteBranch = document.getElementById('gitRemoteBranch');
+    const newCommit = document.createElement('div');
+    newCommit.className = 'git-commit done';
+    newCommit.dataset.msg = 'fix: 修正手機版導覽列（已推送到 GitHub）';
+    newCommit.title = 'HEAD（已推送）';
+    const newLine = document.createElement('div');
+    newLine.className = 'git-line';
+    newLine.style.background = 'var(--accent)';
+    newLine.style.boxShadow = '0 0 4px var(--accent)';
+
+    const pending = remoteBranch.querySelector('span[style]');
+    if(pending) {
+      remoteBranch.insertBefore(newLine, pending);
+      remoteBranch.insertBefore(newCommit, pending);
+      pending.remove();
+    }
+
+    const originTag = remoteBranch.querySelector('.git-tag.origin');
+    if(originTag) {
+      const headTag = document.createElement('span');
+      headTag.className = 'git-tag head';
+      headTag.textContent = 'HEAD';
+      remoteBranch.insertBefore(headTag, originTag);
+    }
+
+    btn.textContent = '✓ 推送完成';
+    btn.style.borderColor = 'var(--accent)';
+    document.getElementById('gitMsg').textContent = '→ Vercel 偵測到新 commit，自動觸發重新部署！';
+    document.getElementById('gitMsg').style.color = 'var(--accent)';
+  }, 800);
+});
+
+document.getElementById('gitResetBtn').addEventListener('click', () => {
+  location.reload();
+});
+
+// ── DEPLOY PIPELINE ──
+const stageIds = ['stage-trigger','stage-clone','stage-install','stage-build','stage-deploy','stage-live'];
+const connIds  = ['conn-0','conn-1','conn-2','conn-3','conn-4'];
+
+const stageInfos = {
+  'stage-trigger': '📡 觸發條件\ngit push 到 main 分支\n或手動在 Vercel 控制台觸發 Redeploy',
+  'stage-clone':   '📥 拉取程式碼\nVercel 從 GitHub 克隆最新 commit\n通常在 3–5 秒內完成',
+  'stage-install': '📦 安裝依賴\nnpm install（有快取通常 < 10s）\n第一次可能需要 30–60 秒',
+  'stage-build':   '⚙️ Build 專案\nnpm run build\nVite 打包 React 應用，通常 10–30 秒\n此步驟失敗會停止部署',
+  'stage-deploy':  '🌐 部署到 CDN\n把 dist/ 靜態檔案部署到全球 30+ Edge 節點\n使用者從最近的節點取得資源',
+  'stage-live':    '✅ 上線完成！\nyour-app.vercel.app 已更新\n全球使用者在幾秒內看到最新版本',
+};
+
+stageIds.forEach(id => {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.title = stageInfos[id] || '';
+  el.addEventListener('click', () => {
+    document.getElementById('deployInfo').textContent = stageInfos[id] || '';
+  });
+});
+
+let deployRunning = false;
+let deployInterval = null;
+
+function resetPipeline() {
+  stageIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.className = 'stage-circle';
+  });
+  connIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.className = 'pipeline-connector';
+  });
+  document.getElementById('deployInfo').textContent = '';
+  document.getElementById('buildLog').style.display = 'none';
+  document.getElementById('buildLogBody').innerHTML = '';
+  deployRunning = false;
+  if(deployInterval) clearTimeout(deployInterval);
+}
+
+const buildSteps = [
+  { icon: 'si-run', label: '克隆倉庫', dur: '' },
+  { icon: 'si-run', label: 'npm install', dur: '' },
+  { icon: 'si-run', label: 'vite build', dur: '' },
+  { icon: 'si-run', label: '壓縮靜態資源', dur: '' },
+  { icon: 'si-run', label: '部署到 Edge Network', dur: '' },
+];
+
+function runDeploy(failAt = -1) {
+  if(deployRunning) return;
+  deployRunning = true;
+  resetPipeline();
+
+  const logDiv = document.getElementById('buildLog');
+  const logBody = document.getElementById('buildLogBody');
+  logDiv.style.display = 'block';
+
+  let t = 0;
+  let stepDone = 0;
+
+  stageIds.forEach((id, i) => {
+    const delay = i * 700;
+    deployInterval = setTimeout(() => {
+      const el = document.getElementById(id);
+      if(!el || !deployRunning) return;
+
+      if(failAt === i) {
+        el.className = 'stage-circle fail';
+        el.textContent = 'ERR';
+        document.getElementById('deployInfo').textContent = '💥 Build 失敗！請查看 build log 找出錯誤。';
+        document.getElementById('deployInfo').style.color = 'var(--red)';
+
+        // Add error log
+        const row = document.createElement('div');
+        row.className = 'status-row';
+        row.innerHTML = `<div class="status-indicator si-err"></div><div class="status-step" style="color:var(--red);">Build failed: Module not found: Can't resolve './components/Header'</div><div class="status-dur">12.3s</div>`;
+        logBody.appendChild(row);
+        deployRunning = false;
+        return;
+      }
+
+      if(i > 0) {
+        const conn = document.getElementById('conn-' + (i-1));
+        if(conn) conn.className = 'pipeline-connector done';
+      }
+      el.className = 'stage-circle ' + (i === stageIds.length - 1 ? 'done' : 'active');
+
+      // Add log row
+      if(i < buildSteps.length + 1) {
+        const row = document.createElement('div');
+        row.className = 'status-row';
+        const doneI = Math.min(stepDone, buildSteps.length - 1);
+        const bs = buildSteps[doneI];
+        const dur = ['3.2s','18.4s','11.7s','2.1s','4.5s'][doneI] || '';
+        const isLast = i === stageIds.length - 1;
+        row.innerHTML = `<div class="status-indicator ${isLast ? 'si-ok' : 'si-ok'}"></div><div class="status-step">${isLast ? '✅ 部署成功！' : bs.label}</div><div class="status-dur">${isLast ? '40.2s total' : dur}</div>`;
+        logBody.appendChild(row);
+        stepDone++;
+      }
+
+      if(i === stageIds.length - 1) {
+        document.getElementById('deployInfo').textContent = '✅ 部署完成！your-app.vercel.app 已更新';
+        document.getElementById('deployInfo').style.color = 'var(--accent)';
+        deployRunning = false;
+      }
+    }, delay);
+  });
+}
+
+document.getElementById('deployBtn').addEventListener('click', () => runDeploy(-1));
+document.getElementById('deployFailBtn').addEventListener('click', () => runDeploy(3)); // fail at build
+document.getElementById('deployReset').addEventListener('click', resetPipeline);
+
+// ── ENV TOGGLE ──
+document.querySelectorAll('.env-toggle').forEach(el => {
+  let shown = false;
+  const secret = el.dataset.secret;
+  el.addEventListener('click', () => {
+    shown = !shown;
+    const span = el.querySelector('span:first-child');
+    if(shown) {
+      span.textContent = secret;
+      span.className = 'revealed';
+      el.style.background = 'rgba(255,221,87,.05)';
+    } else {
+      span.textContent = '●●●●●●●●●●●●●●●●';
+      span.className = 'masked';
+      el.style.background = '';
+    }
+  });
+});
+
+// ── QUIZ ──
+document.querySelectorAll('.quiz-block').forEach(block => {
+  const correct = parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts = block.querySelectorAll('.quiz-opt');
+  const fbs  = block.querySelectorAll('.quiz-fb');
+  let done = false;
+  opts.forEach((opt, i) => {
+    opt.addEventListener('click', () => {
+      if(done) return;
+      done = true;
+      opts.forEach(o => o.style.pointerEvents = 'none');
+      if(i === correct) {
+        opt.classList.add('correct');
+        fbs[0] && fbs[0].classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        opts[correct].classList.add('correct');
+        fbs[1] && fbs[1].classList.add('show');
+        setTimeout(() => {
+          done = false;
+          opts.forEach(o => { o.style.pointerEvents=''; o.classList.remove('wrong','correct'); });
+          fbs.forEach(f => f.classList.remove('show'));
+        }, 2800);
+      }
+    });
+  });
+});
+
+// ── CHECKLIST ──
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent = el.classList.contains('done') ? '✓' : '';
+}
+</script>
+</body>
+</html>
