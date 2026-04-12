@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 17 — UI 完善與錯誤處理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f5f5f5;--bg3:#ebebeb;
+  --surface:#ffffff;--border:#d0d0d0;--border2:#b8b8b8;
+  --text:#111111;--muted:#666666;--faint:#aaaaaa;
+  --red:#e63329;--red-dim:rgba(230,51,41,.07);--red-border:rgba(230,51,41,.25);
+  --black:#111111;--black-dim:rgba(17,17,17,.06);
+  --blue:#0047cc;--blue-dim:rgba(0,71,204,.08);--blue-border:rgba(0,71,204,.25);
+  --green:#1a7a3c;--green-dim:rgba(26,122,60,.08);--green-border:rgba(26,122,60,.25);
+  --yellow:#f5a623;--yellow-dim:rgba(245,166,35,.1);
+  --code-bg:#111111;--code-text:#f0f0f0;
+  --font-d:'Barlow Condensed',sans-serif;
+  --font-b:'Barlow',sans-serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.65;overflow-x:hidden;}
+
+/* Swiss grid lines */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px);
+  background-size:100% 24px;
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes skeletonShimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes spinLoad{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes toastSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes progressFill{from{width:0}to{width:var(--target-w,100%)}}
+
+.progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;z-index:500;background:var(--red);transition:width .08s linear;}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 2.5rem;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(10px);
+  border-bottom:2px solid var(--black);
+}
+.logo{font-family:var(--font-d);font-size:1.1rem;color:var(--red);letter-spacing:.08em;text-decoration:none;font-weight:800;text-transform:uppercase;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--red);}
+
+/* Swiss-style TOC with vertical rule */
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;border-right:2px solid var(--black);display:flex;flex-direction:column;gap:.25rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.25rem 1rem .25rem .7rem;font-family:var(--font-m);font-size:.56rem;color:var(--faint);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .15s,background .15s;}
+.toc-item::before{content:'';width:4px;height:4px;background:var(--faint);flex-shrink:0;transition:all .15s;}
+.toc-item:hover,.toc-item.active{color:var(--red);background:var(--red-dim);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--red);width:12px;}
+
+main{padding-top:60px;margin-left:152px;position:relative;z-index:1;}
+
+/* HERO — brutalist Swiss */
+.hero{
+  padding:5rem 3.5rem 4rem;border-bottom:2px solid var(--black);
+  position:relative;overflow:hidden;
+  display:grid;grid-template-columns:1fr auto;gap:3rem;align-items:end;
+}
+.hero-left{}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--red);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.8rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{
+  font-family:var(--font-d);font-size:clamp(4rem,8vw,8rem);font-weight:800;
+  line-height:.92;letter-spacing:-.01em;margin-bottom:1.5rem;text-transform:uppercase;
+  opacity:0;animation:fadeUp .5s .2s forwards;
+}
+.hero h1 .hi{color:var(--red);}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:520px;line-height:1.7;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .35s forwards;}
+.hero-meta{display:flex;gap:0;border:2px solid var(--black);width:fit-content;opacity:0;animation:fadeUp .5s .48s forwards;}
+.meta-cell{padding:.85rem 1.6rem;border-right:1px solid var(--border);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.2rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.82rem;color:var(--text);font-weight:600;}
+
+/* Hero right: Swiss-style UI error demo card */
+.hero-right{opacity:0;animation:fadeUp .5s .6s forwards;flex-shrink:0;}
+.swiss-demo-card{
+  width:280px;border:2px solid var(--black);background:var(--bg);
+  font-family:var(--font-b);
+}
+.swiss-card-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem .8rem;background:var(--black);
+}
+.swiss-card-title{font-family:var(--font-d);font-size:.75rem;color:#fff;letter-spacing:.12em;text-transform:uppercase;}
+.swiss-status-dot{width:8px;height:8px;border-radius:50%;}
+.swiss-card-body{padding:1rem;}
+.swiss-field{margin-bottom:.7rem;}
+.swiss-field label{display:block;font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.25rem;}
+.swiss-input{width:100%;padding:.4rem .6rem;border:1px solid var(--border2);font-family:var(--font-m);font-size:.75rem;background:var(--bg);color:var(--text);outline:none;}
+.swiss-input.error-state{border-color:var(--red);background:var(--red-dim);}
+.swiss-input.success-state{border-color:var(--green);background:var(--green-dim);}
+.swiss-error-msg{font-family:var(--font-m);font-size:.6rem;color:var(--red);margin-top:.2rem;display:flex;align-items:center;gap:.3rem;}
+.swiss-btn{width:100%;padding:.55rem;background:var(--black);color:#fff;border:none;font-family:var(--font-d);font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:background .15s;}
+.swiss-btn:hover{background:var(--red);}
+.swiss-btn.loading-btn{background:var(--muted);cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.mini-spinner{width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spinLoad .6s linear infinite;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:2px solid var(--black);opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s;}
+.section.visible{opacity:1;transform:none;}
+
+/* Swiss-style eyebrow with red rule */
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--red);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::before{content:'';width:20px;height:2px;background:var(--red);flex-shrink:0;}
+.section-title{font-family:var(--font-d);font-size:2.4rem;font-weight:700;text-transform:uppercase;color:var(--text);margin-bottom:1.8rem;line-height:1.05;letter-spacing:.02em;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.75;}
+
+/* Objectives — Swiss grid */
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--black);}
+.obj-item{padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .15s;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+.obj-item:nth-child(even){border-right:none;}
+.obj-item:nth-last-child(-n+2){border-bottom:none;}
+.obj-item:hover{background:var(--red-dim);}
+.obj-num{font-family:var(--font-d);font-size:1.8rem;font-weight:800;color:var(--red);line-height:1;flex-shrink:0;opacity:.6;}
+.obj-text{font-size:.87rem;line-height:1.6;padding-top:.2rem;}
+
+/* Concept blocks */
+.cblock{margin-bottom:2.5rem;border:1px solid var(--border2);overflow:hidden;}
+.cblock-head{padding:1rem 1.6rem;background:var(--bg2);border-bottom:2px solid var(--black);display:flex;align-items:center;gap:1rem;}
+.cicon{width:26px;height:26px;background:var(--black);color:#fff;font-family:var(--font-d);font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.05rem;}
+.csub{font-family:var(--font-m);font-size:.63rem;color:var(--muted);}
+.cbody{padding:1.6rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#444;line-height:1.75;margin-bottom:1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:600;}
+.cbody em{color:var(--red);font-style:normal;font-weight:600;}
+
+/* Notes */
+.note{border-left:3px solid var(--yellow);background:var(--yellow-dim);padding:.9rem 1.3rem;margin:1.1rem 0;font-size:.84rem;color:#5a3e00;line-height:1.65;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:#a06000;display:block;margin-bottom:.3rem;}
+.note.tip{border-left-color:var(--green);background:var(--green-dim);color:#0a4020;}
+.note.tip .note-label{color:var(--green);}
+.note.info{border-left-color:var(--blue);background:var(--blue-dim);color:#002066;}
+.note.info .note-label{color:var(--blue);}
+.note.warn{border-left-color:var(--red);background:var(--red-dim);color:#660000;}
+.note.warn .note-label{color:var(--red);}
+
+/* Code */
+.code-block{border:1px solid var(--border2);overflow:hidden;margin:1.4rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:#222;border-bottom:1px solid #333;}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:#888;letter-spacing:.1em;}
+pre{background:var(--code-bg);padding:1.3rem 1.5rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);}
+.t{color:#79d4f0;}
+.p{color:#a5e887;}
+.v{color:#ffd87a;}
+.c{color:#444;font-style:italic;}
+.s{color:#f0a0c8;}
+.fn{color:#c4a0f0;}
+.kw{color:#ffb87a;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--red);padding:.1em .4em;border:1px solid var(--border2);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+/* Tables */
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.4rem 0;border:2px solid var(--black);}
+.ptable thead tr{background:var(--black);}
+.ptable th{text-align:left;padding:.65rem 1rem;font-family:var(--font-d);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-weight:600;}
+.ptable td{padding:.65rem 1rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--red);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+/* DEMO AREAS */
+.demo-wrap{border:2px solid var(--black);overflow:hidden;margin:1.4rem 0;}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem;background:var(--black);font-family:var(--font-m);font-size:.6rem;color:#aaa;letter-spacing:.1em;}
+.demo-bar strong{color:#fff;}
+.demo-body{padding:1.6rem;background:var(--bg);}
+
+/* ══ SKELETON DEMO ══ */
+.skeleton-area{display:flex;flex-direction:column;gap:.8rem;}
+.skeleton-card{background:var(--bg2);border:1px solid var(--border);padding:1rem;display:flex;flex-direction:column;gap:.6rem;}
+.sk-line{height:12px;border-radius:2px;background:linear-gradient(90deg,var(--bg3) 25%,var(--border) 50%,var(--bg3) 75%);background-size:200%;animation:skeletonShimmer 1.6s linear infinite;}
+.sk-line.title{height:16px;width:60%;}
+.sk-line.full{width:100%;}
+.sk-line.half{width:50%;}
+.sk-line.third{width:33%;}
+.sk-circle{width:40px;height:40px;border-radius:50%;background:linear-gradient(90deg,var(--bg3) 25%,var(--border) 50%,var(--bg3) 75%);background-size:200%;animation:skeletonShimmer 1.6s linear infinite;flex-shrink:0;}
+.sk-row{display:flex;gap:.8rem;align-items:center;}
+
+/* ══ LOADING STATES GALLERY ══ */
+.loading-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);}
+.loading-item{background:var(--bg);padding:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.6rem;}
+.loading-label{font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.08em;text-align:center;}
+/* spinner */
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spinLoad .7s linear infinite;}
+/* dots */
+.dots{display:flex;gap:4px;align-items:center;}
+.dot-pulse{width:8px;height:8px;border-radius:50%;background:var(--red);animation:dotPulse 1.2s ease-in-out infinite;}
+.dot-pulse:nth-child(2){animation-delay:.2s;}
+.dot-pulse:nth-child(3){animation-delay:.4s;}
+@keyframes dotPulse{0%,100%{transform:scale(.6);opacity:.4}50%{transform:scale(1);opacity:1}}
+/* progress bar mini */
+.mini-progress-wrap{width:100%;height:4px;background:var(--border);overflow:hidden;}
+.mini-progress-bar{height:100%;background:var(--red);animation:progressAnim 2s ease-in-out infinite;}
+@keyframes progressAnim{0%{width:0;margin-left:0}50%{width:70%;margin-left:0}100%{width:0;margin-left:100%}}
+/* skeleton inline */
+.inline-sk{width:80px;height:12px;border-radius:2px;background:linear-gradient(90deg,var(--bg3) 25%,var(--border) 50%,var(--bg3) 75%);background-size:200%;animation:skeletonShimmer 1.6s linear infinite;}
+/* pulse overlay */
+.pulse-overlay{width:80px;height:48px;border:1px solid var(--border);position:relative;overflow:hidden;background:var(--bg2);}
+.pulse-shimmer{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:pulseShimmer 1.5s ease-in-out infinite;}
+@keyframes pulseShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+/* button loading */
+.btn-loading{padding:.4rem .9rem;background:var(--muted);color:#fff;border:none;font-family:var(--font-d);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:.4rem;cursor:not-allowed;}
+
+/* ══ ERROR STATE GALLERY ══ */
+.error-gallery{display:flex;flex-direction:column;gap:.6rem;}
+.error-item{padding:.8rem 1rem;border-left:3px solid;font-family:var(--font-b);font-size:.85rem;display:flex;align-items:flex-start;gap:.7rem;}
+.error-icon{font-family:var(--font-d);font-size:.75rem;font-weight:700;letter-spacing:.05em;flex-shrink:0;padding:.1rem .4rem;color:#fff;}
+.error-content{}
+.error-title{font-weight:600;margin-bottom:.15rem;}
+.error-desc{font-size:.8rem;color:var(--muted);}
+.e-error{border-left-color:var(--red);background:var(--red-dim);}
+.e-error .error-icon{background:var(--red);}
+.e-error .error-title{color:var(--red);}
+.e-warn{border-left-color:var(--yellow);background:var(--yellow-dim);}
+.e-warn .error-icon{background:var(--yellow);}
+.e-warn .error-title{color:#a06000;}
+.e-success{border-left-color:var(--green);background:var(--green-dim);}
+.e-success .error-icon{background:var(--green);}
+.e-success .error-title{color:var(--green);}
+.e-info{border-left-color:var(--blue);background:var(--blue-dim);}
+.e-info .error-icon{background:var(--blue);}
+.e-info .error-title{color:var(--blue);}
+
+/* ══ TOAST DEMO ══ */
+.toast-container{position:relative;height:60px;overflow:visible;}
+.toast{
+  position:absolute;bottom:0;right:0;
+  display:flex;align-items:center;gap:.7rem;
+  padding:.7rem 1rem;border-left:3px solid;
+  background:var(--bg);border:1px solid var(--border);border-left-width:3px;
+  font-family:var(--font-b);font-size:.83rem;
+  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;
+  transform:translateY(8px);min-width:240px;
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+.toast.show{opacity:1;pointer-events:all;transform:translateY(0);}
+.toast-success{border-left-color:var(--green);}
+.toast-error{border-left-color:var(--red);}
+.toast-warn{border-left-color:var(--yellow);}
+.toast-info{border-left-color:var(--blue);}
+.toast-icon{font-family:var(--font-d);font-size:.7rem;font-weight:800;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+.toast-close{margin-left:auto;cursor:pointer;color:var(--faint);font-size:.8rem;line-height:1;border:none;background:none;padding:0 0 0 .5rem;}
+.toast-progress{position:absolute;bottom:0;left:0;height:2px;transition:width 3s linear;}
+
+/* ══ EMPTY STATE DEMO ══ */
+.empty-states{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.empty-panel{background:var(--bg);padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:.6rem;text-align:center;}
+.empty-icon{width:40px;height:40px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.1rem;font-weight:800;color:var(--faint);}
+.empty-title{font-family:var(--font-d);font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text);}
+.empty-desc{font-size:.78rem;color:var(--muted);line-height:1.5;}
+.empty-action{font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1px solid var(--black);background:var(--black);color:#fff;cursor:pointer;letter-spacing:.06em;transition:background .15s;}
+.empty-action:hover{background:var(--red);border-color:var(--red);}
+
+/* ══ FORM VALIDATION LIVE DEMO ══ */
+.form-demo{display:flex;flex-direction:column;gap:.9rem;}
+.form-field{display:flex;flex-direction:column;gap:.3rem;}
+.form-label{font-family:var(--font-m);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:.4rem;}
+.req-dot{color:var(--red);}
+.form-input{padding:.55rem .8rem;border:1.5px solid var(--border2);font-family:var(--font-b);font-size:.88rem;background:var(--bg);color:var(--text);outline:none;transition:border-color .2s,background .2s;}
+.form-input:focus{border-color:var(--black);}
+.form-input.valid{border-color:var(--green);background:var(--green-dim);}
+.form-input.invalid{border-color:var(--red);background:var(--red-dim);}
+.form-msg{font-family:var(--font-m);font-size:.63rem;display:flex;align-items:center;gap:.3rem;min-height:1rem;}
+.form-msg.err{color:var(--red);}
+.form-msg.ok{color:var(--green);}
+.form-submit{padding:.65rem 1.5rem;background:var(--black);color:#fff;border:none;font-family:var(--font-d);font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:background .15s;}
+.form-submit:hover:not(:disabled){background:var(--red);}
+.form-submit:disabled{background:var(--faint);cursor:not-allowed;}
+
+/* ══ COMPARE ══ */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--black);margin:1.4rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.6rem 1.1rem;font-family:var(--font-d);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:var(--green-dim);color:var(--green);border-bottom:1px solid var(--green-border);border-right:1px solid var(--border);}
+.cpanel-hdr.bad{background:var(--red-dim);color:var(--red);border-bottom:1px solid var(--red-border);border-right:1px solid var(--border);}
+
+/* Quiz */
+.quiz-block{background:var(--bg2);border:2px solid var(--black);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--red);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.15rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:1.2rem;color:var(--text);line-height:1.2;}
+.quiz-options{display:flex;flex-direction:column;gap:.45rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg);border:1.5px solid var(--border);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--black);background:var(--black-dim);}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-dim);color:var(--red);}
+.quiz-key{font-family:var(--font-d);font-size:.75rem;font-weight:700;width:22px;height:22px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* Checklist */
+.checklist{display:flex;flex-direction:column;gap:.4rem;margin:1.4rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.75rem 1rem;background:var(--bg2);border:1px solid var(--border);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:var(--green-dim);border-color:var(--green-border);}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:#fff;font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* Project */
+.project-hero{background:var(--black);color:#fff;padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'UX';position:absolute;right:1rem;bottom:-1rem;font-family:var(--font-d);font-size:10rem;font-weight:800;color:rgba(255,255,255,.06);pointer-events:none;line-height:1;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--red);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:2.2rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.8rem;line-height:1.05;}
+.project-desc{font-size:.88rem;color:#aaa;line-height:1.65;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:0;border:2px solid var(--black);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg);padding:1.3rem 1.7rem;display:grid;grid-template-columns:44px 1fr;gap:1.3rem;align-items:start;transition:background .15s;border-bottom:1px solid var(--border);}
+.step:last-child{border-bottom:none;}
+.step:hover{background:var(--bg2);}
+.step-num{font-family:var(--font-d);font-size:1.2rem;font-weight:800;color:var(--red);line-height:1.2;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.3rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* Resources */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--black);}
+.resource-card{background:var(--bg);padding:1.3rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .15s;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+.resource-card:nth-child(even){border-right:none;}
+.resource-card:nth-last-child(-n+2){border-bottom:none;}
+.resource-card:hover{background:var(--red-dim);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.95rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.55;}
+.resource-arrow{font-size:.85rem;color:var(--red);margin-top:auto;padding-top:.4rem;}
+
+/* Bottom nav */
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:2px solid var(--black);}
+.nav-btn{font-family:var(--font-m);font-size:.72rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.7rem 1.4rem;border:1.5px solid var(--border);background:var(--bg);transition:border-color .15s,color .15s,background .15s;}
+.nav-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .15s;}
+.home-link:hover{color:var(--red);}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;}.hero-right{display:none;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .loading-gallery{grid-template-columns:1fr 1fr;}
+  .empty-states{grid-template-columns:1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / Course</a>
+  <div class="header-badge">WEEK 17 / 18 &mdash; UI POLISH</div>
+  <nav class="header-nav">
+    <a href="week16.html">&larr; Week 16</a>
+    <a href="index.html">總覽</a>
+    <a href="week18.html">Week 18 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">Loading 設計</a>
+  <a class="toc-item" href="#concept-2">錯誤處理</a>
+  <a class="toc-item" href="#concept-3">Toast 通知</a>
+  <a class="toc-item" href="#concept-4">Empty State</a>
+  <a class="toc-item" href="#concept-5">表單驗證</a>
+  <a class="toc-item" href="#concept-6">RWD 完善</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作任務</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-label">PHASE 04 &mdash; Side Project 實戰 / WEEK 17</div>
+      <h1>UI <span class="hi">完善</span><br>錯誤<br>處理</h1>
+      <p class="hero-desc">細節決定一切。這週你將學會讓應用「感覺對了」——Loading 讓等待不焦慮、錯誤訊息讓使用者知道該怎麼做、Empty State 讓空白有意義、表單驗證即時反饋。</p>
+      <div class="hero-meta">
+        <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 04</div></div>
+        <div class="meta-cell"><div class="meta-cell-label">時數</div><div class="meta-cell-value">12–15 h</div></div>
+        <div class="meta-cell"><div class="meta-cell-label">前置</div><div class="meta-cell-value">Week 16 CRUD</div></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="swiss-demo-card">
+        <div class="swiss-card-bar">
+          <div class="swiss-card-title">Form State Demo</div>
+          <div class="swiss-status-dot" id="heroDot" style="background:#aaa;"></div>
+        </div>
+        <div class="swiss-card-body">
+          <div class="swiss-field">
+            <label>EMAIL</label>
+            <input class="swiss-input" id="heroEmailInput" type="text" placeholder="輸入電子郵件">
+            <div class="swiss-error-msg" id="heroEmailErr" style="display:none;">
+              <span>&#9632;</span><span>請輸入有效的電子郵件</span>
+            </div>
+          </div>
+          <div class="swiss-field">
+            <label>PASSWORD</label>
+            <input class="swiss-input" id="heroPassInput" type="password" placeholder="至少 8 個字元">
+            <div class="swiss-error-msg" id="heroPassErr" style="display:none;">
+              <span>&#9632;</span><span>密碼長度至少需要 8 個字元</span>
+            </div>
+          </div>
+          <button class="swiss-btn" id="heroSubmitBtn" onclick="heroSubmit()">LOGIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">學習目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個讓應用從「能用」升級到「好用」的核心技能。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">使用 Skeleton Screen 和 Spinner 為非同步操作提供適當的 Loading UI，並理解兩者的適用場景差異</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">建立統一的錯誤處理架構，區分網路錯誤、業務邏輯錯誤和驗證錯誤，並提供使用者友善的錯誤訊息</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">實作 Toast 通知系統，讓操作成功/失敗的回饋輕量呈現，並設計自動消失和手動關閉兩種模式</span></div>
+        <div class="obj-item"><span class="obj-item"><span class="obj-num">04</span><span class="obj-text">設計有意義的 Empty State，引導使用者採取第一個行動，而非只顯示「目前沒有資料」</span></div></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">使用 React Hook Form 實作即時表單驗證，在 onChange 時顯示即時回饋，在 onSubmit 時進行最終驗證</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">全面檢查 RWD，修正文字過小、按鈕點擊目標過小、圖片溢出、水平捲軸等常見手機版問題</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: Loading -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">Loading 狀態設計</h2>
+      <p class="section-intro">使用者等待是無法避免的，但不同的 Loading UI 帶來完全不同的體驗感受。選對 Loading 模式，讓等待的焦慮降到最低。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">Skeleton Screen vs Spinner</div><div class="csub">各有最佳適用場景</div></div></div>
+        <div class="cbody">
+          <p><em>Skeleton Screen（骨架屏）</em>：在內容載入前，顯示灰色的佔位圖形，形狀模擬真實內容的版面。優點是讓使用者知道「什麼東西即將出現在哪個位置」，大幅降低等待的焦慮感。Facebook、LinkedIn 的動態消息都用這種方式。<strong>適合頁面初始載入或大量內容的渲染</strong>。</p>
+          <p><em>Spinner（旋轉圖示）</em>：通用的等待指示器，不佔太多空間。適合小範圍的操作——按鈕點擊後的處理、提交表單、上傳圖片。<strong>如果 Spinner 顯示超過 3 秒，就要考慮是否有問題</strong>。</p>
+          <p><em>Progress Bar（進度條）</em>：當可以估算進度時使用——檔案上傳、多步驟流程、批次操作。比 Spinner 更讓使用者安心，因為他們知道事情正在推進。頁面頂端的細線進度條（如 YouTube、GitHub）也屬於這類，用於表示頁面或資源載入進度。</p>
+          <div class="note tip">
+            <span class="note-label">立即回饋原則</span>
+            使用者點擊按鈕後，應該在 <strong>100ms 內</strong>得到視覺回饋（按鈕變灰、出現 Spinner）。如果等待超過 1 秒才有反應，使用者會以為按鈕壞了，可能重複點擊。<em>立即回饋不代表立即完成</em>——告訴使用者「我聽到了，正在處理」就足夠了。
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Gallery Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>LOADING PATTERNS GALLERY</strong><span>六種常見的 Loading UI 模式</span></div>
+        <div class="demo-body">
+          <div class="loading-gallery">
+            <div class="loading-item">
+              <div class="spinner"></div>
+              <div class="loading-label">Spinner<br>通用等待</div>
+            </div>
+            <div class="loading-item">
+              <div class="dots"><div class="dot-pulse"></div><div class="dot-pulse"></div><div class="dot-pulse"></div></div>
+              <div class="loading-label">Dot Pulse<br>行內等待</div>
+            </div>
+            <div class="loading-item">
+              <div style="width:100%;">
+                <div class="mini-progress-wrap"><div class="mini-progress-bar"></div></div>
+              </div>
+              <div class="loading-label">Progress Bar<br>可估量進度</div>
+            </div>
+            <div class="loading-item">
+              <div class="inline-sk"></div>
+              <div class="loading-label">Inline Skeleton<br>文字佔位</div>
+            </div>
+            <div class="loading-item">
+              <div class="pulse-overlay"><div class="pulse-shimmer"></div></div>
+              <div class="loading-label">Shimmer<br>圖片/卡片佔位</div>
+            </div>
+            <div class="loading-item">
+              <div class="btn-loading"><div class="mini-spinner"></div>Processing</div>
+              <div class="loading-label">Button Loading<br>操作處理中</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton Demo -->
+      <div class="demo-wrap" style="margin-top:1rem;">
+        <div class="demo-bar"><strong>SKELETON SCREEN DEMO</strong><span>模擬資料載入前後的畫面切換</span></div>
+        <div class="demo-body">
+          <div style="display:flex;gap:.6rem;margin-bottom:1rem;">
+            <button id="showSkeletonBtn" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1.5px solid var(--black);background:var(--black);color:#fff;cursor:pointer;letter-spacing:.06em;">顯示 Skeleton</button>
+            <button id="showContentBtn" style="font-family:var(--font-m);font-size:.65rem;padding:.3rem .8rem;border:1.5px solid var(--border2);background:var(--bg);color:var(--muted);cursor:pointer;letter-spacing:.06em;">載入完成</button>
+          </div>
+          <div id="skeletonView" class="skeleton-area">
+            <div class="skeleton-card">
+              <div class="sk-row"><div class="sk-circle"></div><div style="flex:1;display:flex;flex-direction:column;gap:.4rem;"><div class="sk-line title"></div><div class="sk-line half"></div></div></div>
+              <div class="sk-line full"></div><div class="sk-line full"></div><div class="sk-line third"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="sk-row"><div class="sk-circle"></div><div style="flex:1;display:flex;flex-direction:column;gap:.4rem;"><div class="sk-line title" style="width:45%"></div><div class="sk-line half" style="width:30%"></div></div></div>
+              <div class="sk-line full"></div><div class="sk-line" style="width:80%"></div>
+            </div>
+          </div>
+          <div id="contentView" style="display:none;" class="skeleton-area">
+            <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem;">
+              <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.7rem;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-d);font-weight:800;font-size:.9rem;">A</div>
+                <div><div style="font-weight:600;font-size:.9rem;">Alice Wang</div><div style="font-size:.75rem;color:var(--muted);">2 分鐘前</div></div>
+              </div>
+              <p style="font-size:.85rem;color:#444;line-height:1.6;">這週學完了 React Router，終於搞懂 useNavigate 和 useParams 的差異！明天要繼續挑戰 Supabase 的 RLS 設定。</p>
+            </div>
+            <div style="background:var(--bg2);border:1px solid var(--border);padding:1rem;">
+              <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.7rem;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-d);font-weight:800;font-size:.9rem;">B</div>
+                <div><div style="font-weight:600;font-size:.9rem;">Bob Chen</div><div style="font-size:.75rem;color:var(--muted);">15 分鐘前</div></div>
+              </div>
+              <p style="font-size:.85rem;color:#444;line-height:1.6;">部署到 Vercel 遇到環境變數問題，後來發現 VITE_ 前綴很重要。文件寫得蠻清楚的，多看幾遍就懂了。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — Loading 狀態完整實作</div></div>
+        <pre><span class="s">import</span> { useState, useEffect } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="c">// ── Skeleton Screen 元件 ──</span>
+<span class="s">function</span> <span class="fn">PostSkeleton</span>() {
+  <span class="s">return</span> (
+    <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"animate-pulse"</span><span class="t">&gt;</span>  <span class="c">{/* Tailwind */}</span>
+      <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"flex gap-3 mb-4"</span><span class="t">&gt;</span>
+        <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"w-10 h-10 rounded-full bg-gray-200"</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"flex-1 space-y-2"</span><span class="t">&gt;</span>
+          <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"h-4 bg-gray-200 rounded w-1/3"</span> <span class="t">/&gt;</span>
+          <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"h-3 bg-gray-200 rounded w-1/4"</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;/div&gt;</span>
+      <span class="t">&lt;/div&gt;</span>
+      <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"space-y-2"</span><span class="t">&gt;</span>
+        <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"h-3 bg-gray-200 rounded"</span> <span class="t">/&gt;</span>
+        <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"h-3 bg-gray-200 rounded w-5/6"</span> <span class="t">/&gt;</span>
+      <span class="t">&lt;/div&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── 資料取得 + 三狀態管理 ──</span>
+<span class="s">function</span> <span class="fn">PostList</span>() {
+  <span class="s">const</span> [posts, setPosts]   = <span class="fn">useState</span>([]);
+  <span class="s">const</span> [loading, setLoading] = <span class="fn">useState</span>(<span class="s">true</span>);  <span class="c">// 初始為 true</span>
+  <span class="s">const</span> [error, setError]   = <span class="fn">useState</span>(<span class="s">null</span>);
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="s">const</span> <span class="fn">fetchPosts</span> = <span class="s">async</span> () => {
+      <span class="s">try</span> {
+        <span class="fn">setLoading</span>(<span class="s">true</span>);
+        <span class="fn">setError</span>(<span class="s">null</span>);         <span class="c">// 重試時清除舊錯誤</span>
+        <span class="s">const</span> res = <span class="s">await</span> <span class="fn">fetch</span>(<span class="v">'/api/posts'</span>);
+        <span class="s">if</span> (!res.ok) <span class="s">throw new</span> Error(<span class="v">`HTTP ${res.status}`</span>);
+        <span class="s">const</span> { data } = <span class="s">await</span> res.<span class="fn">json</span>();
+        <span class="fn">setPosts</span>(data ?? []);
+      } <span class="s">catch</span> (err) {
+        <span class="fn">setError</span>(err.message);
+      } <span class="s">finally</span> {
+        <span class="fn">setLoading</span>(<span class="s">false</span>);    <span class="c">// 無論成功失敗都關閉 loading</span>
+      }
+    };
+    <span class="fn">fetchPosts</span>();
+  }, []);
+
+  <span class="c">// 狀態分支渲染</span>
+  <span class="s">if</span> (loading) <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="kw">{</span>[<span class="str">1</span>,<span class="str">2</span>,<span class="str">3</span>].<span class="fn">map</span>(i => <span class="t">&lt;PostSkeleton</span> <span class="p">key</span>=<span class="kw">{</span>i<span class="kw">}</span> <span class="t">/&gt;</span>)<span class="kw">}</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+
+  <span class="s">if</span> (error) <span class="s">return</span> <span class="t">&lt;ErrorMessage</span> <span class="p">message</span>=<span class="kw">{</span>error<span class="kw">}</span> <span class="t">/&gt;</span>;
+
+  <span class="s">if</span> (posts.length === <span class="str">0</span>) <span class="s">return</span> <span class="t">&lt;EmptyState</span> <span class="t">/&gt;</span>;
+
+  <span class="s">return</span> posts.<span class="fn">map</span>(post => <span class="t">&lt;PostCard</span> <span class="p">key</span>=<span class="kw">{</span>post.id<span class="kw">}</span> <span class="p">post</span>=<span class="kw">{</span>post<span class="kw">}</span> <span class="t">/&gt;</span>);
+}
+
+<span class="c">// ── 按鈕 Loading 狀態 ──</span>
+<span class="s">function</span> <span class="fn">SubmitButton</span>({ loading, children }) {
+  <span class="s">return</span> (
+    <span class="t">&lt;button</span>
+      <span class="p">type</span>=<span class="v">"submit"</span>
+      <span class="p">disabled</span>=<span class="kw">{</span>loading<span class="kw">}</span>
+      <span class="p">className</span>=<span class="v">{`btn ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}</span>
+    <span class="t">&gt;</span>
+      <span class="kw">{</span>loading ? (
+        <span class="t">&lt;span</span> <span class="p">className</span>=<span class="v">"flex items-center gap-2"</span><span class="t">&gt;</span>
+          <span class="t">&lt;Spinner</span> <span class="p">size</span>=<span class="v">"sm"</span> <span class="t">/&gt;</span>
+          處理中...
+        <span class="t">&lt;/span&gt;</span>
+      ) : children<span class="kw">}</span>
+    <span class="t">&lt;/button&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: 錯誤處理 -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">錯誤處理架構</h2>
+      <p class="section-intro">錯誤是必然發生的，問題是如何優雅地處理它。好的錯誤處理讓使用者知道「發生了什麼」和「我能做什麼」，而不是讓他們面對一片空白。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">錯誤的三種類型</div><div class="csub">不同錯誤需要不同的處理策略</div></div></div>
+        <div class="cbody">
+          <p><em>網路錯誤（Network Error）</em>：網路斷線、伺服器無回應（503）、逾時（Timeout）。使用者無法直接解決，但你應該提供<strong>重試按鈕</strong>，並給出「請檢查網路連線」之類的提示。</p>
+          <p><em>業務邏輯錯誤（Business Error）</em>：權限不足（403）、資源不存在（404）、操作衝突（409，如用戶名稱已被使用）。這些有明確的解決方向，應該<strong>提供具體的行動指引</strong>（「這個帳號已存在，是否要改用此帳號登入？」）。</p>
+          <p><em>驗證錯誤（Validation Error）</em>：表單欄位格式錯誤、必填欄位為空。應該在送出前就即時提示，或在 API 回傳 400 錯誤後顯示在對應欄位下方，不要只彈出一個通用的「錯誤」提示框。</p>
+          <div class="note warn">
+            <span class="note-label">使用者友善的錯誤訊息</span>
+            不要直接把程式碼錯誤顯示給使用者：「Error: ECONNREFUSED 127.0.0.1:5432」對他們毫無意義。<strong>把技術錯誤翻譯成使用者能理解的語言</strong>：「伺服器暫時無法回應，請稍後再試。」並在 console 中保留完整的技術錯誤供開發時除錯。
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State Gallery -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>ERROR STATE PATTERNS</strong><span>四種錯誤訊息的視覺設計</span></div>
+        <div class="demo-body">
+          <div class="error-gallery">
+            <div class="error-item e-error">
+              <div class="error-icon">ERR</div>
+              <div class="error-content">
+                <div class="error-title">無法載入資料</div>
+                <div class="error-desc">伺服器暫時無法回應（500 Internal Server Error）。<a href="#" style="color:var(--red);" onclick="return false;">重新嘗試</a></div>
+              </div>
+            </div>
+            <div class="error-item e-warn">
+              <div class="error-icon">!</div>
+              <div class="error-content">
+                <div class="error-title">連線逾時</div>
+                <div class="error-desc">請求花費太長時間，請確認網路連線後再試。若問題持續，請<a href="#" style="color:#a06000;" onclick="return false;">聯絡客服</a>。</div>
+              </div>
+            </div>
+            <div class="error-item e-info">
+              <div class="error-icon">i</div>
+              <div class="error-content">
+                <div class="error-title">找不到此頁面（404）</div>
+                <div class="error-desc">您查詢的內容不存在或已被移除。<a href="#" style="color:var(--blue);" onclick="return false;">返回首頁</a></div>
+              </div>
+            </div>
+            <div class="error-item e-success">
+              <div class="error-icon">OK</div>
+              <div class="error-content">
+                <div class="error-title">操作成功</div>
+                <div class="error-desc">您的變更已儲存。資料已同步至雲端。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — 統一錯誤處理架構</div></div>
+        <pre><span class="c">// ── 統一 API 錯誤處理函式 ──</span>
+<span class="c">// lib/api.ts</span>
+<span class="s">export class</span> <span class="fn">ApiError</span> <span class="s">extends</span> Error {
+  constructor(
+    <span class="s">public</span> status: <span class="t">number</span>,
+    message: <span class="t">string</span>,
+    <span class="s">public</span> code?: <span class="t">string</span>
+  ) {
+    <span class="s">super</span>(message);
+    this.name = <span class="v">'ApiError'</span>;
+  }
+}
+
+<span class="s">export async function</span> <span class="fn">apiFetch</span>&lt;T&gt;(url: <span class="t">string</span>, options?: RequestInit): Promise&lt;T&gt; {
+  <span class="s">const</span> res = <span class="s">await</span> <span class="fn">fetch</span>(url, {
+    headers: { <span class="v">'Content-Type'</span>: <span class="v">'application/json'</span> },
+    ...options,
+  });
+  <span class="s">if</span> (!res.ok) {
+    <span class="s">const</span> body = <span class="s">await</span> res.<span class="fn">json</span>().<span class="fn">catch</span>(() => ({}));
+    <span class="s">throw new</span> <span class="fn">ApiError</span>(res.status, body.error ?? <span class="v">'請求失敗'</span>, body.code);
+  }
+  <span class="s">return</span> res.<span class="fn">json</span>();
+}
+
+<span class="c">// ── 把 status code 轉成使用者友善訊息 ──</span>
+<span class="s">function</span> <span class="fn">getUserMessage</span>(err: unknown): <span class="t">string</span> {
+  <span class="s">if</span> (err <span class="s">instanceof</span> ApiError) {
+    <span class="s">switch</span> (err.status) {
+      <span class="s">case</span> <span class="str">400</span>: <span class="s">return</span> <span class="v">'請求格式有誤，請確認輸入內容'</span>;
+      <span class="s">case</span> <span class="str">401</span>: <span class="s">return</span> <span class="v">'請先登入後再操作'</span>;
+      <span class="s">case</span> <span class="str">403</span>: <span class="s">return</span> <span class="v">'您沒有執行此操作的權限'</span>;
+      <span class="s">case</span> <span class="str">404</span>: <span class="s">return</span> <span class="v">'找不到請求的資源'</span>;
+      <span class="s">case</span> <span class="str">409</span>: <span class="s">return</span> <span class="v">'資料已存在，請確認後再試'</span>;
+      <span class="s">case</span> <span class="str">429</span>: <span class="s">return</span> <span class="v">'請求過於頻繁，請稍後再試'</span>;
+      <span class="s">default</span>:  <span class="s">return</span> <span class="v">'伺服器發生錯誤，請稍後再試'</span>;
+    }
+  }
+  <span class="s">if</span> (err <span class="s">instanceof</span> TypeError) {
+    <span class="s">return</span> <span class="v">'網路連線異常，請確認網路後再試'</span>;
+  }
+  <span class="s">return</span> <span class="v">'發生未知錯誤，請重新整理頁面'</span>;
+}
+
+<span class="c">// ── 在元件中使用 ──</span>
+<span class="s">try</span> {
+  <span class="s">const</span> data = <span class="s">await</span> <span class="fn">apiFetch</span>(<span class="v">'/api/posts'</span>);
+} <span class="s">catch</span> (err) {
+  <span class="fn">setError</span>(<span class="fn">getUserMessage</span>(err));  <span class="c">// 友善訊息給使用者</span>
+  console.<span class="fn">error</span>(<span class="v">'API error:'</span>, err); <span class="c">// 技術細節給開發者</span>
+}
+
+<span class="c">// ── React Error Boundary（捕捉渲染錯誤）──</span>
+<span class="s">import</span> { Component, ErrorInfo, ReactNode } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="s">class</span> <span class="fn">ErrorBoundary</span> <span class="s">extends</span> Component&lt;
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: <span class="t">boolean</span>; error?: Error }
+&gt; {
+  state = { hasError: <span class="s">false</span> };
+
+  <span class="s">static</span> <span class="fn">getDerivedStateFromError</span>(error: Error) {
+    <span class="s">return</span> { hasError: <span class="s">true</span>, error };
+  }
+
+  <span class="fn">componentDidCatch</span>(error: Error, info: ErrorInfo) {
+    console.<span class="fn">error</span>(<span class="v">'UI Error:'</span>, error, info);
+    <span class="c">// 可以在這裡發送錯誤報告（如 Sentry）</span>
+  }
+
+  <span class="fn">render</span>() {
+    <span class="s">if</span> (this.state.hasError) {
+      <span class="s">return</span> this.props.fallback ?? <span class="t">&lt;div&gt;</span>發生錯誤<span class="t">&lt;/div&gt;</span>;
+    }
+    <span class="s">return</span> this.props.children;
+  }
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: Toast -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">Toast 通知系統</h2>
+      <p class="section-intro">Toast 是不打斷使用者工作流程的輕量通知——操作完成後短暫顯示在角落，使用者不需要點擊確認就能繼續操作。比對話框（Dialog）更友善。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">Toast 的設計原則</div><div class="csub">時機、位置、持續時間</div></div></div>
+        <div class="cbody">
+          <p><em>何時用 Toast</em>：操作成功/失敗的回饋（儲存、刪除、複製）、不需要使用者做任何決定的通知。<strong>不適合用 Toast 的情況</strong>：需要使用者確認的操作（刪除重要資料）、需要閱讀多行說明的錯誤（用 inline 錯誤訊息更好）。</p>
+          <p><em>位置</em>：通常在右下角或右上角。右下角干擾較少（遠離使用者視覺焦點中心）；右上角更醒目，適合重要通知。<em>持續時間</em>：成功訊息 3 秒、錯誤訊息 5 秒（需要閱讀更多內容）、警告訊息 4 秒。提供手動關閉按鈕，讓不想等待的使用者自己關閉。</p>
+          <p><em>最多同時顯示 3 個</em>。如果操作非常頻繁（如多個上傳同時完成），新 Toast 替換或合併舊的，不要一次堆疊十幾個。</p>
+        </div>
+      </div>
+
+      <!-- Toast Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>INTERACTIVE TOAST DEMO</strong><span>點擊按鈕觸發不同類型的 Toast</span></div>
+        <div class="demo-body">
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.2rem;">
+            <button onclick="showToast('success','儲存成功','您的變更已成功儲存到雲端。')" style="font-family:var(--font-m);font-size:.65rem;padding:.35rem .9rem;border:1.5px solid var(--green);background:var(--green-dim);color:var(--green);cursor:pointer;letter-spacing:.05em;">Success Toast</button>
+            <button onclick="showToast('error','儲存失敗','網路連線異常，請稍後再試。')" style="font-family:var(--font-m);font-size:.65rem;padding:.35rem .9rem;border:1.5px solid var(--red);background:var(--red-dim);color:var(--red);cursor:pointer;letter-spacing:.05em;">Error Toast</button>
+            <button onclick="showToast('warn','注意','此操作將無法復原，請確認後繼續。')" style="font-family:var(--font-m);font-size:.65rem;padding:.35rem .9rem;border:1.5px solid var(--yellow);background:var(--yellow-dim);color:#a06000;cursor:pointer;letter-spacing:.05em;">Warning Toast</button>
+            <button onclick="showToast('info','提示','您的會話將在 5 分鐘後過期。')" style="font-family:var(--font-m);font-size:.65rem;padding:.35rem .9rem;border:1.5px solid var(--blue);background:var(--blue-dim);color:var(--blue);cursor:pointer;letter-spacing:.05em;">Info Toast</button>
+          </div>
+          <div style="min-height:80px;background:var(--bg2);border:1px solid var(--border);padding:1rem;position:relative;">
+            <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;">Toast 顯示區域（模擬右下角）</div>
+            <div style="position:absolute;bottom:1rem;right:1rem;display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;" id="toastContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — Toast 系統實作（Context + Hook）</div></div>
+        <pre><span class="c">// ── Toast Context ──</span>
+<span class="s">import</span> { createContext, useContext, useState, useCallback } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="s">type</span> <span class="t">ToastType</span> = <span class="v">'success'</span> | <span class="v">'error'</span> | <span class="v">'warn'</span> | <span class="v">'info'</span>;
+<span class="s">interface</span> Toast { id: <span class="t">string</span>; type: <span class="t">ToastType</span>; title: <span class="t">string</span>; msg: <span class="t">string</span>; }
+
+<span class="s">const</span> ToastContext = <span class="fn">createContext</span>&lt;{
+  toast: (type: <span class="t">ToastType</span>, title: <span class="t">string</span>, msg: <span class="t">string</span>) => <span class="s">void</span>;
+}&gt;({ toast: () => {} });
+
+<span class="s">export function</span> <span class="fn">ToastProvider</span>({ children }) {
+  <span class="s">const</span> [toasts, setToasts] = <span class="fn">useState</span>&lt;Toast[]&gt;([]);
+
+  <span class="s">const</span> toast = <span class="fn">useCallback</span>((type, title, msg) => {
+    <span class="s">const</span> id = Date.<span class="fn">now</span>().<span class="fn">toString</span>();
+    <span class="fn">setToasts</span>(prev => [...prev, { id, type, title, msg }]);
+    <span class="s">const</span> duration = type === <span class="v">'error'</span> ? <span class="str">5000</span> : type === <span class="v">'warn'</span> ? <span class="str">4000</span> : <span class="str">3000</span>;
+    <span class="fn">setTimeout</span>(() => <span class="fn">dismiss</span>(id), duration);
+  }, []);
+
+  <span class="s">const</span> dismiss = <span class="fn">useCallback</span>((id: <span class="t">string</span>) => {
+    <span class="fn">setToasts</span>(prev => prev.<span class="fn">filter</span>(t => t.id !== id));
+  }, []);
+
+  <span class="s">return</span> (
+    <span class="t">&lt;ToastContext.Provider</span> <span class="p">value</span>=<span class="kw">{{</span>toast<span class="kw">}}</span><span class="t">&gt;</span>
+      <span class="kw">{</span>children<span class="kw">}</span>
+      <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"fixed bottom-4 right-4 flex flex-col gap-2 z-50"</span><span class="t">&gt;</span>
+        <span class="kw">{</span>toasts.<span class="fn">map</span>(t => (
+          <span class="t">&lt;ToastItem</span> <span class="p">key</span>=<span class="kw">{</span>t.id<span class="kw">}</span> <span class="p">toast</span>=<span class="kw">{</span>t<span class="kw">}</span> <span class="p">onDismiss</span>=<span class="kw">{</span>dismiss<span class="kw">}</span> <span class="t">/&gt;</span>
+        ))<span class="kw">}</span>
+      <span class="t">&lt;/div&gt;</span>
+    <span class="t">&lt;/ToastContext.Provider&gt;</span>
+  );
+}
+
+<span class="c">// ── 自訂 Hook ──</span>
+<span class="s">export const</span> useToast = () => <span class="fn">useContext</span>(ToastContext);
+
+<span class="c">// ── 在元件中使用 ──</span>
+<span class="s">function</span> <span class="fn">SaveButton</span>() {
+  <span class="s">const</span> { toast } = <span class="fn">useToast</span>();
+  <span class="s">const</span> <span class="fn">handleSave</span> = <span class="s">async</span> () => {
+    <span class="s">try</span> {
+      <span class="s">await</span> <span class="fn">saveData</span>();
+      <span class="fn">toast</span>(<span class="v">'success'</span>, <span class="v">'儲存成功'</span>, <span class="v">'您的變更已儲存'</span>);
+    } <span class="s">catch</span> {
+      <span class="fn">toast</span>(<span class="v">'error'</span>, <span class="v">'儲存失敗'</span>, <span class="v">'請稍後再試'</span>);
+    }
+  };
+  <span class="s">return</span> <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>handleSave<span class="kw">}</span><span class="t">&gt;</span>儲存<span class="t">&lt;/button&gt;</span>;
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: Empty State -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">Empty State 設計</h2>
+      <p class="section-intro">當列表沒有資料時，不要只顯示「目前沒有項目」——這是一個絕佳機會，引導新使用者採取第一個行動，或讓現有使用者了解為什麼沒有看到預期的資料。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">Empty State 的四種情境</div><div class="csub">根據情境選擇不同的設計策略</div></div></div>
+        <div class="cbody">
+          <p><em>第一次使用（First Use）</em>：使用者剛建立帳號，什麼都沒有。這是最重要的 Empty State——給他們一個<strong>明確的行動指令</strong>（「新增第一個任務」的大按鈕），讓他們立刻開始使用。</p>
+          <p><em>搜尋無結果（No Results）</em>：使用者搜尋了但沒找到匹配項目。應該告訴他們<strong>可以嘗試什麼</strong>——換個關鍵字、清除篩選器、或者提示「您要新增這個嗎？」。</p>
+          <p><em>錯誤造成的空白（Error Empty）</em>：資料載入失敗導致空白。這和普通的 Empty State 不同，應該<strong>告知有問題並提供重試</strong>。</p>
+          <p><em>有意為之的空白（Intentional Empty）</em>：使用者主動清空了列表（刪除了所有待辦事項、清空購物車）。可以<strong>給予正向回饋</strong>（「太好了，全部完成！」）而不是消極的「沒有資料」。</p>
+        </div>
+      </div>
+
+      <!-- Empty State Gallery -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>EMPTY STATE PATTERNS</strong><span>四種情境的 Empty State 設計</span></div>
+        <div class="demo-body">
+          <div class="empty-states">
+            <div class="empty-panel">
+              <div class="empty-icon">+</div>
+              <div class="empty-title">開始使用</div>
+              <div class="empty-desc">您還沒有任何待辦事項。<br>新增第一個任務來開始吧！</div>
+              <button class="empty-action">新增任務</button>
+            </div>
+            <div class="empty-panel">
+              <div class="empty-icon">?</div>
+              <div class="empty-title">找不到結果</div>
+              <div class="empty-desc">「React」沒有符合的結果。<br>試試其他關鍵字，或清除篩選器。</div>
+              <button class="empty-action">清除篩選</button>
+            </div>
+            <div class="empty-panel">
+              <div class="empty-icon" style="border-color:var(--red);color:var(--red);">!</div>
+              <div class="empty-title">載入失敗</div>
+              <div class="empty-desc">無法取得資料，<br>請確認網路連線後重試。</div>
+              <button class="empty-action" style="background:var(--red);border-color:var(--red);">重新載入</button>
+            </div>
+            <div class="empty-panel">
+              <div class="empty-icon" style="border-color:var(--green);color:var(--green);">✓</div>
+              <div class="empty-title">全部完成！</div>
+              <div class="empty-desc">您已完成所有待辦事項。<br>休息一下，做得很好！</div>
+              <button class="empty-action" style="background:var(--green);border-color:var(--green);">新增更多</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — 可重用的 EmptyState 元件</div></div>
+        <pre><span class="s">interface</span> EmptyStateProps {
+  icon?: React.ReactNode;
+  title: <span class="t">string</span>;
+  description: <span class="t">string</span>;
+  action?: { label: <span class="t">string</span>; onClick: () => <span class="s">void</span> };
+  variant?: <span class="v">'default'</span> | <span class="v">'error'</span> | <span class="v">'success'</span>;
+}
+
+<span class="s">function</span> <span class="fn">EmptyState</span>({ icon, title, description, action, variant = <span class="v">'default'</span> }: EmptyStateProps) {
+  <span class="s">const</span> styles = {
+    default: <span class="v">'text-gray-400'</span>,
+    error:   <span class="v">'text-red-400'</span>,
+    success: <span class="v">'text-green-400'</span>,
+  };
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div</span> <span class="p">className</span>=<span class="v">"flex flex-col items-center justify-center py-16 text-center"</span><span class="t">&gt;</span>
+      <span class="kw">{</span>icon && (
+        <span class="t">&lt;div</span> <span class="p">className</span>=<span class="kw">{`text-4xl mb-4 ${styles[variant]}`}</span><span class="t">&gt;</span>
+          <span class="kw">{</span>icon<span class="kw">}</span>
+        <span class="t">&lt;/div&gt;</span>
+      )<span class="kw">}</span>
+      <span class="t">&lt;h3</span> <span class="p">className</span>=<span class="v">"font-semibold text-lg mb-2"</span><span class="t">&gt;</span><span class="kw">{</span>title<span class="kw">}</span><span class="t">&lt;/h3&gt;</span>
+      <span class="t">&lt;p</span> <span class="p">className</span>=<span class="v">"text-sm text-gray-500 max-w-xs mb-6"</span><span class="t">&gt;</span><span class="kw">{</span>description<span class="kw">}</span><span class="t">&lt;/p&gt;</span>
+      <span class="kw">{</span>action && (
+        <span class="t">&lt;button</span> <span class="p">onClick</span>=<span class="kw">{</span>action.onClick<span class="kw">}</span> <span class="p">className</span>=<span class="v">"btn btn-primary"</span><span class="t">&gt;</span>
+          <span class="kw">{</span>action.label<span class="kw">}</span>
+        <span class="t">&lt;/button&gt;</span>
+      )<span class="kw">}</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// 使用方式</span>
+{posts.length === <span class="str">0</span> && (
+  <span class="t">&lt;EmptyState</span>
+    <span class="p">icon</span>=<span class="kw">{</span><span class="t">&lt;ClipboardList /&gt;</span><span class="kw">}</span>
+    <span class="p">title</span>=<span class="v">"還沒有文章"</span>
+    <span class="p">description</span>=<span class="v">"發布您的第一篇文章，開始與讀者分享！"</span>
+    <span class="p">action</span>=<span class="kw">{{</span> label: <span class="v">'新增文章'</span>, onClick: () => navigate(<span class="v">'/posts/new'</span>) <span class="kw">}}</span>
+  <span class="t">/&gt;</span>
+)}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: 表單驗證 -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">表單驗證與 React Hook Form</h2>
+      <p class="section-intro">表單是使用者與應用互動最頻繁的地方。即時、清晰的驗證回饋讓使用者知道「我做對了嗎」，大幅減少錯誤率和挫折感。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">驗證策略：何時觸發</div><div class="csub">onChange / onBlur / onSubmit</div></div></div>
+        <div class="cbody">
+          <p><em>onBlur（失去焦點時）</em>：使用者填完一個欄位離開時才驗證。比 onChange 更不打擾，是大多數欄位的推薦策略。例外：密碼強度可以在 onChange 時即時顯示（使用者還沒離開欄位就需要知道是否滿足條件）。</p>
+          <p><em>onChange（每次輸入時）</em>：適合限制性較強的欄位（只能輸入數字、字元長度限制）。注意：電子郵件驗證不適合 onChange——使用者輸入到一半時「a@」就顯示錯誤很煩。</p>
+          <p><em>onSubmit（送出時）</em>：最後一道防線，確保所有欄位都通過驗證才允許送出。React Hook Form 的 <code>handleSubmit</code> 自動在所有欄位通過驗證後才呼叫你的 submit 函式。</p>
+        </div>
+      </div>
+
+      <!-- Live Form Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>LIVE FORM VALIDATION DEMO</strong><span>即時驗證回饋示範</span></div>
+        <div class="demo-body">
+          <div class="form-demo" id="liveFormDemo">
+            <div class="form-field">
+              <div class="form-label">電子郵件 <span class="req-dot">*</span></div>
+              <input class="form-input" id="liveEmail" type="text" placeholder="your@email.com">
+              <div class="form-msg" id="liveEmailMsg"></div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">使用者名稱 <span class="req-dot">*</span></div>
+              <input class="form-input" id="liveUsername" type="text" placeholder="3–20 個字元，英文數字">
+              <div class="form-msg" id="liveUsernameMsg"></div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">密碼 <span class="req-dot">*</span></div>
+              <input class="form-input" id="livePassword" type="password" placeholder="至少 8 個字元，含大小寫和數字">
+              <div class="form-msg" id="livePasswordMsg"></div>
+              <!-- Password Strength Meter -->
+              <div style="display:flex;gap:3px;margin-top:.4rem;" id="strengthMeter">
+                <div style="flex:1;height:3px;background:var(--border2);border-radius:1px;" id="s1"></div>
+                <div style="flex:1;height:3px;background:var(--border2);border-radius:1px;" id="s2"></div>
+                <div style="flex:1;height:3px;background:var(--border2);border-radius:1px;" id="s3"></div>
+                <div style="flex:1;height:3px;background:var(--border2);border-radius:1px;" id="s4"></div>
+              </div>
+              <div style="font-family:var(--font-m);font-size:.6rem;color:var(--faint);margin-top:.25rem;" id="strengthLabel"></div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">確認密碼 <span class="req-dot">*</span></div>
+              <input class="form-input" id="liveConfirm" type="password" placeholder="再次輸入密碼">
+              <div class="form-msg" id="liveConfirmMsg"></div>
+            </div>
+            <button class="form-submit" id="liveSubmitBtn" disabled>建立帳號</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — React Hook Form + Zod 完整範例</div></div>
+        <pre><span class="s">import</span> { useForm } <span class="s">from</span> <span class="v">'react-hook-form'</span>;
+<span class="s">import</span> { zodResolver } <span class="s">from</span> <span class="v">'@hookform/resolvers/zod'</span>;
+<span class="s">import</span> * <span class="s">as</span> z <span class="s">from</span> <span class="v">'zod'</span>;
+
+<span class="c">// ── 1. 用 Zod 定義 Schema ──</span>
+<span class="s">const</span> registerSchema = z.<span class="fn">object</span>({
+  email: z.<span class="fn">string</span>()
+    .<span class="fn">min</span>(<span class="str">1</span>, <span class="v">'請輸入電子郵件'</span>)
+    .<span class="fn">email</span>(<span class="v">'請輸入有效的電子郵件格式'</span>),
+  username: z.<span class="fn">string</span>()
+    .<span class="fn">min</span>(<span class="str">3</span>, <span class="v">'使用者名稱至少 3 個字元'</span>)
+    .<span class="fn">max</span>(<span class="str">20</span>, <span class="v">'使用者名稱最多 20 個字元'</span>)
+    .<span class="fn">regex</span>(/^[a-zA-Z0-9_]+$/, <span class="v">'只允許英文、數字和底線'</span>),
+  password: z.<span class="fn">string</span>()
+    .<span class="fn">min</span>(<span class="str">8</span>, <span class="v">'密碼至少 8 個字元'</span>)
+    .<span class="fn">regex</span>(/[A-Z]/, <span class="v">'需包含至少一個大寫字母'</span>)
+    .<span class="fn">regex</span>(/[0-9]/, <span class="v">'需包含至少一個數字'</span>),
+  confirmPassword: z.<span class="fn">string</span>(),
+}).<span class="fn">refine</span>(
+  data => data.password === data.confirmPassword,
+  { message: <span class="v">'兩次輸入的密碼不一致'</span>, path: [<span class="v">'confirmPassword'</span>] }
+);
+
+<span class="s">type</span> RegisterForm = z.<span class="fn">infer</span>&lt;<span class="s">typeof</span> registerSchema&gt;;
+
+<span class="c">// ── 2. 在元件中使用 ──</span>
+<span class="s">function</span> <span class="fn">RegisterForm</span>() {
+  <span class="s">const</span> {
+    register, handleSubmit, formState: { errors, isSubmitting },
+  } = <span class="fn">useForm</span>&lt;RegisterForm&gt;({
+    resolver: <span class="fn">zodResolver</span>(registerSchema),
+    mode: <span class="v">'onBlur'</span>,   <span class="c">// 失去焦點時驗證</span>
+  });
+
+  <span class="s">const</span> <span class="fn">onSubmit</span> = <span class="s">async</span> (data: RegisterForm) => {
+    <span class="c">// 只有全部通過驗證才會到這裡</span>
+    <span class="s">await</span> <span class="fn">registerUser</span>(data);
+  };
+
+  <span class="s">return</span> (
+    <span class="t">&lt;form</span> <span class="p">onSubmit</span>=<span class="kw">{</span><span class="fn">handleSubmit</span>(onSubmit)<span class="kw">}</span><span class="t">&gt;</span>
+      <span class="t">&lt;div&gt;</span>
+        <span class="t">&lt;input</span>
+          <span class="kw">{</span>...<span class="fn">register</span>(<span class="v">'email'</span>)<span class="kw">}</span>
+          <span class="p">className</span>=<span class="kw">{</span>errors.email ? <span class="v">'input error'</span> : <span class="v">'input'</span><span class="kw">}</span>
+        <span class="t">/&gt;</span>
+        <span class="kw">{</span>errors.email && (
+          <span class="t">&lt;p</span> <span class="p">className</span>=<span class="v">"text-red-500 text-sm mt-1"</span><span class="t">&gt;</span>
+            <span class="kw">{</span>errors.email.message<span class="kw">}</span>
+          <span class="t">&lt;/p&gt;</span>
+        )<span class="kw">}</span>
+      <span class="t">&lt;/div&gt;</span>
+
+      <span class="t">&lt;button</span> <span class="p">type</span>=<span class="v">"submit"</span> <span class="p">disabled</span>=<span class="kw">{</span>isSubmitting<span class="kw">}</span><span class="t">&gt;</span>
+        <span class="kw">{</span>isSubmitting ? <span class="v">'處理中...'</span> : <span class="v">'建立帳號'</span><span class="kw">}</span>
+      <span class="t">&lt;/button&gt;</span>
+    <span class="t">&lt;/form&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: RWD 完善 -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">RWD 完善與收尾</h2>
+      <p class="section-intro">RWD 不只是「縮小字體」。這週進行全面的手機版審查，修正所有影響使用者體驗的細節問題，讓應用在所有裝置上都感覺對了。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">最常見的手機版問題</div><div class="csub">系統性檢查清單</div></div></div>
+        <div class="cbody">
+          <p><em>觸控目標過小</em>：按鈕或連結的可點擊區域太小（應至少 44×44px）。解法：增加 padding，不要只讓文字本身可點擊。<code>min-h-[44px] min-w-[44px]</code>（Tailwind）。</p>
+          <p><em>文字過小</em>：手機上的正文字體應至少 16px，否則 iOS Safari 會自動縮放輸入框導致頁面縮放。使用 <code>text-base</code>（16px）作為基準，而不是 <code>text-sm</code>（14px）。</p>
+          <p><em>水平捲軸</em>：某個元素超出視窗寬度，產生意外的橫向捲動。常見原因：固定寬度的表格、<code>pre</code> 標籤、<code>min-width</code> 過大。用 Chrome DevTools 的「Rendering → Show Layout Shift Regions」或直接在手機模式拖動視窗寬度找出問題元素。</p>
+          <p><em>圖片溢出</em>：記得所有 <code>&lt;img&gt;</code> 都要有 <code>max-width: 100%</code>。</p>
+          <div class="note info">
+            <span class="note-label">Chrome DevTools 測試技巧</span>
+            按 <kbd>Ctrl+Shift+M</kbd>（Mac: <kbd>Cmd+Shift+M</kbd>）進入裝置模擬模式，選擇「iPhone 14 Pro」或「Samsung Galaxy S21」等具體裝置。同時開啟「Sensors」面板設定 touch 模式，才能測試真實的觸控目標大小。記得在 300%、150%、100% 三種縮放比例下各測試一遍。
+          </div>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr bad">常見手機版問題（點擊後截圖）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:1.9;"><span class="c">/* 按鈕太小，無法觸控 */</span>
+<span class="t">.btn</span> { <span class="p">padding</span>: <span class="v">2px 8px</span>; }  <span class="c">/* ❌ 高度 ~26px */</span>
+
+<span class="c">/* 文字過小觸發縮放 */</span>
+<span class="t">input</span> { <span class="p">font-size</span>: <span class="v">12px</span>; }  <span class="c">/* ❌ iOS 自動縮放 */</span>
+
+<span class="c">/* 圖片溢出 */</span>
+<span class="t">img</span> { <span class="p">width</span>: <span class="v">500px</span>; }  <span class="c">/* ❌ 超出容器 */</span>
+
+<span class="c">/* 表格產生水平捲軸 */</span>
+<span class="t">table</span> { <span class="p">width</span>: <span class="v">800px</span>; }  <span class="c">/* ❌ 固定寬度 */</span></pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">修正後（符合規範）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:1.9;"><span class="c">/* 觸控友善按鈕 */</span>
+<span class="t">.btn</span> { <span class="p">min-height</span>: <span class="v">44px</span>; <span class="p">padding</span>: <span class="v">.75rem 1.5rem</span>; } <span class="c">/* ✓ */</span>
+
+<span class="c">/* 避免 iOS 縮放 */</span>
+<span class="t">input</span> { <span class="p">font-size</span>: <span class="v">16px</span>; }  <span class="c">/* ✓ >= 16px */</span>
+
+<span class="c">/* 圖片不溢出 */</span>
+<span class="t">img</span> { <span class="p">max-width</span>: <span class="v">100%</span>; <span class="p">height</span>: <span class="v">auto</span>; }  <span class="c">/* ✓ */</span>
+
+<span class="c">/* 表格可橫向捲動 */</span>
+<span class="t">.table-wrap</span> {
+  <span class="p">overflow-x</span>: <span class="v">auto</span>;  <span class="c">/* ✓ 容器可捲動 */</span>
+}</pre>
+        </div>
+      </div>
+
+      <table class="ptable">
+        <thead><tr><th>問題類型</th><th>診斷方式</th><th>修正方法</th></tr></thead>
+        <tbody>
+          <tr><td>觸控目標過小</td><td>DevTools → Lighthouse → Accessibility</td><td>加 padding 至少 44×44px，或加 <code>touch-action: manipulation</code></td></tr>
+          <tr><td>文字過小</td><td>DevTools 手機模式目視確認</td><td>body font-size 至少 16px，input font-size 至少 16px</td></tr>
+          <tr><td>水平捲軸</td><td>DevTools Console 執行 <code>document.body.scrollWidth > window.innerWidth</code></td><td>找出寬度超出的元素，加 <code>max-width: 100%</code> 或 <code>overflow-x: hidden</code></td></tr>
+          <tr><td>iOS 輸入框縮放</td><td>Safari 模擬器，點擊 input</td><td>所有 input/select 的 font-size 設為 16px 以上</td></tr>
+          <tr><td>行距過密</td><td>目視確認，行間是否足夠</td><td>line-height 至少 1.5，行動版建議 1.6–1.7</td></tr>
+          <tr><td>Overflow 截斷文字</td><td>測試長文字輸入</td><td>加 <code>word-break: break-word</code> 或 <code>overflow-wrap: anywhere</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋本週 UI 完善的核心概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">以下哪個情境最適合使用 Skeleton Screen 而非 Spinner？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>使用者點擊「刪除」按鈕，等待確認操作完成</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>頁面初始載入，等待文章列表從 API 取得並渲染</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>圖片上傳中，顯示上傳進度</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>表單送出後，等待後端驗證回應</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Skeleton Screen 的優勢在於它告訴使用者「頁面上將會有什麼內容、在哪個位置」，特別適合<strong>頁面初始載入</strong>這類需要填充大量內容的場景。選項 A 和 D 是操作回饋（用按鈕 Loading 或小 Spinner 即可）；選項 C 有明確進度（用 Progress Bar）。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Skeleton Screen 模擬的是「即將出現的內容結構」——想想哪個場景最需要讓使用者提前知道畫面上會有哪些區塊？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">你的 API 回傳了 HTTP 403 錯誤。以下哪個錯誤訊息對使用者最有幫助？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>「Error: 403 Forbidden」</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>「發生錯誤，請聯絡客服」</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>「您沒有執行此操作的權限。如需申請權限，請聯絡管理員。」</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>什麼都不顯示，直接重新導向到首頁</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>好的錯誤訊息應該告訴使用者：(1) 發生了什麼、(2) 為什麼、(3) 可以怎麼辦。選項 C 做到了這三點：說明了問題（沒有權限）並提供了行動方向（聯絡管理員）。選項 A 是技術訊息，使用者看不懂；選項 B 太模糊；選項 D 讓使用者完全不知道發生了什麼。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>好的錯誤訊息包含三個元素：發生了什麼 + 為什麼 + 下一步怎麼做。哪個選項包含這三個元素？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">React Hook Form 的 <code>mode: 'onBlur'</code> 設定，表示驗證在什麼時機觸發？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>使用者每次在欄位中輸入字元時立即觸發</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>使用者點擊欄位後，焦點離開（切換到其他欄位）時觸發</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>使用者點擊提交按鈕送出表單時觸發</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>頁面載入時自動觸發所有欄位的驗證</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span><code>onBlur</code> 表示當使用者的焦點<strong>離開</strong>（blur）某個欄位時觸發驗證。這是大多數欄位的推薦策略，因為它不會在使用者還在輸入時就打斷他（比 onChange 更友善），同時也不需要等到送出才知道錯誤（比 onSubmit 更及時）。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>「blur」在 Web 中是什麼意思？想想瀏覽器中的 focus 和 blur 事件的觸發條件。</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">為什麼在 iOS Safari 上，把 input 的 font-size 設為 12px 會造成問題？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>iOS Safari 不支援 12px 的字型大小，會顯示為 0px</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>12px 的字型會讓中文字符顯示為方塊</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>iOS Safari 會自動把 12px 的 input 轉換成 button 元件</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>iOS Safari 當字型小於 16px 時，點擊 input 聚焦後會自動縮放頁面（zoom in），讓整個頁面放大</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>iOS Safari 有一個保護機制：當 input 的 font-size 小於 16px 時，點擊聚焦時會自動縮放頁面（zoom in），讓字變得更容易閱讀。這讓頁面突然放大，使用者必須用手勢縮小回來，體驗很差。解法很簡單：確保所有 input/select/textarea 的 font-size 都是 <strong>16px 以上</strong>。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>想想 iOS Safari 對小字型的「自動幫助」功能——這個功能在 input 上有什麼特別的行為？</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週任務</div>
+      <h2 class="section-title">任務：全面 UI 完善</h2>
+      <p class="section-intro">把 Side Project 從「功能完整」提升到「體驗完整」。這週專注在所有讓使用者感到困惑、焦慮或挫折的細節，逐一修正。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 17 MISSION</div>
+        <div class="project-name">Side Project<br>UI 完善衝刺</div>
+        <p class="project-desc">系統性地為所有非同步操作加入 Loading 狀態，建立統一的錯誤處理，加入 Toast 通知，設計 Empty State，完善表單驗證，並全面修正 RWD 問題。</p>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">安裝必要的套件</div>
+            <div class="step-body">執行 <code>npm install react-hot-toast</code>（或 <code>sonner</code>）安裝 Toast 套件。執行 <code>npm install react-hook-form @hookform/resolvers zod</code> 安裝表單驗證套件。檢查 package.json 確認安裝成功。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立 Skeleton Screen 元件</div>
+            <div class="step-body">在 <code>components/ui/Skeleton.tsx</code> 建立可重用的 Skeleton 元件，接受 <code>className</code> prop 控制形狀。為你的主要列表頁（如 TodoList、PostList）建立對應的 Skeleton 版本，在 loading 時渲染 3–5 個 Skeleton 卡片佔位。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">統一所有按鈕的 Loading 狀態</div>
+            <div class="step-body">建立 <code>LoadingButton</code> 元件，接受 <code>loading: boolean</code> prop，loading 時顯示 Spinner 並 disabled。把所有需要等待 API 的按鈕（新增、刪除、儲存）換成 <code>LoadingButton</code>，確保使用者點擊後立刻有視覺回饋，且無法重複點擊。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">設定全域 Toast 並整合到所有操作</div>
+            <div class="step-body">在 layout 最外層加入 <code>&lt;Toaster /&gt;</code>（react-hot-toast）或 <code>&lt;Sonner /&gt;</code>。找出所有 CRUD 操作，在成功時呼叫 <code>toast.success('...')</code>，在失敗時呼叫 <code>toast.error('...')</code>。確認 Toast 的措辭是使用者友善的語言。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">為所有列表頁設計 Empty State</div>
+            <div class="step-body">識別應用中所有可能出現空列表的位置。建立 <code>EmptyState</code> 元件，包含圖示、標題、描述和行動按鈕。根據情境設計：第一次使用時引導新增；搜尋無結果時提示換關鍵字；全部完成時給予正向回饋。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">用 React Hook Form + Zod 重構表單</div>
+            <div class="step-body">找出應用中最重要的表單（登入、新增主要資料）。用 Zod 定義驗證 Schema，用 React Hook Form 的 <code>useForm</code> 管理。每個欄位在 onBlur 時驗證，在欄位下方顯示即時錯誤訊息。確保 submit 按鈕在有錯誤時 disabled。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">全面 RWD 審查與修正</div>
+            <div class="step-body">打開 Chrome DevTools 手機模式，用 iPhone 14 Pro 尺寸逐頁瀏覽。記下所有問題：觸控目標過小、水平捲軸、文字截斷、間距過密。重點修正：所有 input font-size 至少 16px，按鈕 min-height 44px，檢查有無水平溢出元素，圖片加 <code>max-w-full h-auto</code>。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">建立統一錯誤邊界</div>
+            <div class="step-body">在 app 的頂層加入 <code>ErrorBoundary</code> 元件，捕捉意外的渲染錯誤。在 error.tsx（Next.js App Router）實作使用者友善的錯誤頁面，包含「重新嘗試」和「返回首頁」按鈕。用 <code>getUserMessage(error)</code> 函式統一把技術錯誤轉換成使用者友善的語言。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:700;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有列表頁在載入時顯示 Skeleton Screen，而非空白或 Spinner</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有需要等待的按鈕有 Loading 狀態（Spinner + disabled），防止重複點擊</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有 CRUD 操作成功/失敗後都有 Toast 通知，措辭使用者友善</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有可能出現空列表的頁面都有設計過的 Empty State，包含行動指引</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>主要表單用 React Hook Form + Zod，有即時欄位驗證和清晰的錯誤訊息</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>手機版審查通過：無水平捲軸，按鈕可點擊，input font-size ≥ 16px</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>有全域 Error Boundary，意外錯誤不會讓整個應用白屏</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有錯誤訊息都翻譯成使用者能理解的語言，不暴露技術細節</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <p class="section-intro">UI 完善是一門需要積累的學問，這些資源幫助你建立系統性的 UX 思維。</p>
+      <div class="resource-grid">
+        <a href="https://react-hot-toast.com/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">套件文件</div>
+          <div class="resource-name">react-hot-toast</div>
+          <div class="resource-desc">輕量的 React Toast 通知套件，極簡 API，高度可自訂。文件清晰，含所有使用場景的範例程式碼。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://react-hook-form.com/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">套件文件</div>
+          <div class="resource-name">React Hook Form</div>
+          <div class="resource-desc">效能最佳的 React 表單管理套件，與 Zod 整合的完整範例，以及常見驗證模式的文件。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://zod.dev/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">套件文件</div>
+          <div class="resource-name">Zod Schema Validation</div>
+          <div class="resource-desc">TypeScript-first 的 Schema 驗證套件，語法直覺，錯誤訊息可自訂。API 文件詳盡，涵蓋所有常見驗證規則。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.nngroup.com/articles/error-message-guidelines/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">UX 研究</div>
+          <div class="resource-name">Nielsen Norman — Error Message 指南</div>
+          <div class="resource-desc">業界最具影響力的 UX 研究機構對錯誤訊息設計的完整指引，基於大量使用者研究，有具體的可操作建議。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.patterns.dev/vanilla/loading-ui" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">設計模式</div>
+          <div class="resource-name">patterns.dev — Loading UI</div>
+          <div class="resource-desc">各種 Loading 模式的詳細說明和最佳實踐，含 Skeleton Screen、Suspense、Streaming 等現代方案的比較。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://web.dev/articles/inp" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">效能指標</div>
+          <div class="resource-name">web.dev — Interaction to Next Paint</div>
+          <div class="resource-desc">Google 的 Core Web Vitals 之一，說明如何量測和優化使用者互動的回應速度，直接影響「立即回饋感」。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week16.html" class="nav-btn">&larr; Week 16：核心功能</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week18.html" class="nav-btn">Week 18：部署展示 &rarr;</a>
+  </div>
+</main>
+<script>
+// Progress
+window.addEventListener('scroll',()=>{
+  const p=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
+  document.getElementById('progressBar').style.width=Math.min(p,100)+'%';
+});
+// Scroll Reveal
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');});},{threshold:.07});
+document.querySelectorAll('.section').forEach(s=>obs.observe(s));
+// TOC
+const sids=['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const sels=sids.map(id=>document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll',()=>{
+  let c='';sels.forEach(el=>{if(window.scrollY>=el.offsetTop-130)c=el.id;});
+  document.querySelectorAll('.toc-item').forEach(i=>i.classList.toggle('active',i.getAttribute('href')==='#'+c));
+});
+
+// ── Hero Form Demo ──
+function heroSubmit() {
+  const email = document.getElementById('heroEmailInput');
+  const pass  = document.getElementById('heroPassInput');
+  const emailErr = document.getElementById('heroEmailErr');
+  const passErr  = document.getElementById('heroPassErr');
+  const btn   = document.getElementById('heroSubmitBtn');
+  const dot   = document.getElementById('heroDot');
+  let valid = true;
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
+  if (!emailOk) {
+    email.className = 'swiss-input error-state';
+    emailErr.style.display = 'flex';
+    valid = false;
+  } else {
+    email.className = 'swiss-input success-state';
+    emailErr.style.display = 'none';
+  }
+
+  if (pass.value.length < 8) {
+    pass.className = 'swiss-input error-state';
+    passErr.style.display = 'flex';
+    valid = false;
+  } else {
+    pass.className = 'swiss-input success-state';
+    passErr.style.display = 'none';
+  }
+
+  if (valid) {
+    btn.className = 'swiss-btn loading-btn';
+    btn.innerHTML = '<div class="mini-spinner"></div>LOGGING IN...';
+    dot.style.background = '#f5a623';
+    setTimeout(() => {
+      btn.className = 'swiss-btn';
+      btn.innerHTML = 'LOGIN';
+      dot.style.background = '#1a7a3c';
+      setTimeout(() => { dot.style.background='#aaa'; }, 2000);
+    }, 1800);
+  } else {
+    dot.style.background = 'var(--red)';
+    setTimeout(() => { dot.style.background='#aaa'; }, 1500);
+  }
+}
+
+// ── Skeleton Toggle ──
+document.getElementById('showSkeletonBtn').addEventListener('click', () => {
+  document.getElementById('skeletonView').style.display = 'flex';
+  document.getElementById('contentView').style.display = 'none';
+});
+document.getElementById('showContentBtn').addEventListener('click', () => {
+  document.getElementById('skeletonView').style.display = 'none';
+  document.getElementById('contentView').style.display = 'flex';
+});
+
+// ── Toast Demo ──
+const toastColors = {
+  success: { border: 'var(--green)', icon: '✓', bg: '#1a7a3c' },
+  error:   { border: 'var(--red)',   icon: '✕', bg: '#e63329' },
+  warn:    { border: 'var(--yellow)','icon':'!', bg: '#f5a623' },
+  info:    { border: 'var(--blue)',   icon: 'i', bg: '#0047cc' },
+};
+let toastCount = 0;
+
+function showToast(type, title, msg) {
+  const container = document.getElementById('toastContainer');
+  if (container.children.length >= 3) {
+    container.removeChild(container.firstChild);
+  }
+  const c = toastColors[type];
+  const id = 'toast-' + (++toastCount);
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = `display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .9rem;border-left:3px solid ${c.border};background:var(--bg);border:1px solid var(--border);border-left-width:3px;font-family:var(--font-b);font-size:.82rem;opacity:0;transform:translateY(8px);min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,.1);transition:opacity .25s,transform .25s;position:relative;`;
+  div.innerHTML = `
+    <div style="width:18px;height:18px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-d);font-size:.68rem;font-weight:800;flex-shrink:0;">${c.icon}</div>
+    <div style="flex:1;">
+      <div style="font-weight:600;margin-bottom:.1rem;">${title}</div>
+      <div style="font-size:.78rem;color:var(--muted);">${msg}</div>
+      <div style="position:absolute;bottom:0;left:0;height:2px;background:${c.border};animation:progressAnim ${type==='error'?5:type==='warn'?4:3}s linear forwards;"></div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="border:none;background:none;cursor:pointer;color:var(--faint);font-size:.8rem;padding:0;margin-left:.3rem;">&#10005;</button>`;
+  container.appendChild(div);
+  requestAnimationFrame(() => {
+    div.style.opacity = '1';
+    div.style.transform = 'translateY(0)';
+  });
+  const duration = type === 'error' ? 5000 : type === 'warn' ? 4000 : 3000;
+  setTimeout(() => {
+    div.style.opacity = '0';
+    div.style.transform = 'translateY(8px)';
+    setTimeout(() => div.remove(), 300);
+  }, duration);
+}
+
+// ── Live Form Validation ──
+const validators = {
+  email: {
+    fn: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    ok: '電子郵件格式正確',
+    err: '請輸入有效的電子郵件格式（如 user@example.com）',
+    emptyErr: '電子郵件為必填',
+  },
+  username: {
+    fn: v => v.length >= 3 && v.length <= 20 && /^[a-zA-Z0-9_]+$/.test(v),
+    ok: '使用者名稱可使用',
+    err: v => {
+      if (!v) return '使用者名稱為必填';
+      if (v.length < 3) return '至少需要 3 個字元';
+      if (v.length > 20) return '最多 20 個字元';
+      return '只允許英文、數字和底線（_）';
+    },
+    emptyErr: '使用者名稱為必填',
+  },
+  password: {
+    fn: v => v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v),
+    ok: '密碼強度符合要求',
+    err: v => {
+      if (!v) return '密碼為必填';
+      if (v.length < 8) return `密碼需要至少 8 個字元（目前 ${v.length} 個）`;
+      if (!/[A-Z]/.test(v)) return '需包含至少一個大寫字母';
+      return '需包含至少一個數字';
+    },
+    emptyErr: '密碼為必填',
+  },
+  confirm: {
+    fn: v => v === document.getElementById('livePassword').value && v.length > 0,
+    ok: '密碼一致',
+    err: '兩次輸入的密碼不一致',
+    emptyErr: '請確認密碼',
+  },
+};
+
+const fieldStates = { email: false, username: false, password: false, confirm: false };
+
+function validateField(id, validatorKey) {
+  const input = document.getElementById('live' + id.charAt(0).toUpperCase() + id.slice(1));
+  const msgEl = document.getElementById('live' + id.charAt(0).toUpperCase() + id.slice(1) + 'Msg');
+  if (!input || !msgEl) return;
+  const v = validators[validatorKey];
+  const val = input.value;
+
+  if (!val.trim()) {
+    input.className = 'form-input';
+    msgEl.className = 'form-msg';
+    msgEl.innerHTML = '';
+    fieldStates[validatorKey] = false;
+  } else if (v.fn(val)) {
+    input.className = 'form-input valid';
+    msgEl.className = 'form-msg ok';
+    msgEl.innerHTML = `<span>&#10003;</span> ${v.ok}`;
+    fieldStates[validatorKey] = true;
+  } else {
+    input.className = 'form-input invalid';
+    msgEl.className = 'form-msg err';
+    const errMsg = typeof v.err === 'function' ? v.err(val) : v.err;
+    msgEl.innerHTML = `<span>&#9632;</span> ${errMsg}`;
+    fieldStates[validatorKey] = false;
+  }
+
+  // Update strength meter for password
+  if (validatorKey === 'password') updateStrength(val);
+
+  // Update submit button
+  const allValid = Object.values(fieldStates).every(Boolean) &&
+    ['email','username','password','confirm'].every(k => {
+      const el = document.getElementById('live' + k.charAt(0).toUpperCase() + k.slice(1));
+      return el && el.value.trim().length > 0;
+    });
+  document.getElementById('liveSubmitBtn').disabled = !allValid;
+}
+
+function updateStrength(pwd) {
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+  const colors = ['var(--red)', 'var(--yellow)', '#e67e22', 'var(--green)'];
+  const labels = ['弱', '普通', '良好', '強'];
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('s' + i);
+    if (el) el.style.background = i <= score ? colors[score - 1] : 'var(--border2)';
+  }
+  const lbl = document.getElementById('strengthLabel');
+  if (lbl) lbl.textContent = pwd ? `密碼強度：${labels[score - 1] || ''}` : '';
+}
+
+const fieldMap = [['Email','email'],['Username','username'],['Password','password'],['Confirm','confirm']];
+fieldMap.forEach(([id, key]) => {
+  const el = document.getElementById('live' + id);
+  if (el) {
+    el.addEventListener('blur', () => validateField(id.toLowerCase(), key));
+    el.addEventListener('input', () => {
+      if (el.classList.contains('valid') || el.classList.contains('invalid')) {
+        validateField(id.toLowerCase(), key);
+      }
+      if (key === 'password') updateStrength(el.value);
+      // Re-validate confirm when password changes
+      if (key === 'password') {
+        const conf = document.getElementById('liveConfirm');
+        if (conf && conf.value) validateField('confirm', 'confirm');
+      }
+    });
+  }
+});
+
+// ── Quiz ──
+document.querySelectorAll('.quiz-block').forEach(block=>{
+  const correct=parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts=block.querySelectorAll('.quiz-opt');
+  const fbs=block.querySelectorAll('.quiz-fb');
+  let done=false;
+  opts.forEach((opt,i)=>{
+    opt.addEventListener('click',()=>{
+      if(done)return;done=true;
+      opts.forEach(o=>o.style.pointerEvents='none');
+      if(i===correct){opt.classList.add('correct');fbs[0]&&fbs[0].classList.add('show');}
+      else{
+        opt.classList.add('wrong');opts[correct].classList.add('correct');
+        fbs[1]&&fbs[1].classList.add('show');
+        setTimeout(()=>{done=false;opts.forEach(o=>{o.style.pointerEvents='';o.classList.remove('wrong','correct');});fbs.forEach(f=>f.classList.remove('show'));},2800);
+      }
+    });
+  });
+});
+
+// ── Checklist ──
+function toggleCheck(el){
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent=el.classList.contains('done')?'✓':'';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 16 — 核心功能開發</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0c;--bg2:#181714;--bg3:#221f1b;--surface:#2a2620;
+  --border:#3a3530;--border2:#4a4540;
+  --text:#f0ebe2;--muted:#8a8078;--faint:#4a4540;
+  --forge:#e05a1e;--forge2:#f07830;--forge3:#ffa050;
+  --forge-dim:rgba(224,90,30,.1);--forge-border:rgba(224,90,30,.3);
+  --steel:#8090a8;--steel-dim:rgba(128,144,168,.08);
+  --amber:#d4920a;--amber-dim:rgba(212,146,10,.1);
+  --green:#4a9a5a;--green-dim:rgba(74,154,90,.1);--green-border:rgba(74,154,90,.3);
+  --red:#c04040;--red-dim:rgba(192,64,64,.1);--red-border:rgba(192,64,64,.3);
+  --code-bg:#080706;--code-text:#d8cfc0;
+  --font-d:'Oswald',sans-serif;
+  --font-b:'Source Serif 4',serif;
+  --font-m:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-weight:300;line-height:1.75;overflow-x:hidden;}
+
+/* Forge texture - diagonal hatching */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.06;
+  background-image:repeating-linear-gradient(
+    -45deg,
+    rgba(224,90,30,.8) 0px,rgba(224,90,30,.8) 1px,
+    transparent 1px,transparent 12px
+  );
+}
+/* heat glow at bottom */
+body::after{
+  content:'';position:fixed;bottom:0;left:0;right:0;height:200px;
+  pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 100% at 50% 110%,rgba(224,90,30,.06),transparent);
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes forgeGlow{0%,100%{text-shadow:0 0 20px rgba(224,90,30,.3)}50%{text-shadow:0 0 40px rgba(240,120,48,.6),0 0 80px rgba(224,90,30,.2)}}
+@keyframes moltenFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes spinLoad{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes dataFlash{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes slideRight{from{width:0}to{width:var(--w,100%)}}
+
+.progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;z-index:500;background:linear-gradient(to right,var(--forge),var(--forge3));box-shadow:0 0 8px var(--forge);transition:width .08s linear;}
+
+header{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:.85rem 2.5rem;background:rgba(15,14,12,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border2);}
+.logo{font-family:var(--font-d);font-size:1rem;color:var(--forge2);letter-spacing:.2em;text-decoration:none;text-transform:uppercase;}
+.header-badge{font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;padding:.22rem .8rem;border:1px solid var(--forge-border);color:var(--forge);background:var(--forge-dim);}
+.header-nav{display:flex;gap:1.5rem;}
+.header-nav a{font-family:var(--font-m);font-size:.7rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.header-nav a:hover{color:var(--forge2);}
+
+.toc{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:100;padding:.8rem 0;display:flex;flex-direction:column;gap:.3rem;}
+.toc-item{display:flex;align-items:center;gap:.5rem;padding:.26rem 1rem;font-family:var(--font-m);font-size:.57rem;color:var(--faint);text-decoration:none;letter-spacing:.08em;white-space:nowrap;transition:color .2s;}
+.toc-item::before{content:'';width:3px;height:3px;background:var(--faint);flex-shrink:0;transition:all .2s;}
+.toc-item:hover,.toc-item.active{color:var(--forge2);}
+.toc-item:hover::before,.toc-item.active::before{background:var(--forge);width:14px;box-shadow:0 0 6px var(--forge);}
+
+main{padding-top:60px;margin-left:150px;position:relative;z-index:1;}
+
+/* HERO */
+.hero{padding:5rem 3.5rem 4rem;border-bottom:1px solid var(--border2);position:relative;overflow:hidden;min-height:460px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-bg-text{position:absolute;right:-1rem;top:50%;transform:translateY(-50%);font-family:var(--font-d);font-size:14rem;font-weight:700;color:rgba(224,90,30,.04);line-height:1;pointer-events:none;letter-spacing:-.05em;text-transform:uppercase;white-space:nowrap;}
+.hero-label{font-family:var(--font-m);font-size:.65rem;color:var(--forge);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:fadeUp .5s .1s forwards;}
+.hero h1{font-family:var(--font-d);font-size:clamp(3rem,6.5vw,6rem);font-weight:700;line-height:.95;letter-spacing:.03em;margin-bottom:1.4rem;max-width:700px;text-transform:uppercase;opacity:0;animation:fadeUp .5s .25s forwards;}
+.hero h1 .hi{color:var(--forge2);animation:forgeGlow 3s ease-in-out infinite;display:inline-block;}
+.hero h1 .hi2{color:var(--steel);}
+.hero-desc{font-size:1rem;color:var(--muted);max-width:560px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:fadeUp .5s .38s forwards;}
+.hero-meta{display:flex;gap:0;border:1px solid var(--border2);width:fit-content;opacity:0;animation:fadeUp .5s .5s forwards;}
+.meta-cell{padding:.9rem 1.8rem;border-right:1px solid var(--border2);}
+.meta-cell:last-child{border-right:none;}
+.meta-cell-label{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+.meta-cell-value{font-family:var(--font-m);font-size:.85rem;color:var(--forge2);font-weight:600;}
+
+.content{max-width:880px;padding:0 3.5rem;margin:0 auto;}
+
+.section{padding:4rem 0;border-bottom:1px solid var(--border);opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s;}
+.section.visible{opacity:1;transform:none;}
+.eyebrow{font-family:var(--font-m);font-size:.63rem;color:var(--forge);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.7rem;}
+.eyebrow::after{content:'';height:1px;width:60px;background:linear-gradient(to right,var(--forge),transparent);}
+.section-title{font-family:var(--font-d);font-size:2rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text);margin-bottom:1.8rem;line-height:1.1;}
+.section-intro{font-size:.93rem;color:var(--muted);margin-bottom:2.2rem;max-width:660px;line-height:1.82;}
+
+.objectives{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);}
+.obj-item{background:var(--bg2);padding:1.3rem 1.5rem;display:flex;gap:1rem;align-items:flex-start;transition:background .2s;}
+.obj-item:hover{background:var(--bg3);}
+.obj-num{font-family:var(--font-d);font-size:.75rem;color:var(--forge);font-weight:600;background:var(--forge-dim);border:1px solid var(--forge-border);padding:.15rem .45rem;flex-shrink:0;margin-top:.2rem;letter-spacing:.08em;}
+.obj-text{font-size:.87rem;line-height:1.65;}
+
+.cblock{margin-bottom:2.8rem;border:1px solid var(--border2);overflow:hidden;}
+.cblock-head{padding:1.1rem 1.8rem;background:var(--bg2);border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:1rem;}
+.cicon{width:28px;height:28px;background:linear-gradient(135deg,var(--forge),var(--forge2));color:#fff;font-family:var(--font-m);font-size:.65rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ctitle{font-family:var(--font-d);font-size:.95rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.1rem;}
+.csub{font-family:var(--font-m);font-size:.65rem;color:var(--muted);}
+.cbody{padding:1.8rem;background:var(--bg);}
+.cbody p{font-size:.9rem;color:#9a9088;line-height:1.8;margin-bottom:1.1rem;}
+.cbody p:last-child{margin-bottom:0;}
+.cbody strong{color:var(--text);font-weight:600;}
+.cbody em{color:var(--forge2);font-style:normal;font-weight:600;}
+
+.note{border-left:2px solid var(--amber);background:var(--amber-dim);padding:1rem 1.4rem;margin:1.2rem 0;font-size:.84rem;color:#c09040;line-height:1.7;}
+.note-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;color:var(--amber);display:block;margin-bottom:.4rem;}
+.note.tip{border-left-color:var(--green);background:var(--green-dim);color:#6ab87a;}
+.note.tip .note-label{color:var(--green);}
+.note.info{border-left-color:var(--steel);background:var(--steel-dim);color:#90a0b8;}
+.note.info .note-label{color:var(--steel);}
+.note.warn{border-left-color:var(--red);background:var(--red-dim);color:#c07070;}
+.note.warn .note-label{color:var(--red);}
+
+.code-block{border:1px solid var(--border2);overflow:hidden;margin:1.5rem 0;}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:.55rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border2);}
+.code-dots{display:flex;gap:5px;}
+.code-dot{width:9px;height:9px;border-radius:50%;}
+.code-dot:nth-child(1){background:#ff5f57;}
+.code-dot:nth-child(2){background:#febc2e;}
+.code-dot:nth-child(3){background:#28c840;}
+.code-lang{font-family:var(--font-m);font-size:.6rem;color:var(--faint);letter-spacing:.1em;}
+pre{background:var(--code-bg);padding:1.4rem 1.6rem;overflow-x:auto;font-family:var(--font-m);font-size:.8rem;line-height:1.75;color:var(--code-text);}
+.t{color:#87ceeb;}.p{color:#90d080;}.v{color:#f0d080;}.c{color:#2a2820;font-style:italic;}.s{color:#e090c0;}.fn{color:#b890e8;}.kw{color:#f0a060;}
+code{font-family:var(--font-m);font-size:.82em;background:var(--bg3);color:var(--forge2);padding:.1em .4em;border:1px solid var(--border2);}
+kbd{font-family:var(--font-m);font-size:.78em;background:var(--bg3);border:1px solid var(--border2);padding:.1em .4em;border-bottom-width:2px;}
+
+.ptable{width:100%;border-collapse:collapse;font-size:.83rem;margin:1.5rem 0;border:1px solid var(--border2);}
+.ptable thead tr{background:var(--bg3);}
+.ptable th{text-align:left;padding:.7rem 1.1rem;font-family:var(--font-m);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border2);}
+.ptable td{padding:.72rem 1.1rem;border-bottom:1px solid rgba(58,53,48,.4);vertical-align:top;line-height:1.65;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--bg2);}
+.ptable td:first-child{font-family:var(--font-m);font-size:.78rem;color:var(--forge2);white-space:nowrap;font-weight:600;}
+.ptable td:nth-child(2){color:var(--text);font-weight:500;}
+.ptable td:nth-child(3){color:var(--muted);font-size:.8rem;}
+
+.demo-wrap{border:1px solid var(--border2);overflow:hidden;margin:1.5rem 0;}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem 1.1rem;background:var(--bg2);border-bottom:1px solid var(--border2);font-family:var(--font-m);font-size:.6rem;color:var(--muted);letter-spacing:.1em;}
+.demo-bar strong{color:var(--forge);}
+.demo-body{padding:1.8rem;background:var(--bg);}
+
+/* ── OPTIMISTIC UPDATE DEMO ── */
+.ou-demo{display:flex;flex-direction:column;gap:0;}
+.ou-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--border2);margin-bottom:.8rem;min-height:80px;}
+.ou-item{display:flex;align-items:center;gap:.8rem;padding:.75rem 1rem;border-bottom:1px solid rgba(58,53,48,.3);font-family:var(--font-b);font-size:.88rem;transition:all .3s;}
+.ou-item:last-child{border-bottom:none;}
+.ou-item.optimistic{opacity:.6;border-left:3px solid var(--amber);}
+.ou-item.done{text-decoration:line-through;color:var(--muted);}
+.ou-item.removing{opacity:0;transform:translateX(20px);max-height:0;padding:0;overflow:hidden;}
+.ou-checkbox{width:18px;height:18px;border:2px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+.ou-checkbox.checked{background:var(--green);border-color:var(--green);color:#fff;font-size:.6rem;}
+.ou-item-text{flex:1;}
+.ou-delete{width:20px;height:20px;cursor:pointer;color:var(--faint);font-size:.7rem;display:flex;align-items:center;justify-content:center;transition:color .2s;border:none;background:none;}
+.ou-delete:hover{color:var(--red);}
+.ou-add-row{display:flex;gap:.6rem;}
+.ou-input{flex:1;font-family:var(--font-b);font-size:.85rem;padding:.5rem .8rem;background:var(--bg2);border:1px solid var(--border2);color:var(--text);outline:none;}
+.ou-input:focus{border-color:var(--forge);}
+.ou-add-btn{font-family:var(--font-d);font-size:.75rem;padding:.5rem 1.2rem;background:var(--forge);color:#fff;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:.1em;transition:background .15s;}
+.ou-add-btn:hover{background:var(--forge2);}
+.ou-status{font-family:var(--font-m);font-size:.62rem;color:var(--muted);margin-top:.4rem;min-height:1rem;}
+
+/* ── INFINITE SCROLL DEMO ── */
+.is-container{height:240px;overflow-y:auto;border:1px solid var(--border2);background:var(--bg2);}
+.is-item{padding:.8rem 1rem;border-bottom:1px solid var(--border);font-family:var(--font-b);font-size:.85rem;display:flex;align-items:center;gap:.8rem;}
+.is-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:.75rem;font-weight:600;flex-shrink:0;}
+.is-loader{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:1rem;font-family:var(--font-m);font-size:.68rem;color:var(--muted);}
+.is-spinner{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--forge);border-radius:50%;animation:spinLoad .6s linear infinite;}
+
+/* ── REAL-TIME DEMO ── */
+.rt-board{background:var(--bg2);border:1px solid var(--border2);padding:1.2rem;font-family:var(--font-m);font-size:.75rem;}
+.rt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);}
+.rt-status{display:flex;align-items:center;gap:.4rem;font-size:.62rem;}
+.rt-dot{width:6px;height:6px;border-radius:50%;}
+.rt-dot.connected{background:var(--green);box-shadow:0 0 4px var(--green);animation:dataFlash 2s ease-in-out infinite;}
+.rt-dot.disconnected{background:var(--red);}
+.rt-entries{display:flex;flex-direction:column;gap:.4rem;max-height:160px;overflow-y:auto;}
+.rt-entry{padding:.5rem .7rem;background:var(--bg);border-left:2px solid;display:flex;justify-content:space-between;align-items:center;animation:fadeUp .3s ease;}
+.rt-entry-text{color:var(--text);font-size:.7rem;}
+.rt-entry-time{color:var(--faint);font-size:.62rem;}
+.rt-input-row{display:flex;gap:.5rem;margin-top:.8rem;}
+.rt-input{flex:1;font-family:var(--font-m);font-size:.72rem;padding:.4rem .7rem;background:var(--bg);border:1px solid var(--border2);color:var(--text);outline:none;}
+.rt-input:focus{border-color:var(--forge);}
+.rt-send{font-family:var(--font-d);font-size:.7rem;padding:.4rem .9rem;background:var(--forge);color:#fff;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:background .15s;}
+.rt-send:hover{background:var(--forge2);}
+
+/* ── FILE UPLOAD DEMO ── */
+.upload-zone{border:2px dashed var(--border2);padding:2rem;text-align:center;font-family:var(--font-m);font-size:.75rem;color:var(--muted);cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--forge);background:var(--forge-dim);color:var(--forge);}
+.upload-preview{display:flex;flex-direction:column;gap:.4rem;margin-top:.8rem;}
+.upload-file{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;background:var(--bg2);border:1px solid var(--border2);font-family:var(--font-m);font-size:.7rem;}
+.upload-name{flex:1;color:var(--text);}
+.upload-bar-wrap{width:80px;height:3px;background:var(--border2);}
+.upload-bar{height:100%;background:var(--forge);transition:width .3s ease;}
+.upload-size{color:var(--faint);font-size:.62rem;white-space:nowrap;}
+.upload-status{font-size:.62rem;white-space:nowrap;padding:.1rem .35rem;border:1px solid;}
+
+/* ── DEBOUNCE DEMO ── */
+.deb-demo{display:flex;flex-direction:column;gap:.8rem;}
+.deb-input{font-family:var(--font-b);font-size:.88rem;padding:.55rem .9rem;background:var(--bg2);border:1px solid var(--border2);color:var(--text);outline:none;width:100%;}
+.deb-input:focus{border-color:var(--forge);}
+.deb-log{background:var(--code-bg);padding:.8rem 1rem;font-family:var(--font-m);font-size:.7rem;color:var(--code-text);min-height:80px;line-height:1.8;border:1px solid var(--border2);}
+.deb-instant{color:var(--red);}
+.deb-debounced{color:var(--green);}
+.deb-label{font-family:var(--font-m);font-size:.62rem;color:var(--faint);display:flex;gap:1rem;}
+.deb-label span{display:flex;align-items:center;gap:.3rem;}
+.deb-label .dot{width:8px;height:8px;border-radius:50%;}
+
+/* ── COMPARE ── */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);margin:1.5rem 0;}
+.cpanel{background:var(--bg);overflow:hidden;}
+.cpanel-hdr{padding:.65rem 1.2rem;font-family:var(--font-m);font-size:.62rem;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem;}
+.cpanel-hdr.good{background:var(--green-dim);color:var(--green);border-bottom:1px solid var(--green-border);}
+.cpanel-hdr.bad{background:var(--red-dim);color:var(--red);border-bottom:1px solid var(--red-border);}
+.cpanel-hdr.info{background:var(--steel-dim);color:var(--steel);border-bottom:1px solid rgba(128,144,168,.2);}
+
+/* Quiz */
+.quiz-block{background:var(--bg2);border:1px solid var(--border2);padding:2rem;margin:2rem 0;}
+.quiz-eye{font-family:var(--font-m);font-size:.62rem;color:var(--forge);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.8rem;}
+.quiz-q{font-family:var(--font-d);font-size:1.1rem;font-weight:500;text-transform:uppercase;letter-spacing:.03em;margin-bottom:1.2rem;color:var(--text);line-height:1.2;}
+.quiz-options{display:flex;flex-direction:column;gap:.5rem;}
+.quiz-opt{display:flex;align-items:flex-start;gap:.8rem;padding:.85rem 1.1rem;background:var(--bg);border:1px solid var(--border2);cursor:pointer;font-size:.87rem;transition:border-color .15s,background .15s;user-select:none;line-height:1.5;}
+.quiz-opt:hover{border-color:var(--forge);background:var(--forge-dim);}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-dim);color:var(--red);}
+.quiz-key{font-family:var(--font-m);font-size:.62rem;width:22px;height:22px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--muted);margin-top:.1rem;}
+.quiz-fb{margin-top:1rem;padding:.9rem 1.1rem;display:none;font-size:.85rem;}
+.quiz-fb.show{display:block;}
+
+/* Checklist */
+.checklist{display:flex;flex-direction:column;gap:.5rem;margin:1.5rem 0;}
+.check-item{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;background:var(--bg2);border:1px solid var(--border2);font-size:.87rem;cursor:pointer;transition:background .15s;user-select:none;}
+.check-item:hover{background:var(--bg3);}
+.check-item.done{background:var(--green-dim);border-color:var(--green-border);}
+.check-item.done .check-box{background:var(--green);border-color:var(--green);color:var(--bg);font-family:var(--font-m);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;margin-top:.15rem;}
+
+/* Project */
+.project-hero{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--forge-border);padding:2.5rem;margin-bottom:2rem;position:relative;overflow:hidden;}
+.project-hero::after{content:'FORGE';position:absolute;right:-.5rem;bottom:-.8rem;font-family:var(--font-d);font-size:7rem;font-weight:700;color:rgba(224,90,30,.05);pointer-events:none;line-height:1;letter-spacing:-.05em;}
+.project-eyebrow{font-family:var(--font-m);font-size:.62rem;color:var(--forge);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.8rem;}
+.project-name{font-family:var(--font-d);font-size:2rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text);margin-bottom:.8rem;line-height:1.1;}
+.project-desc{font-size:.88rem;color:var(--muted);line-height:1.7;max-width:520px;}
+.steps{display:flex;flex-direction:column;gap:1px;background:var(--border2);border:1px solid var(--border2);margin-bottom:2rem;counter-reset:step;}
+.step{counter-increment:step;background:var(--bg2);padding:1.4rem 1.8rem;display:grid;grid-template-columns:44px 1fr;gap:1.4rem;align-items:start;transition:background .2s;border-bottom:1px solid var(--border);}
+.step:last-child{border-bottom:none;}
+.step:hover{background:var(--bg3);}
+.step-num{font-family:var(--font-m);font-size:1rem;color:var(--forge);font-weight:600;line-height:1.4;}
+.step-num::before{content:counter(step,decimal-leading-zero);}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:.35rem;}
+.step-body{font-size:.83rem;color:var(--muted);line-height:1.65;}
+
+/* Resources */
+.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);border:1px solid var(--border2);}
+.resource-card{background:var(--bg2);padding:1.4rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;}
+.resource-card:hover{background:var(--bg3);}
+.resource-type{font-family:var(--font-m);font-size:.58rem;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;}
+.resource-name{font-family:var(--font-d);font-size:.92rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text);}
+.resource-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+.resource-arrow{font-size:.85rem;color:var(--forge);margin-top:auto;padding-top:.4rem;}
+
+.bottom-nav{display:flex;justify-content:space-between;align-items:center;padding:2.5rem 3.5rem;border-top:1px solid var(--border2);}
+.nav-btn{font-family:var(--font-m);font-size:.73rem;color:var(--muted);text-decoration:none;letter-spacing:.06em;padding:.72rem 1.4rem;border:1px solid var(--border2);background:var(--bg2);transition:border-color .2s,color .2s;}
+.nav-btn:hover{border-color:var(--forge);color:var(--forge);}
+.home-link{font-family:var(--font-m);font-size:.68rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+.home-link:hover{color:var(--forge);}
+
+@media(max-width:1100px){.toc{display:none;}main{margin-left:0;}}
+@media(max-width:768px){
+  header{padding:.8rem 1.2rem;}.header-badge{display:none;}
+  .hero{padding:4rem 1.5rem 3rem;}.hero-bg-text{display:none;}
+  .content{padding:0 1.5rem;}
+  .objectives{grid-template-columns:1fr;}
+  .compare{grid-template-columns:1fr;}
+  .resource-grid{grid-template-columns:1fr;}
+  .hero-meta{flex-direction:column;width:100%;}
+  .meta-cell{border-right:none;border-bottom:1px solid var(--border2);}
+  .meta-cell:last-child{border-bottom:none;}
+  .bottom-nav{padding:2rem 1.5rem;flex-wrap:wrap;gap:1rem;}
+  pre{font-size:.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+<header>
+  <a href="index.html" class="logo">FE / Course</a>
+  <div class="header-badge">WEEK 16 / 18 &mdash; CORE FEATURES</div>
+  <nav class="header-nav">
+    <a href="week15.html">&larr; Week 15</a>
+    <a href="index.html">總覽</a>
+    <a href="week17.html">Week 17 &rarr;</a>
+  </nav>
+</header>
+<nav class="toc" id="toc">
+  <a class="toc-item" href="#objectives">學習目標</a>
+  <a class="toc-item" href="#concept-1">Optimistic Update</a>
+  <a class="toc-item" href="#concept-2">無限滾動</a>
+  <a class="toc-item" href="#concept-3">即時更新</a>
+  <a class="toc-item" href="#concept-4">檔案上傳</a>
+  <a class="toc-item" href="#concept-5">搜尋與防抖</a>
+  <a class="toc-item" href="#concept-6">資料快取</a>
+  <a class="toc-item" href="#quiz">隨堂練習</a>
+  <a class="toc-item" href="#project">實作任務</a>
+  <a class="toc-item" href="#resources">延伸資源</a>
+</nav>
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg-text">FORGE</div>
+    <div class="hero-label">PHASE 04 &mdash; Side Project 實戰 / WEEK 16</div>
+    <h1><span class="hi">核心</span><br>功能<br><span class="hi2">開發</span></h1>
+    <p class="hero-desc">把登入系統和資料庫架構作為基礎，這週開始鍛造真正讓應用「好用」的核心功能——Optimistic Update 讓操作即時響應、無限滾動讓瀏覽流暢、即時更新讓協作成為可能。</p>
+    <div class="hero-meta">
+      <div class="meta-cell"><div class="meta-cell-label">階段</div><div class="meta-cell-value">Phase 04</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">建議時數</div><div class="meta-cell-value">12–15 小時</div></div>
+      <div class="meta-cell"><div class="meta-cell-label">前置</div><div class="meta-cell-value">Week 15 Auth</div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OBJECTIVES -->
+    <section class="section" id="objectives">
+      <div class="eyebrow">學習目標</div>
+      <h2 class="section-title">學完這週，你會...</h2>
+      <p class="section-intro">六個進階功能模式，讓你的應用從「能用」升級到「好用」。</p>
+      <div class="objectives">
+        <div class="obj-item"><span class="obj-num">01</span><span class="obj-text">實作 Optimistic Update——在 API 回應前就更新 UI，讓操作感覺即時，並在失敗時正確回滾到原本狀態</span></div>
+        <div class="obj-item"><span class="obj-num">02</span><span class="obj-text">用 IntersectionObserver 實作無限滾動（Infinite Scroll），分頁載入資料，避免一次載入數千筆造成效能問題</span></div>
+        <div class="obj-item"><span class="obj-num">03</span><span class="obj-text">使用 Supabase Realtime 訂閱資料庫變更，實作多使用者即時同步更新，不需要輪詢（Polling）</span></div>
+        <div class="obj-item"><span class="obj-num">04</span><span class="obj-text">實作拖曳上傳和進度顯示的檔案上傳功能，把檔案儲存到 Supabase Storage，並生成公開存取 URL</span></div>
+        <div class="obj-item"><span class="obj-num">05</span><span class="obj-text">用 debounce 實作高效的搜尋功能，避免每次按鍵都送出 API 請求，並正確處理競態條件（Race Condition）</span></div>
+        <div class="obj-item"><span class="obj-num">06</span><span class="obj-text">理解前端資料快取策略，用 SWR 或 React Query 管理非同步資料狀態，減少不必要的 API 請求</span></div>
+      </div>
+    </section>
+
+    <!-- CONCEPT 1: Optimistic Update -->
+    <section class="section" id="concept-1">
+      <div class="eyebrow">核心概念 01</div>
+      <h2 class="section-title">Optimistic Update</h2>
+      <p class="section-intro">「樂觀更新」——不等 API 回應，直接假設操作會成功並立刻更新 UI。如果真的失敗，再回滾。這讓應用感覺比實際快了許多。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">01</div><div><div class="ctitle">為什麼要 Optimistic Update</div><div class="csub">從「感覺慢」到「感覺即時」</div></div></div>
+        <div class="cbody">
+          <p>傳統的更新流程：使用者點擊「完成」→ 等待 API 回應（可能 200–500ms）→ 畫面才更新。這個延遲在快速操作時（如一次勾選多個待辦事項）讓人沮喪。</p>
+          <p>Optimistic Update 的流程：使用者點擊「完成」→ <em>立刻更新 UI</em>（假設成功）→ 同時發送 API 請求 → API 失敗時回滾 UI 並顯示錯誤。對大多數情況，API 會成功，使用者感覺操作是即時的。</p>
+          <p>實作的關鍵：<strong>在更新 UI 的同時記錄「原本的狀態」</strong>，這樣失敗時才能準確回滾。可以在 useState 中用前一個值，或在 try-catch 中捕捉失敗並 setItems 回滾。</p>
+          <div class="note warn">
+            <span class="note-label">何時不適合 Optimistic Update</span>
+            金融交易、刪除重要資料（應該有確認對話框）、會影響其他使用者的操作（如搶訂位）——這些情境應該等真實回應後再更新，避免讓使用者以為操作成功但實際失敗。
+          </div>
+        </div>
+      </div>
+
+      <!-- Optimistic Update Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>OPTIMISTIC UPDATE DEMO</strong><span>勾選或刪除任務，觀察即時反應（部分模擬失敗）</span></div>
+        <div class="demo-body">
+          <div class="ou-demo">
+            <div class="ou-list" id="ouList"></div>
+            <div class="ou-add-row">
+              <input class="ou-input" id="ouInput" type="text" placeholder="新增任務（按 Enter 或點按鈕）">
+              <button class="ou-add-btn" id="ouAddBtn">新增</button>
+            </div>
+            <div class="ou-status" id="ouStatus"></div>
+            <div style="font-family:var(--font-m);font-size:.62rem;color:var(--faint);margin-top:.4rem;">點擊勾選框為樂觀更新（20% 機率模擬失敗並回滾）</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — Optimistic Update 完整實作</div></div>
+        <pre><span class="s">function</span> <span class="fn">TodoList</span>() {
+  <span class="s">const</span> [todos, setTodos] = <span class="fn">useState</span>([]);
+  <span class="s">const</span> { toast } = <span class="fn">useToast</span>();
+
+  <span class="c">// ── 樂觀新增 ──</span>
+  <span class="s">const</span> <span class="fn">addTodo</span> = <span class="s">async</span> (title) => {
+    <span class="s">const</span> tempId = <span class="v">`temp-${Date.now()}`</span>;
+    <span class="s">const</span> newTodo = { id: tempId, title, done: <span class="s">false</span>, _optimistic: <span class="s">true</span> };
+
+    <span class="c">// 1. 立刻更新 UI（樂觀假設成功）</span>
+    <span class="fn">setTodos</span>(prev => [...prev, newTodo]);
+
+    <span class="s">try</span> {
+      <span class="c">// 2. 發送 API 請求</span>
+      <span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+        .<span class="fn">from</span>(<span class="v">'todos'</span>)
+        .<span class="fn">insert</span>({ title })
+        .<span class="fn">select</span>().<span class="fn">single</span>();
+
+      <span class="s">if</span> (error) <span class="s">throw</span> error;
+
+      <span class="c">// 3. 成功：把暫時 ID 換成真實 ID</span>
+      <span class="fn">setTodos</span>(prev => prev.<span class="fn">map</span>(t =>
+        t.id === tempId ? { ...data, _optimistic: <span class="s">false</span> } : t
+      ));
+    } <span class="s">catch</span> (err) {
+      <span class="c">// 4. 失敗：回滾（移除暫時加入的項目）</span>
+      <span class="fn">setTodos</span>(prev => prev.<span class="fn">filter</span>(t => t.id !== tempId));
+      <span class="fn">toast</span>.<span class="fn">error</span>(<span class="v">'新增失敗，請稍後再試'</span>);
+    }
+  };
+
+  <span class="c">// ── 樂觀切換完成狀態 ──</span>
+  <span class="s">const</span> <span class="fn">toggleTodo</span> = <span class="s">async</span> (id, currentDone) => {
+    <span class="c">// 1. 記錄原本狀態，立刻更新 UI</span>
+    <span class="fn">setTodos</span>(prev => prev.<span class="fn">map</span>(t =>
+      t.id === id ? { ...t, done: !currentDone } : t
+    ));
+
+    <span class="s">try</span> {
+      <span class="s">const</span> { error } = <span class="s">await</span> supabase
+        .<span class="fn">from</span>(<span class="v">'todos'</span>)
+        .<span class="fn">update</span>({ done: !currentDone })
+        .<span class="fn">eq</span>(<span class="v">'id'</span>, id);
+
+      <span class="s">if</span> (error) <span class="s">throw</span> error;
+    } <span class="s">catch</span> (err) {
+      <span class="c">// 失敗：回滾到原本狀態</span>
+      <span class="fn">setTodos</span>(prev => prev.<span class="fn">map</span>(t =>
+        t.id === id ? { ...t, done: currentDone } : t
+      ));
+      <span class="fn">toast</span>.<span class="fn">error</span>(<span class="v">'操作失敗，請稍後再試'</span>);
+    }
+  };
+
+  <span class="c">// ── 樂觀刪除 ──</span>
+  <span class="s">const</span> <span class="fn">deleteTodo</span> = <span class="s">async</span> (id) => {
+    <span class="c">// 記住被刪的項目，以便失敗時恢復</span>
+    <span class="s">const</span> deleted = todos.<span class="fn">find</span>(t => t.id === id);
+    <span class="fn">setTodos</span>(prev => prev.<span class="fn">filter</span>(t => t.id !== id));
+
+    <span class="s">try</span> {
+      <span class="s">const</span> { error } = <span class="s">await</span> supabase
+        .<span class="fn">from</span>(<span class="v">'todos'</span>).<span class="fn">delete</span>().<span class="fn">eq</span>(<span class="v">'id'</span>, id);
+      <span class="s">if</span> (error) <span class="s">throw</span> error;
+    } <span class="s">catch</span> (err) {
+      <span class="c">// 失敗：把刪掉的項目加回來</span>
+      <span class="fn">setTodos</span>(prev => [...prev, deleted].sort((a, b) =>
+        <span class="s">new</span> Date(a.createdAt) - <span class="s">new</span> Date(b.createdAt)
+      ));
+      <span class="fn">toast</span>.<span class="fn">error</span>(<span class="v">'刪除失敗'</span>);
+    }
+  };
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 2: Infinite Scroll -->
+    <section class="section" id="concept-2">
+      <div class="eyebrow">核心概念 02</div>
+      <h2 class="section-title">無限滾動</h2>
+      <p class="section-intro">當列表可能有數百、數千筆資料時，一次全部載入會讓頁面卡頓。無限滾動在使用者接近底部時自動載入下一頁，讓瀏覽體驗流暢不中斷。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">02</div><div><div class="ctitle">IntersectionObserver — 監測元素可見性</div><div class="csub">比 scroll 事件更高效的解法</div></div></div>
+        <div class="cbody">
+          <p>舊方法：監聽 <code>scroll</code> 事件，計算 <code>scrollTop + clientHeight >= scrollHeight</code>。問題：scroll 事件觸發非常頻繁，即使有 throttle 也消耗效能。</p>
+          <p><em>IntersectionObserver</em>：瀏覽器原生 API，監測一個「哨兵元素」（sentinel，放在列表最底部的空 div）是否進入視窗。當哨兵可見時，代表使用者到達底部，觸發載入下一頁。這個 API 是瀏覽器原生支援的，比 scroll 監聽更高效、更精確。</p>
+          <p>分頁策略：通常使用 <strong>cursor-based pagination</strong>（基於游標分頁）而非 offset（第幾頁第幾筆）。Supabase 提供 <code>.range(from, to)</code> 支援 offset 分頁，<code>.lt('id', lastId)</code> 支援游標分頁——后者在資料會即時更新的情境更準確（不會因為新資料插入而跳過或重複）。</p>
+        </div>
+      </div>
+
+      <!-- Infinite Scroll Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>INFINITE SCROLL DEMO</strong><span>向下捲動容器到底部，自動載入更多</span></div>
+        <div class="demo-body" style="padding:0;">
+          <div class="is-container" id="isContainer">
+            <div id="isItems"></div>
+            <div id="isSentinel"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — IntersectionObserver 無限滾動</div></div>
+        <pre><span class="s">function</span> <span class="fn">InfiniteList</span>() {
+  <span class="s">const</span> [items, setItems]      = <span class="fn">useState</span>([]);
+  <span class="s">const</span> [loading, setLoading]  = <span class="fn">useState</span>(<span class="s">false</span>);
+  <span class="s">const</span> [hasMore, setHasMore]  = <span class="fn">useState</span>(<span class="s">true</span>);
+  <span class="s">const</span> [page, setPage]        = <span class="fn">useState</span>(<span class="str">0</span>);
+  <span class="s">const</span> sentinelRef            = <span class="fn">useRef</span>(<span class="s">null</span>);
+  <span class="s">const</span> PAGE_SIZE              = <span class="str">10</span>;
+
+  <span class="s">const</span> <span class="fn">fetchMore</span> = <span class="fn">useCallback</span>(<span class="s">async</span> () => {
+    <span class="s">if</span> (loading || !hasMore) <span class="s">return</span>;
+    <span class="fn">setLoading</span>(<span class="s">true</span>);
+    <span class="s">try</span> {
+      <span class="s">const</span> from = page * PAGE_SIZE;
+      <span class="s">const</span> { data, error } = <span class="s">await</span> supabase
+        .<span class="fn">from</span>(<span class="v">'posts'</span>)
+        .<span class="fn">select</span>(<span class="v">'id, title, created_at'</span>)
+        .<span class="fn">order</span>(<span class="v">'created_at'</span>, { ascending: <span class="s">false</span> })
+        .<span class="fn">range</span>(from, from + PAGE_SIZE - <span class="str">1</span>);
+
+      <span class="s">if</span> (error) <span class="s">throw</span> error;
+      <span class="fn">setItems</span>(prev => [...prev, ...data]);
+      <span class="fn">setPage</span>(p => p + <span class="str">1</span>);
+      <span class="s">if</span> (data.length < PAGE_SIZE) <span class="fn">setHasMore</span>(<span class="s">false</span>);
+    } <span class="s">finally</span> {
+      <span class="fn">setLoading</span>(<span class="s">false</span>);
+    }
+  }, [page, loading, hasMore]);
+
+  <span class="c">// 初始載入</span>
+  <span class="fn">useEffect</span>(() => { <span class="fn">fetchMore</span>(); }, []);  <span class="c">// eslint-disable-line</span>
+
+  <span class="c">// 設定 IntersectionObserver</span>
+  <span class="fn">useEffect</span>(() => {
+    <span class="s">const</span> sentinel = sentinelRef.current;
+    <span class="s">if</span> (!sentinel) <span class="s">return</span>;
+
+    <span class="s">const</span> observer = <span class="s">new</span> IntersectionObserver(
+      entries => {
+        <span class="c">// 哨兵元素可見時，載入下一頁</span>
+        <span class="s">if</span> (entries[<span class="str">0</span>].isIntersecting) <span class="fn">fetchMore</span>();
+      },
+      { threshold: <span class="str">0.1</span> }  <span class="c">// 10% 可見時觸發</span>
+    );
+    observer.<span class="fn">observe</span>(sentinel);
+    <span class="s">return</span> () => observer.<span class="fn">disconnect</span>();
+  }, [fetchMore]);
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="kw">{</span>items.<span class="fn">map</span>(item => <span class="t">&lt;PostCard</span> <span class="p">key</span>=<span class="kw">{</span>item.id<span class="kw">}</span> <span class="p">item</span>=<span class="kw">{</span>item<span class="kw">}</span> <span class="t">/&gt;</span>)<span class="kw">}</span>
+
+      <span class="c">{/* 哨兵元素：放在列表最底部 */}</span>
+      <span class="t">&lt;div</span> <span class="p">ref</span>=<span class="kw">{</span>sentinelRef<span class="kw">}</span><span class="t">&gt;</span>
+        <span class="kw">{</span>loading && <span class="t">&lt;Spinner /&gt;</span><span class="kw">}</span>
+        <span class="kw">{</span>!hasMore && <span class="t">&lt;p&gt;</span>已顯示全部內容<span class="t">&lt;/p&gt;</span><span class="kw">}</span>
+      <span class="t">&lt;/div&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 3: Realtime -->
+    <section class="section" id="concept-3">
+      <div class="eyebrow">核心概念 03</div>
+      <h2 class="section-title">即時更新</h2>
+      <p class="section-intro">讓多個使用者同時使用應用時，資料能即時同步——一個人新增了項目，其他人不用重新整理就能看到。Supabase Realtime 讓這件事變得簡單。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">03</div><div><div class="ctitle">Supabase Realtime</div><div class="csub">WebSocket 訂閱資料庫變更</div></div></div>
+        <div class="cbody">
+          <p>Supabase Realtime 在底層使用 WebSocket 和 PostgreSQL 的 <em>LISTEN/NOTIFY</em> 機制。當資料庫發生 INSERT、UPDATE、DELETE 時，所有訂閱的客戶端立刻收到通知，不需要輪詢（Polling）。</p>
+          <p>三種事件：<em>INSERT</em>（新資料加入）、<em>UPDATE</em>（資料被修改）、<em>DELETE</em>（資料被刪除）。可以訂閱特定資料表的所有事件，也可以用 filter 只訂閱特定條件的變更（如 <code>user_id=eq.xxx</code>）。</p>
+          <p>重要：使用 Realtime 時要記得在元件卸載時<strong>取消訂閱</strong>（在 useEffect 的 cleanup 函式中呼叫 <code>channel.unsubscribe()</code>），否則會有記憶體洩漏和重複更新的問題。</p>
+        </div>
+      </div>
+
+      <!-- Realtime Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>REALTIME SIMULATION</strong><span>在輸入框輸入訊息，模擬多用戶即時訊息</span></div>
+        <div class="demo-body" style="padding:0;">
+          <div class="rt-board">
+            <div class="rt-header">
+              <div style="font-family:var(--font-d);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;">Live Channel</div>
+              <div class="rt-status">
+                <div class="rt-dot connected" id="rtDot"></div>
+                <span id="rtStatusText" style="color:var(--green);font-family:var(--font-m);font-size:.62rem;letter-spacing:.08em;">CONNECTED</span>
+              </div>
+            </div>
+            <div class="rt-entries" id="rtEntries">
+              <div class="rt-entry" style="border-color:var(--forge);">
+                <span class="rt-entry-text" style="color:var(--muted);">頻道已連接，等待訊息...</span>
+                <span class="rt-entry-time">—</span>
+              </div>
+            </div>
+            <div class="rt-input-row">
+              <input class="rt-input" id="rtInput" type="text" placeholder="輸入訊息按 Enter 送出">
+              <button class="rt-send" id="rtSend">SEND</button>
+              <button id="rtSimBtn" style="font-family:var(--font-d);font-size:.7rem;padding:.4rem .9rem;background:var(--steel-dim);color:var(--steel);border:1px solid var(--steel);cursor:pointer;text-transform:uppercase;letter-spacing:.08em;transition:all .15s;">模擬他人</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — Supabase Realtime 訂閱</div></div>
+        <pre><span class="s">import</span> { useEffect, useState } <span class="s">from</span> <span class="v">'react'</span>;
+<span class="s">import</span> { createClient } <span class="s">from</span> <span class="v">'@/lib/supabase/client'</span>;
+
+<span class="s">function</span> <span class="fn">LiveTodoList</span>() {
+  <span class="s">const</span> [todos, setTodos] = <span class="fn">useState</span>([]);
+  <span class="s">const</span> supabase = <span class="fn">createClient</span>();
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="c">// 1. 初始載入</span>
+    supabase.<span class="fn">from</span>(<span class="v">'todos'</span>).<span class="fn">select</span>(<span class="v">'*'</span>)
+      .<span class="fn">then</span>(({ data }) => <span class="fn">setTodos</span>(data ?? []));
+
+    <span class="c">// 2. 訂閱即時變更</span>
+    <span class="s">const</span> channel = supabase
+      .<span class="fn">channel</span>(<span class="v">'todos-realtime'</span>)  <span class="c">// 頻道名稱（任意字串）</span>
+      .<span class="fn">on</span>(
+        <span class="v">'postgres_changes'</span>,
+        {
+          event:  <span class="v">'*'</span>,         <span class="c">// INSERT | UPDATE | DELETE | *</span>
+          schema: <span class="v">'public'</span>,
+          table:  <span class="v">'todos'</span>,
+          <span class="c">// filter: 'user_id=eq.xxx'  // 可選：只訂閱特定條件</span>
+        },
+        (payload) => {
+          <span class="s">const</span> { eventType, new: newRecord, old: oldRecord } = payload;
+
+          <span class="s">switch</span> (eventType) {
+            <span class="s">case</span> <span class="v">'INSERT'</span>:
+              <span class="fn">setTodos</span>(prev => {
+                <span class="c">// 避免樂觀更新後重複新增</span>
+                <span class="s">if</span> (prev.<span class="fn">some</span>(t => t.id === newRecord.id)) <span class="s">return</span> prev;
+                <span class="s">return</span> [...prev, newRecord];
+              });
+              <span class="s">break</span>;
+            <span class="s">case</span> <span class="v">'UPDATE'</span>:
+              <span class="fn">setTodos</span>(prev => prev.<span class="fn">map</span>(t =>
+                t.id === newRecord.id ? newRecord : t
+              ));
+              <span class="s">break</span>;
+            <span class="s">case</span> <span class="v">'DELETE'</span>:
+              <span class="fn">setTodos</span>(prev => prev.<span class="fn">filter</span>(t => t.id !== oldRecord.id));
+              <span class="s">break</span>;
+          }
+        }
+      )
+      .<span class="fn">subscribe</span>();
+
+    <span class="c">// 3. 元件卸載時取消訂閱（重要！）</span>
+    <span class="s">return</span> () => {
+      supabase.<span class="fn">removeChannel</span>(channel);
+    };
+  }, []);
+
+  <span class="s">return</span> <span class="t">&lt;ul&gt;</span><span class="kw">{</span>todos.<span class="fn">map</span>(t => <span class="t">&lt;li</span> <span class="p">key</span>=<span class="kw">{</span>t.id<span class="kw">}</span><span class="t">&gt;</span><span class="kw">{</span>t.title<span class="kw">}</span><span class="t">&lt;/li&gt;</span>)<span class="kw">}</span><span class="t">&lt;/ul&gt;</span>;
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 4: File Upload -->
+    <section class="section" id="concept-4">
+      <div class="eyebrow">核心概念 04</div>
+      <h2 class="section-title">檔案上傳</h2>
+      <p class="section-intro">讓使用者能上傳頭像、圖片、附件——Supabase Storage 提供 S3 相容的物件儲存服務，搭配前端的拖曳上傳和進度顯示，讓上傳體驗完整且直覺。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">04</div><div><div class="ctitle">Supabase Storage 架構</div><div class="csub">Bucket → 物件路徑 → 公開 URL</div></div></div>
+        <div class="cbody">
+          <p>Supabase Storage 用 <em>Bucket（儲存桶）</em> 組織檔案。先在 Supabase Dashboard 建立 Bucket（如 <code>avatars</code>、<code>attachments</code>），設定公開或私有。公開 Bucket 的檔案可以用 URL 直接存取；私有 Bucket 需要生成簽名 URL。</p>
+          <p>上傳時最好用<strong>使用者 ID 作為路徑前綴</strong>：<code>{userId}/{timestamp}-{filename}</code>。這樣結合 Supabase Storage 的 RLS，可以確保使用者只能存取自己的檔案。</p>
+          <p>前端上傳後取得的是<strong>路徑（path）</strong>，要用 <code>supabase.storage.from('bucket').getPublicUrl(path)</code> 取得可存取的完整 URL，再把這個 URL 存到資料庫的對應欄位。</p>
+          <div class="note tip">
+            <span class="note-label">圖片上傳前的優化</span>
+            在送出前用 Canvas API 或 <code>browser-image-compression</code> 套件壓縮圖片。使用者上傳的照片可能是 10MB 的 RAW 檔，壓縮到 500KB 以下再上傳，可以大幅減少儲存成本和載入時間。
+          </div>
+        </div>
+      </div>
+
+      <!-- File Upload Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>FILE UPLOAD DEMO</strong><span>拖曳或點擊選擇檔案，模擬上傳流程</span></div>
+        <div class="demo-body">
+          <div class="upload-zone" id="uploadZone">
+            拖曳檔案到這裡，或點擊選擇（支援圖片、PDF）
+            <input type="file" id="uploadInput" multiple accept="image/*,.pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+          </div>
+          <div class="upload-preview" id="uploadPreview"></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — Supabase Storage 完整上傳流程</div></div>
+        <pre><span class="s">import</span> { createClient } <span class="s">from</span> <span class="v">'@/lib/supabase/client'</span>;
+
+<span class="s">function</span> <span class="fn">AvatarUpload</span>({ userId, onUpload }) {
+  <span class="s">const</span> [uploading, setUploading] = <span class="fn">useState</span>(<span class="s">false</span>);
+  <span class="s">const</span> supabase = <span class="fn">createClient</span>();
+
+  <span class="s">const</span> <span class="fn">handleUpload</span> = <span class="s">async</span> (file: File) => {
+    <span class="c">// 1. 驗證檔案類型和大小</span>
+    <span class="s">const</span> MAX_SIZE  = <span class="str">5</span> * <span class="str">1024</span> * <span class="str">1024</span>; <span class="c">// 5MB</span>
+    <span class="s">const</span> ALLOWED   = [<span class="v">'image/jpeg'</span>, <span class="v">'image/png'</span>, <span class="v">'image/webp'</span>];
+
+    <span class="s">if</span> (!ALLOWED.<span class="fn">includes</span>(file.type)) {
+      <span class="s">throw new</span> Error(<span class="v">'只支援 JPG、PNG、WebP 格式'</span>);
+    }
+    <span class="s">if</span> (file.size > MAX_SIZE) {
+      <span class="s">throw new</span> Error(<span class="v">'檔案大小不能超過 5MB'</span>);
+    }
+
+    <span class="fn">setUploading</span>(<span class="s">true</span>);
+    <span class="s">try</span> {
+      <span class="c">// 2. 建立唯一路徑（避免覆蓋）</span>
+      <span class="s">const</span> ext      = file.name.<span class="fn">split</span>(<span class="v">'.'</span>).<span class="fn">pop</span>();
+      <span class="s">const</span> filePath = <span class="v">`${userId}/${Date.now()}.${ext}`</span>;
+
+      <span class="c">// 3. 上傳到 Supabase Storage</span>
+      <span class="s">const</span> { error: uploadError } = <span class="s">await</span> supabase.storage
+        .<span class="fn">from</span>(<span class="v">'avatars'</span>)
+        .<span class="fn">upload</span>(filePath, file, {
+          cacheControl: <span class="v">'3600'</span>,
+          upsert: <span class="s">false</span>,
+        });
+      <span class="s">if</span> (uploadError) <span class="s">throw</span> uploadError;
+
+      <span class="c">// 4. 取得公開 URL</span>
+      <span class="s">const</span> { data: { publicUrl } } = supabase.storage
+        .<span class="fn">from</span>(<span class="v">'avatars'</span>)
+        .<span class="fn">getPublicUrl</span>(filePath);
+
+      <span class="c">// 5. 更新資料庫中的 avatar_url</span>
+      <span class="s">const</span> { error: dbError } = <span class="s">await</span> supabase
+        .<span class="fn">from</span>(<span class="v">'profiles'</span>)
+        .<span class="fn">update</span>({ avatar_url: publicUrl })
+        .<span class="fn">eq</span>(<span class="v">'id'</span>, userId);
+      <span class="s">if</span> (dbError) <span class="s">throw</span> dbError;
+
+      <span class="fn">onUpload</span>(publicUrl);  <span class="c">// 通知父元件更新顯示</span>
+    } <span class="s">finally</span> {
+      <span class="fn">setUploading</span>(<span class="s">false</span>);
+    }
+  };
+
+  <span class="c">// 拖曳上傳</span>
+  <span class="s">const</span> <span class="fn">handleDrop</span> = (e) => {
+    e.<span class="fn">preventDefault</span>();
+    <span class="s">const</span> file = e.dataTransfer.files[<span class="str">0</span>];
+    <span class="s">if</span> (file) <span class="fn">handleUpload</span>(file);
+  };
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div</span>
+      <span class="p">onDrop</span>=<span class="kw">{</span>handleDrop<span class="kw">}</span>
+      <span class="p">onDragOver</span>=<span class="kw">{</span>(e) => e.<span class="fn">preventDefault</span>()<span class="kw">}</span>
+      <span class="p">className</span>=<span class="v">"upload-zone"</span>
+    <span class="t">&gt;</span>
+      <span class="kw">{</span>uploading ? <span class="v">'上傳中...'</span> : <span class="v">'拖曳或點擊上傳頭像'</span><span class="kw">}</span>
+      <span class="t">&lt;input</span> <span class="p">type</span>=<span class="v">"file"</span> <span class="p">onChange</span>=<span class="kw">{</span>e => <span class="fn">handleUpload</span>(e.target.files[<span class="str">0</span>])<span class="kw">}</span> <span class="t">/&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 5: 搜尋與 Debounce -->
+    <section class="section" id="concept-5">
+      <div class="eyebrow">核心概念 05</div>
+      <h2 class="section-title">搜尋與防抖（Debounce）</h2>
+      <p class="section-intro">搜尋功能看似簡單，但做好有幾個細節：避免每次按鍵都發 API 請求、處理快速輸入後的舊請求覆蓋新結果（Race Condition）、讓使用者知道正在搜尋。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">05</div><div><div class="ctitle">Debounce 與 Race Condition</div><div class="csub">搜尋的兩個核心問題</div></div></div>
+        <div class="cbody">
+          <p><em>Debounce（防抖）</em>：使用者輸入「react」要打 5 個字，不做 debounce 就會送出 5 個請求（「r」「re」「rea」「reac」「react」）。Debounce 讓你在使用者<strong>停止輸入後才送出請求</strong>（通常等 300–500ms）。</p>
+          <p><em>Race Condition（競態條件）</em>：使用者快速改變搜尋詞「react」→「vue」→「angular」，三個請求同時在飛，但回應順序不一定——如果「react」的回應最慢，最終畫面會顯示「react」的結果，但輸入框裡是「angular」。解法：在每次新請求時<strong>取消上一個請求</strong>（用 AbortController）或忽略舊請求的回應（用 cleanup flag）。</p>
+          <div class="note info">
+            <span class="note-label">Debounce vs Throttle</span>
+            Debounce：等使用者「停下來」才執行（適合搜尋輸入）。Throttle：每隔固定時間最多執行一次（適合 scroll 事件、resize 事件）。兩者都能減少函式的執行頻率，但策略不同。
+          </div>
+        </div>
+      </div>
+
+      <!-- Debounce Demo -->
+      <div class="demo-wrap">
+        <div class="demo-bar"><strong>DEBOUNCE DEMO</strong><span>在輸入框打字，觀察即時觸發 vs 防抖後觸發的差異</span></div>
+        <div class="demo-body">
+          <div class="deb-demo">
+            <input class="deb-input" id="debInput" type="text" placeholder="在這裡輸入，觀察 API 請求模擬...">
+            <div class="deb-label">
+              <span><div class="dot" style="background:var(--red);"></div> 即時觸發（每次按鍵）</span>
+              <span><div class="dot" style="background:var(--green);"></div> 防抖後觸發（停止輸入 400ms 後）</span>
+            </div>
+            <div class="deb-log" id="debLog"><span style="color:var(--faint);">// 開始輸入以觀察</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — 搜尋功能完整實作（Debounce + Race Condition 處理）</div></div>
+        <pre><span class="s">import</span> { useState, useEffect, useCallback } <span class="s">from</span> <span class="v">'react'</span>;
+
+<span class="c">// ── 自訂 useDebounce Hook ──</span>
+<span class="s">function</span> <span class="fn">useDebounce</span>&lt;T&gt;(value: T, delay: <span class="t">number</span> = <span class="str">400</span>): T {
+  <span class="s">const</span> [debounced, setDebounced] = <span class="fn">useState</span>(value);
+  <span class="fn">useEffect</span>(() => {
+    <span class="s">const</span> timer = <span class="fn">setTimeout</span>(() => <span class="fn">setDebounced</span>(value), delay);
+    <span class="s">return</span> () => <span class="fn">clearTimeout</span>(timer); <span class="c">// 清除上一個 timer</span>
+  }, [value, delay]);
+  <span class="s">return</span> debounced;
+}
+
+<span class="c">// ── 搜尋元件 ──</span>
+<span class="s">function</span> <span class="fn">SearchPage</span>() {
+  <span class="s">const</span> [query,   setQuery]   = <span class="fn">useState</span>(<span class="v">''</span>);
+  <span class="s">const</span> [results, setResults] = <span class="fn">useState</span>([]);
+  <span class="s">const</span> [loading, setLoading] = <span class="fn">useState</span>(<span class="s">false</span>);
+
+  <span class="c">// 只有停止輸入 400ms 後才更新</span>
+  <span class="s">const</span> debouncedQuery = <span class="fn">useDebounce</span>(query, <span class="str">400</span>);
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="s">if</span> (!debouncedQuery.trim()) {
+      <span class="fn">setResults</span>([]);
+      <span class="s">return</span>;
+    }
+
+    <span class="c">// AbortController 解決 Race Condition</span>
+    <span class="s">const</span> controller = <span class="s">new</span> AbortController();
+    <span class="fn">setLoading</span>(<span class="s">true</span>);
+
+    supabase
+      .<span class="fn">from</span>(<span class="v">'posts'</span>)
+      .<span class="fn">select</span>(<span class="v">'id, title'</span>)
+      .<span class="fn">ilike</span>(<span class="v">'title'</span>, <span class="v">`%${debouncedQuery}%`</span>)
+      .<span class="fn">limit</span>(<span class="str">10</span>)
+      .<span class="fn">abortSignal</span>(controller.signal)  <span class="c">// Supabase 支援 AbortSignal</span>
+      .<span class="fn">then</span>(({ data, error }) => {
+        <span class="s">if</span> (error?.name === <span class="v">'AbortError'</span>) <span class="s">return</span>; <span class="c">// 被取消，忽略</span>
+        <span class="s">if</span> (error) <span class="s">throw</span> error;
+        <span class="fn">setResults</span>(data ?? []);
+      })
+      .<span class="fn">catch</span>(console.error)
+      .<span class="fn">finally</span>(() => <span class="fn">setLoading</span>(<span class="s">false</span>));
+
+    <span class="c">// cleanup：下次 effect 執行前取消上一個請求</span>
+    <span class="s">return</span> () => controller.<span class="fn">abort</span>();
+
+  }, [debouncedQuery]);  <span class="c">// 只在 debounced 值變化時觸發</span>
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="t">&lt;input</span>
+        <span class="p">value</span>=<span class="kw">{</span>query<span class="kw">}</span>
+        <span class="p">onChange</span>=<span class="kw">{</span>e => <span class="fn">setQuery</span>(e.target.value)<span class="kw">}</span>
+        <span class="p">placeholder</span>=<span class="v">"搜尋..."</span>
+      <span class="t">/&gt;</span>
+      <span class="kw">{</span>loading && <span class="t">&lt;Spinner /&gt;</span><span class="kw">}</span>
+      <span class="t">&lt;ul&gt;</span>
+        <span class="kw">{</span>results.<span class="fn">map</span>(r => <span class="t">&lt;li</span> <span class="p">key</span>=<span class="kw">{</span>r.id<span class="kw">}</span><span class="t">&gt;</span><span class="kw">{</span>r.title<span class="kw">}</span><span class="t">&lt;/li&gt;</span>)<span class="kw">}</span>
+      <span class="t">&lt;/ul&gt;</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- CONCEPT 6: 資料快取 -->
+    <section class="section" id="concept-6">
+      <div class="eyebrow">核心概念 06</div>
+      <h2 class="section-title">資料快取與 SWR</h2>
+      <p class="section-intro">每次元件掛載都重新發 API 請求，不只浪費資源，還讓使用者一直看到 Loading。SWR 或 React Query 提供智慧快取，讓資料在新鮮的同時減少不必要的請求。</p>
+
+      <div class="cblock">
+        <div class="cblock-head"><div class="cicon">06</div><div><div class="ctitle">SWR — Stale-While-Revalidate</div><div class="csub">先回傳快取（舊）資料，同時在背景更新</div></div></div>
+        <div class="cbody">
+          <p>SWR 名字來自 HTTP 快取策略 <em>stale-while-revalidate</em>：先立刻回傳快取中的舊資料（讓 UI 不空白），同時在背景重新取得最新資料，取到後更新 UI。使用者幾乎不需要等待 Loading。</p>
+          <p>SWR 和 React Query 都做同樣的事情，選一個即可。React Query（TanStack Query）功能更豐富，適合複雜的非同步狀態管理；SWR 更輕量，適合大多數情況。兩者都提供：<em>自動重試</em>、<em>focus 時重新驗證</em>（切回 tab 自動更新）、<em>重複請求合併</em>、<em>樂觀更新支援</em>。</p>
+          <p>使用這些庫後，你不需要再手動管理 loading/error/data 三個 state——<code>const { data, error, isLoading } = useSWR(...)</code> 一行搞定，而且多個元件使用同一個 key 會自動共享快取，不會重複請求。</p>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="cpanel">
+          <div class="cpanel-hdr info">手動管理（useState + useEffect）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:1.7;"><span class="s">function</span> <span class="fn">PostList</span>() {
+  <span class="s">const</span> [data, setData]     = <span class="fn">useState</span>([]);
+  <span class="s">const</span> [loading, setLoading] = <span class="fn">useState</span>(<span class="s">true</span>);
+  <span class="s">const</span> [error, setError]   = <span class="fn">useState</span>(<span class="s">null</span>);
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="fn">fetchPosts</span>()
+      .<span class="fn">then</span>(setData)
+      .<span class="fn">catch</span>(setError)
+      .<span class="fn">finally</span>(() => <span class="fn">setLoading</span>(<span class="s">false</span>));
+  }, []);
+
+  <span class="c">// 3 個 state 手動維護
+  // 每次掛載都重新請求
+  // 多個元件各自請求</span>
+}</pre>
+        </div>
+        <div class="cpanel">
+          <div class="cpanel-hdr good">SWR（自動快取、共享、重驗）</div>
+          <pre style="background:var(--code-bg);padding:1.2rem 1.5rem;font-size:.76rem;line-height:1.7;"><span class="c">// npm install swr</span>
+<span class="s">import</span> useSWR <span class="s">from</span> <span class="v">'swr'</span>;
+
+<span class="s">const</span> <span class="fn">fetcher</span> = url => <span class="fn">fetch</span>(url).<span class="fn">then</span>(r => r.<span class="fn">json</span>());
+
+<span class="s">function</span> <span class="fn">PostList</span>() {
+  <span class="s">const</span> { data, error, isLoading } = <span class="fn">useSWR</span>(
+    <span class="v">'/api/posts'</span>,  <span class="c">// key（也是 URL）</span>
+    fetcher
+  );
+  <span class="c">// 自動快取，多個元件共享
+  // 切回 tab 自動更新
+  // 一行取代 3 個 useState</span>
+}</pre>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-hdr"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><div class="code-lang">React — SWR 完整使用模式</div></div>
+        <pre><span class="s">import</span> useSWR, { mutate } <span class="s">from</span> <span class="v">'swr'</span>;
+
+<span class="c">// ── fetcher 函式（只需定義一次）──</span>
+<span class="s">const</span> <span class="fn">fetcher</span> = <span class="s">async</span> (url: <span class="t">string</span>) => {
+  <span class="s">const</span> res = <span class="s">await</span> <span class="fn">fetch</span>(url);
+  <span class="s">if</span> (!res.ok) <span class="s">throw new</span> Error(<span class="v">'Network error'</span>);
+  <span class="s">return</span> res.<span class="fn">json</span>();
+};
+
+<span class="c">// ── 基本使用 ──</span>
+<span class="s">function</span> <span class="fn">PostList</span>() {
+  <span class="s">const</span> { data, error, isLoading, isValidating } = <span class="fn">useSWR</span>(
+    <span class="v">'/api/posts'</span>,  <span class="c">// key：相同 key 的請求會共享快取</span>
+    fetcher,
+    {
+      revalidateOnFocus:      <span class="s">true</span>,   <span class="c">// 切回視窗時重新驗證（預設 true）</span>
+      revalidateOnReconnect:  <span class="s">true</span>,   <span class="c">// 斷線重連後重新驗證</span>
+      refreshInterval:        <span class="str">30000</span>,  <span class="c">// 每 30 秒自動更新</span>
+      dedupingInterval:       <span class="str">2000</span>,   <span class="c">// 2 秒內相同 key 只發一次請求</span>
+      fallbackData:           [],      <span class="c">// 沒有快取時的預設值</span>
+    }
+  );
+  <span class="c">// isLoading: 首次載入（無快取）
+  // isValidating: 背景更新中（有快取但正在重驗）</span>
+
+  <span class="s">return</span> (
+    <span class="t">&lt;div&gt;</span>
+      <span class="kw">{</span>isLoading && <span class="t">&lt;Skeleton /&gt;</span><span class="kw">}</span>
+      <span class="kw">{</span>error && <span class="t">&lt;ErrorMessage</span> <span class="p">error</span>=<span class="kw">{</span>error<span class="kw">}</span> <span class="t">/&gt;</span><span class="kw">}</span>
+      <span class="kw">{</span>data?.posts.<span class="fn">map</span>(p => <span class="t">&lt;PostCard</span> <span class="p">key</span>=<span class="kw">{</span>p.id<span class="kw">}</span> <span class="p">post</span>=<span class="kw">{</span>p<span class="kw">}</span> <span class="t">/&gt;</span>)<span class="kw">}</span>
+    <span class="t">&lt;/div&gt;</span>
+  );
+}
+
+<span class="c">// ── 搭配樂觀更新（mutate）──</span>
+<span class="s">async function</span> <span class="fn">addPost</span>(newPost) {
+  <span class="c">// 樂觀更新本地快取（不等 API）</span>
+  <span class="s">await</span> <span class="fn">mutate</span>(
+    <span class="v">'/api/posts'</span>,
+    <span class="s">async</span> (current) => {
+      <span class="s">const</span> created = <span class="s">await</span> <span class="fn">createPost</span>(newPost); <span class="c">// 真實 API</span>
+      <span class="s">return</span> { posts: [...(current?.posts ?? []), created] };
+    },
+    {
+      optimisticData: (current) => ({
+        posts: [...(current?.posts ?? []), { ...newPost, id: <span class="v">'temp'</span> }],
+      }),
+      rollbackOnError: <span class="s">true</span>,  <span class="c">// 失敗時自動回滾</span>
+    }
+  );
+}</pre>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="section" id="quiz">
+      <div class="eyebrow">隨堂練習</div>
+      <h2 class="section-title">測試你的理解</h2>
+      <p class="section-intro">四道題目，涵蓋本週核心功能開發的關鍵概念。</p>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 01 / 04</div>
+        <div class="quiz-q">實作 Optimistic Update 時，最重要的是什麼？</div>
+        <div class="quiz-options" data-answer="2">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>先等 API 成功再更新 UI，確保資料一致</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>只在成功的情況下更新 UI，失敗時什麼都不做</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>更新 UI 前記錄原本狀態，API 失敗時能準確回滾</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>使用 setTimeout 假裝 API 很快，再真的發請求</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>Optimistic Update 的核心是「假設成功並立刻更新 UI」，但如果 API 真的失敗，你必須能夠<strong>回滾到原本狀態</strong>。所以在更新之前，要先保存一份原本的資料（如 <code>const previous = todos.find(t => t.id === id)</code>），這樣失敗時才能精準恢復。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Optimistic Update 有兩個關鍵步驟：立刻更新 UI，以及失敗時的處理。哪個步驟需要「記錄原本狀態」？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 02 / 04</div>
+        <div class="quiz-q">無限滾動中，「哨兵元素」（sentinel）的作用是什麼？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>一個隱藏的計時器，每 5 秒自動載入下一頁</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>放在列表底部的空元素，被 IntersectionObserver 監測，進入視窗時觸發載入</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>一個特殊的 API 端點，告訴伺服器要載入哪一頁</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>用來防止使用者滾動太快的限速機制</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>哨兵元素（Sentinel Element）是一個放在列表最底部的空 <code>&lt;div&gt;</code>，本身不顯示任何內容。IntersectionObserver 監測它——當使用者滾動到底部，這個元素進入視窗的可見範圍，Observer 收到通知並觸發載入下一頁的函式。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>「哨兵」的比喻：哨兵站在門口，當有人（使用者視窗）接近時發出信號。在無限滾動中，這個「哨兵」放在列表的哪裡？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 03 / 04</div>
+        <div class="quiz-q">用戶快速輸入「r」→「re」→「rea」→「reac」→「react」，不做任何處理會發送幾個搜尋 API 請求？使用 Debounce（400ms）後呢？</div>
+        <div class="quiz-options" data-answer="3">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>5 個請求；Debounce 後還是 5 個（只是延遲）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>5 個請求；Debounce 後 0 個（全部被取消）</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>1 個請求；Debounce 後 1 個（相同）</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>5 個請求；Debounce 後 1 個（只發最後的「react」）</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>沒有 Debounce：每次 onChange 都發請求，5 個按鍵發 5 個請求。Debounce（400ms）：每次按鍵都重置計時器，只有在<strong>停止輸入 400ms 後</strong>才發請求。如果用戶連續按鍵間隔都小於 400ms，最終只發 1 個請求（「react」）。大幅節省 API 請求次數。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>Debounce 的機制：每次觸發都「重置計時器」——想想連續按鍵後，最終只有哪一個按鍵能等到計時器自然倒數完？</div>
+      </div>
+
+      <div class="quiz-block">
+        <div class="quiz-eye">QUIZ 04 / 04</div>
+        <div class="quiz-q">使用 SWR 的 <code>useSWR('/api/posts', fetcher)</code>，在三個不同的頁面元件都使用這個 hook。會發送幾個 API 請求？</div>
+        <div class="quiz-options" data-answer="1">
+          <div class="quiz-opt" data-idx="0"><span class="quiz-key">A</span>3 個請求（每個元件各自請求）</div>
+          <div class="quiz-opt" data-idx="1"><span class="quiz-key">B</span>1 個請求（相同 key 共享快取，只發一次）</div>
+          <div class="quiz-opt" data-idx="2"><span class="quiz-key">C</span>0 個請求（SWR 永遠使用本地快取）</div>
+          <div class="quiz-opt" data-idx="3"><span class="quiz-key">D</span>取決於元件的渲染順序</div>
+        </div>
+        <div class="quiz-fb note tip"><span class="note-label">CORRECT</span>SWR 的核心能力之一：使用相同 key（<code>'/api/posts'</code>）的所有元件<strong>共享同一個快取和請求</strong>。即使 10 個元件都呼叫 <code>useSWR('/api/posts')</code>，SWR 只會發 1 個 HTTP 請求，回應後所有元件同步更新。這稱為「請求合併（Deduplication）」，是 SWR 的重要效能優化。</div>
+        <div class="quiz-fb note warn"><span class="note-label">TRY AGAIN</span>SWR 的「S」代表 Stale（舊），「W」代表 While，「R」代表 Revalidate（重新驗證）。多個元件使用相同 key 時，SWR 如何處理？</div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="section" id="project">
+      <div class="eyebrow">本週實作</div>
+      <h2 class="section-title">任務：為 Side Project 加入核心功能</h2>
+      <p class="section-intro">這週選擇 1–2 個對你的 Side Project 最重要的功能實作——不需要全部都做，選最有影響力的做好做完整。</p>
+
+      <div class="project-hero">
+        <div class="project-eyebrow">WEEK 16 MISSION</div>
+        <div class="project-name">Side Project<br>核心功能鍛造</div>
+        <div class="project-desc">把基礎架構（Auth + CRUD）轉化成真正讓使用者「哇」一聲的功能。這週的目標是讓應用感覺真正可用，而不只是能用。</div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:500;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem;color:var(--text);">完成步驟</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">為所有 CRUD 操作加入 Optimistic Update</div>
+            <div class="step-body">審視上週完成的所有增刪改操作，逐一改為 Optimistic Update 模式：儲存原始狀態 → 立刻更新 UI → API 成功就確認，API 失敗就回滾並顯示 Toast 錯誤訊息。測試方式：把網路設為 Slow 3G，確認操作感覺仍然即時。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">實作資料列表的無限滾動或分頁</div>
+            <div class="step-body">如果你的應用有可能有大量資料（待辦事項、文章列表、訊息記錄），用 IntersectionObserver 實作無限滾動，或用傳統的「載入更多」按鈕分頁。確保有 Loading 指示器和「已顯示全部」的結束提示。設定每頁 10–20 筆。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加入搜尋功能（搭配 Debounce）</div>
+            <div class="step-body">在主要資料列表頁加入搜尋輸入框。實作 <code>useDebounce</code> hook（等待 400ms 後才觸發搜尋）。在 Supabase 查詢中加入 <code>.ilike('field', '%query%')</code>。加入 AbortController 處理 Race Condition。顯示搜尋無結果時的 Empty State。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">（選擇一）即時更新 或 檔案上傳</div>
+            <div class="step-body"><strong>即時更新</strong>：用 Supabase Realtime 訂閱你的主要資料表，讓多個視窗同時開啟時資料自動同步。<strong>檔案上傳</strong>：建立 Supabase Storage Bucket，實作拖曳上傳和進度顯示，把上傳後的 URL 存到資料庫對應欄位（如頭像、附件）。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">改用 SWR 或 React Query 管理資料狀態</div>
+            <div class="step-body">安裝 <code>swr</code> 或 <code>@tanstack/react-query</code>，把主要的資料取得邏輯從手動的 useState + useEffect 改為 useSWR / useQuery。特別注意 loading vs isValidating 的差異——有快取時 isLoading 是 false，但仍可能在背景重驗。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">整合測試：完整功能流程</div>
+            <div class="step-body">在瀏覽器開兩個視窗，登入同一個帳號，在一個視窗新增/刪除/修改資料，確認另一個視窗的反應（有 Realtime 則即時同步，無則在切換回來時重新載入）。打開 Network tab，確認 Debounce 有效減少了搜尋請求次數。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：鍵盤快捷鍵</div>
+            <div class="step-body">為主要操作加入鍵盤快捷鍵提升效率：<code>Ctrl/Cmd+K</code> 開啟搜尋、<code>Ctrl/Cmd+N</code> 新增項目、<code>Escape</code> 關閉 Modal。用 <code>document.addEventListener('keydown')</code> 實作，在 useEffect 的 cleanup 中移除監聽器。</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <div class="step-title">加分：本地排序與篩選</div>
+            <div class="step-body">加入在前端本地進行的排序（按日期、名稱、優先級）和篩選（完成/未完成）。這類操作不需要重新請求 API，直接用 <code>Array.sort()</code> 和 <code>Array.filter()</code> 對已載入的資料操作，並記住使用者的偏好（存在 localStorage 或 URL query params）。</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-family:var(--font-d);font-weight:500;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em;margin:2rem 0 1rem;color:var(--text);">完成項目自評</h3>
+      <div class="checklist">
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>所有 CRUD 操作改為 Optimistic Update，失敗時有回滾和錯誤 Toast</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>資料列表有無限滾動或分頁，不會一次載入全部資料</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>搜尋功能有 Debounce（至少 300ms），並正確處理 Race Condition</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>至少實作了一個進階功能（即時更新 或 檔案上傳）</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>主要資料取得改用 SWR 或 React Query，不再手動管理三個 state</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>開兩個視窗測試功能流程，Realtime 或重新驗證運作正常</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>Network tab 確認 Debounce 有效，搜尋請求次數大幅減少</span></div>
+        <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div><span>（加分）實作鍵盤快捷鍵或本地排序篩選功能</span></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section class="section" id="resources">
+      <div class="eyebrow">延伸學習</div>
+      <h2 class="section-title">推薦資源</h2>
+      <div class="resource-grid">
+        <a href="https://swr.vercel.app/" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">套件文件</div>
+          <div class="resource-name">SWR 官方文件</div>
+          <div class="resource-desc">Vercel 出品的資料取得 Hook 套件。文件包含所有用法，特別推薦「Mutation」和「Optimistic UI」章節，與本週學的主題完美對應。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://tanstack.com/query/latest" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">套件文件</div>
+          <div class="resource-name">TanStack Query（React Query）</div>
+          <div class="resource-desc">功能更豐富的非同步狀態管理套件。如果你的應用有複雜的伺服器狀態管理需求（無限查詢、分頁、樂觀更新），React Query 是首選。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://supabase.com/docs/guides/realtime" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件</div>
+          <div class="resource-name">Supabase Realtime 指南</div>
+          <div class="resource-desc">Supabase 官方的 Realtime 完整文件，包含 Broadcast（廣播）、Presence（在線狀態）和 Postgres Changes（資料庫變更）三種訂閱模式的說明和範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://supabase.com/docs/guides/storage" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">官方文件</div>
+          <div class="resource-name">Supabase Storage 指南</div>
+          <div class="resource-desc">完整的檔案上傳說明，包含 Storage 安全規則、圖片轉換（縮圖）、簽名 URL 等功能，有完整的 JavaScript 範例。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">MDN 文件</div>
+          <div class="resource-name">Intersection Observer API</div>
+          <div class="resource-desc">MDN 的完整說明，含所有選項（threshold、rootMargin）的解釋和互動示範。是實作無限滾動、懶加載、視差效果的核心 API。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+        <a href="https://www.youtube.com/watch?v=HBxz6V0NA1Y" target="_blank" rel="noopener noreferrer" class="resource-card">
+          <div class="resource-type">影片教學</div>
+          <div class="resource-name">Theo — Optimistic Updates in React</div>
+          <div class="resource-desc">t3.gg 創辦人 Theo 的深度解說，從為什麼要 Optimistic Update 到各種實作方式的比較，含 React Query 和手動實作的對比。</div>
+          <div class="resource-arrow">&#8599;</div>
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="bottom-nav">
+    <a href="week15.html" class="nav-btn">&larr; Week 15：使用者登入</a>
+    <a href="index.html" class="home-link">&#8598; 課程總覽</a>
+    <a href="week17.html" class="nav-btn">Week 17：UI 完善 &rarr;</a>
+  </div>
+</main>
+<script>
+// Progress
+window.addEventListener('scroll',()=>{
+  const p=window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100;
+  document.getElementById('progressBar').style.width=Math.min(p,100)+'%';
+});
+// Scroll Reveal
+const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');});},{threshold:.07});
+document.querySelectorAll('.section').forEach(s=>obs.observe(s));
+// TOC
+const sids=['objectives','concept-1','concept-2','concept-3','concept-4','concept-5','concept-6','quiz','project','resources'];
+const sels=sids.map(id=>document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll',()=>{
+  let c='';sels.forEach(el=>{if(window.scrollY>=el.offsetTop-130)c=el.id;});
+  document.querySelectorAll('.toc-item').forEach(i=>i.classList.toggle('active',i.getAttribute('href')==='#'+c));
+});
+
+// ── Optimistic Update Demo ──
+const colors = ['var(--forge)','var(--steel)','var(--amber)','var(--green)'];
+let ouItems = [
+  {id:1,text:'學習 Optimistic Update',done:false,color:colors[0]},
+  {id:2,text:'實作無限滾動',done:false,color:colors[1]},
+  {id:3,text:'完成 Side Project',done:false,color:colors[2]},
+];
+let nextId = 4;
+
+function renderOuList() {
+  const list = document.getElementById('ouList');
+  list.innerHTML = '';
+  ouItems.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'ou-item' + (item.done ? ' done' : '') + (item.optimistic ? ' optimistic' : '');
+    div.dataset.id = item.id;
+    div.innerHTML = `
+      <div class="ou-checkbox ${item.done?'checked':''}" onclick="ouToggle(${item.id},${item.done})">
+        ${item.done ? '✓' : ''}
+      </div>
+      <span class="ou-item-text">${item.text}</span>
+      ${item.optimistic ? '<span style="font-family:var(--font-m);font-size:.58rem;color:var(--amber);padding:0 .4rem;">同步中...</span>' : ''}
+      <button class="ou-delete" onclick="ouDelete(${item.id})">✕</button>`;
+    list.appendChild(div);
+  });
+}
+
+function setStatus(msg, color='var(--muted)') {
+  const s = document.getElementById('ouStatus');
+  s.textContent = msg;
+  s.style.color = color;
+}
+
+function ouToggle(id, currentDone) {
+  const originalItems = [...ouItems.map(i=>({...i}))];
+  // Optimistic: update immediately
+  ouItems = ouItems.map(i => i.id === id ? {...i, done: !currentDone, optimistic: true} : i);
+  renderOuList();
+  setStatus('正在同步...', 'var(--amber)');
+
+  const willFail = Math.random() < 0.2;
+  setTimeout(() => {
+    if (willFail) {
+      // Rollback
+      ouItems = originalItems;
+      renderOuList();
+      setStatus('操作失敗，已回滾！', 'var(--red)');
+      setTimeout(() => setStatus(''), 2500);
+    } else {
+      ouItems = ouItems.map(i => i.id === id ? {...i, optimistic: false} : i);
+      renderOuList();
+      setStatus('同步成功', 'var(--green)');
+      setTimeout(() => setStatus(''), 1500);
+    }
+  }, 600);
+}
+
+function ouDelete(id) {
+  const backup = [...ouItems.map(i=>({...i}))];
+  const delItem = ouItems.find(i => i.id === id);
+  ouItems = ouItems.filter(i => i.id !== id);
+  renderOuList();
+  setStatus('刪除中...', 'var(--amber)');
+
+  const willFail = Math.random() < 0.15;
+  setTimeout(() => {
+    if (willFail) {
+      ouItems = backup;
+      renderOuList();
+      setStatus('刪除失敗，已恢復！', 'var(--red)');
+      setTimeout(() => setStatus(''), 2500);
+    } else {
+      setStatus('已刪除', 'var(--green)');
+      setTimeout(() => setStatus(''), 1500);
+    }
+  }, 500);
+}
+
+function ouAdd(text) {
+  if (!text.trim()) return;
+  const tempId = 'temp-' + Date.now();
+  const newItem = {id: tempId, text: text.trim(), done: false, optimistic: true, color: colors[nextId % colors.length]};
+  ouItems.push(newItem);
+  nextId++;
+  renderOuList();
+  setStatus('新增中...', 'var(--amber)');
+
+  setTimeout(() => {
+    const realId = nextId++;
+    ouItems = ouItems.map(i => i.id === tempId ? {...i, id: realId, optimistic: false} : i);
+    renderOuList();
+    setStatus('已新增', 'var(--green)');
+    setTimeout(() => setStatus(''), 1500);
+  }, 700);
+}
+
+document.getElementById('ouAddBtn').addEventListener('click', () => {
+  const input = document.getElementById('ouInput');
+  ouAdd(input.value);
+  input.value = '';
+});
+document.getElementById('ouInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    ouAdd(e.target.value);
+    e.target.value = '';
+  }
+});
+renderOuList();
+
+// ── Infinite Scroll Demo ──
+const isContainer = document.getElementById('isContainer');
+const isItems = document.getElementById('isItems');
+const isSentinel = document.getElementById('isSentinel');
+let isPage = 0;
+let isLoading = false;
+let isHasMore = true;
+const IS_PAGE_SIZE = 8;
+const avatarColors = ['#e05a1e','#8090a8','#d4920a','#4a9a5a','#c04040','#7060c0','#1a8a9a','#a04080'];
+const names = ['Alice','Bob','Carol','David','Emma','Frank','Grace','Henry','Iris','Jack','Kate','Leo'];
+
+function renderIsItem(i) {
+  const globalIdx = isPage * IS_PAGE_SIZE + i;
+  const name = names[globalIdx % names.length];
+  const color = avatarColors[globalIdx % avatarColors.length];
+  const div = document.createElement('div');
+  div.className = 'is-item';
+  div.innerHTML = `
+    <div class="is-avatar" style="background:${color};">${name[0]}</div>
+    <div>
+      <div style="font-weight:600;font-size:.85rem;">${name}</div>
+      <div style="font-size:.72rem;color:var(--muted);font-family:var(--font-m);">文章 #${globalIdx + 1} — ${new Date(Date.now() - globalIdx * 3600000).toLocaleDateString('zh-TW')}</div>
+    </div>`;
+  isItems.appendChild(div);
+}
+
+function loadIsPage() {
+  if (isLoading || !isHasMore) return;
+  isLoading = true;
+  const loader = document.createElement('div');
+  loader.className = 'is-loader';
+  loader.id = 'isLoader';
+  loader.innerHTML = '<div class="is-spinner"></div><span>載入中...</span>';
+  isItems.appendChild(loader);
+
+  setTimeout(() => {
+    const loaderEl = document.getElementById('isLoader');
+    if (loaderEl) loaderEl.remove();
+    for (let i = 0; i < IS_PAGE_SIZE; i++) renderIsItem(i);
+    isPage++;
+    isLoading = false;
+    if (isPage >= 4) {
+      isHasMore = false;
+      const end = document.createElement('div');
+      end.className = 'is-loader';
+      end.style.color = 'var(--faint)';
+      end.innerHTML = '— 已顯示全部內容 —';
+      isItems.appendChild(end);
+    }
+  }, 800);
+}
+loadIsPage();
+
+const isObs = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) loadIsPage();
+}, {root: isContainer, threshold: 0.1});
+isObs.observe(isSentinel);
+
+// ── Realtime Simulation ──
+const rtEntries = document.getElementById('rtEntries');
+const rtColors = ['var(--forge)','var(--steel)','var(--amber)','var(--green)'];
+const rtNames = ['Alice','Bob','Carol','System'];
+let rtCount = 0;
+
+function addRtEntry(text, user, isSystem=false) {
+  const color = isSystem ? 'var(--faint)' : rtColors[rtCount % rtColors.length];
+  const entry = document.createElement('div');
+  entry.className = 'rt-entry';
+  entry.style.borderColor = color;
+  const time = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  entry.innerHTML = `
+    <span class="rt-entry-text" style="color:${isSystem?'var(--faint)':'var(--text)'};">
+      ${isSystem ? '' : `<strong style="color:${color};font-family:var(--font-d);">${user}</strong> `}${text}
+    </span>
+    <span class="rt-entry-time">${time}</span>`;
+  rtEntries.appendChild(entry);
+  rtEntries.scrollTop = rtEntries.scrollHeight;
+  if (rtEntries.children.length > 12) rtEntries.removeChild(rtEntries.firstChild);
+  rtCount++;
+}
+
+// Simulate occasional messages from others
+const simMessages = [
+  '準備好要上線了！','這個功能很棒','Realtime 果然厲害','感謝分享','收到了','太厲害了','加油！'
+];
+let rtSimInterval = setInterval(() => {
+  if (Math.random() < 0.3) {
+    const name = rtNames[Math.floor(Math.random() * 3)];
+    const msg = simMessages[Math.floor(Math.random() * simMessages.length)];
+    addRtEntry(msg, name);
+  }
+}, 4000);
+
+document.getElementById('rtSend').addEventListener('click', () => {
+  const input = document.getElementById('rtInput');
+  if (input.value.trim()) {
+    addRtEntry(input.value.trim(), '你');
+    input.value = '';
+  }
+});
+document.getElementById('rtInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.value.trim()) {
+    addRtEntry(e.target.value.trim(), '你');
+    e.target.value = '';
+  }
+});
+document.getElementById('rtSimBtn').addEventListener('click', () => {
+  const name = rtNames[Math.floor(Math.random() * 3)];
+  const msg = simMessages[Math.floor(Math.random() * simMessages.length)];
+  addRtEntry(msg, name);
+});
+
+// ── File Upload Demo ──
+const uploadZone = document.getElementById('uploadZone');
+const uploadInput = document.getElementById('uploadInput');
+const uploadPreview = document.getElementById('uploadPreview');
+
+function simulateUpload(file) {
+  const row = document.createElement('div');
+  row.className = 'upload-file';
+  const barId = 'bar-' + Date.now();
+  const sizeStr = file.size > 1024*1024 ? (file.size/1024/1024).toFixed(1)+'MB' : (file.size/1024).toFixed(0)+'KB';
+  row.innerHTML = `
+    <div class="upload-name">${file.name}</div>
+    <div class="upload-bar-wrap"><div class="upload-bar" id="${barId}" style="width:0%"></div></div>
+    <div class="upload-size">${sizeStr}</div>
+    <div class="upload-status" id="st-${barId}" style="border-color:var(--amber);color:var(--amber);">上傳中</div>`;
+  uploadPreview.appendChild(row);
+
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 20 + 8;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(interval);
+      const st = document.getElementById('st-'+barId);
+      if (st) { st.textContent = '完成'; st.style.borderColor='var(--green)'; st.style.color='var(--green)'; }
+    }
+    const bar = document.getElementById(barId);
+    if (bar) bar.style.width = Math.min(progress,100) + '%';
+  }, 180);
+}
+
+uploadInput.addEventListener('change', e => {
+  Array.from(e.target.files).forEach(simulateUpload);
+});
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  Array.from(e.dataTransfer.files).forEach(simulateUpload);
+});
+
+// ── Debounce Demo ──
+const debInput = document.getElementById('debInput');
+const debLog = document.getElementById('debLog');
+let debTimer = null;
+let debLogCount = 0;
+
+function addDebLog(msg, cls) {
+  if (debLog.firstChild && debLog.firstChild.tagName === 'SPAN') debLog.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = msg;
+  debLog.insertBefore(div, debLog.firstChild);
+  debLogCount++;
+  while (debLog.children.length > 10) debLog.removeChild(debLog.lastChild);
+}
+
+debInput.addEventListener('input', e => {
+  const val = e.target.value;
+  if (!val) { debLog.innerHTML = '<span style="color:var(--faint);">// 開始輸入以觀察</span>'; return; }
+  addDebLog(`即時觸發: "${val}" (onChange)`, 'deb-instant');
+  clearTimeout(debTimer);
+  debTimer = setTimeout(() => {
+    addDebLog(`防抖觸發: "${val}" → API 請求送出 ✓`, 'deb-debounced');
+  }, 400);
+});
+
+// ── Quiz ──
+document.querySelectorAll('.quiz-block').forEach(block=>{
+  const correct=parseInt(block.querySelector('.quiz-options').dataset.answer);
+  const opts=block.querySelectorAll('.quiz-opt');
+  const fbs=block.querySelectorAll('.quiz-fb');
+  let done=false;
+  opts.forEach((opt,i)=>{
+    opt.addEventListener('click',()=>{
+      if(done)return;done=true;
+      opts.forEach(o=>o.style.pointerEvents='none');
+      if(i===correct){opt.classList.add('correct');fbs[0]&&fbs[0].classList.add('show');}
+      else{
+        opt.classList.add('wrong');opts[correct].classList.add('correct');
+        fbs[1]&&fbs[1].classList.add('show');
+        setTimeout(()=>{done=false;opts.forEach(o=>{o.style.pointerEvents='';o.classList.remove('wrong','correct');});fbs.forEach(f=>f.classList.remove('show'));},2800);
+      }
+    });
+  });
+});
+
+// ── Checklist ──
+function toggleCheck(el){
+  el.classList.toggle('done');
+  el.querySelector('.check-box').textContent=el.classList.contains('done')?'✓':'';
+}
+</script>
+</body>
+</html>
